@@ -1,3 +1,6 @@
+# :construction: This project is not ready yet. :construction:
+
+
 # Management-Science
 GitHub for exchanging data and the formulation of the stochastic mathematical model 
 
