@@ -23,15 +23,15 @@ class Parameters:
         self.cmax = self.create_cmax()
         self.alpha = self.create_alpha()
         self.ost = self.create_ost()
-        self.wp = self.create_wp()
-        self.el_min = self.create_el_min()
-        self.el_max = self.create_el_max()
-        self.is_ = self.create_is()
-        self.omega_fw = self.create_omega_fw()
-        self.omega_dc = self.create_omega_dc()
-        self.rr = self.create_rr()
-        self.r = self.create_r()
-        self.re = self.create_re()
+        self.wp = self.create_wp(MP, T, self.sigma)
+        self.el_min = self.create_el_min(F)
+        self.el_max = self.create_el_max(F)
+        self.is_ = self.create_is(M)
+        self.omega_fw = self.create_omega_fw(F)
+        self.omega_dc = self.create_omega_dc(F)
+        self.rr = self.create_rr(F)
+        self.r = self.create_r(F)
+        self.re = self.create_re(F)
         self.imax = self.create_imax()
         self.zmax = self.create_zmax()
         self.sc = self.create_sc()
@@ -113,40 +113,44 @@ class Parameters:
         ''' Add description of the function here '''
         pass
 
-    def create_wp(self) -> list:
-        ''' Add description of the function here '''
+    def create_wp(self, M, T, sigma ) -> list:
+        ''' m: manufacturing plant, 
+            t: time (days), 
+            sigma: process time for family produced in manufacturing plant m'''
+
         pass
 
-    def create_el_min(self) -> list:
-        ''' Add description of the function here '''
+    def create_el_min(self, F) -> list:
+        ''' F: lots of family f to be exported; here: Minimum number'''
         pass
 
-    def create_el_max(self) -> list:
-        ''' Add description of the function here '''
+    def create_el_max(self, F) -> list:
+        ''' F: lots of family f to be exported; here: Maximum number'''
+
         pass
 
-    def create_is(self) -> list:
-        ''' Add description of the function here '''
+    def create_is(self, M) -> list:
+        ''' M: maximum portion of total capacity that can be left idle during a production campaign  at manufacturing plant m with [0,1) value'''
         pass
 
-    def create_omega_fw(self) -> list:
-        ''' Add description of the function here '''
+    def create_omega_fw(self, F) -> list:
+        ''' factory warehouse shelf-life of products of family f'''
         pass
 
-    def create_omega_dc(self) -> list:
-        ''' Add description of the function here '''
+    def create_omega_dc(self, F) -> list:
+        ''' distrinution center shelf-life of products of family f'''
         pass
 
-    def create_rr(self) -> list:
-        ''' Add description of the function here '''
+    def create_rr(self, F) -> list:
+        ''' revenue from reduced price selling of products of family f over stock (distressed sales) '''
         pass
 
-    def create_r(self) -> list:
-        ''' Add description of the function here '''
+    def create_r(self, F) -> list:
+        ''' revenue from selling one ton of family f in any distribution center of the Supply Chain '''
         pass
 
-    def create_re(self) -> list:
-        ''' Add description of the function here '''
+    def create_re(self, F) -> list:
+        ''' revenue from exporting a batch of family f '''
         pass
 
     def create_imax(self) -> list:
