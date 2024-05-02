@@ -31,3 +31,5 @@ L = [i for i in range(0,9)]
 ### Get the needede parameters
 
 data = Parameters(T,F,S,FT,MP,CT,L)
+
+print(data.cmin)
