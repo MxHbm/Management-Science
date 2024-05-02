@@ -10,7 +10,7 @@ Welcome to the GitHub repository for our project developed as part of a task at 
 This project aims to understand and reproduce the results presented in the source paper provided. Leveraging Python3 and Gurobi, we delve into the computational aspects of management science, striving to replicate and expand upon the findings presented in the original research.
 
 ## Project Status:
-This project is actively maintained until June 2024 and welcomes contributions from the community.
+:construction: This project is not ready yet. We are still working on it.
 
 ## Scource Paper
 Guarnaschelli, A., Salomone, H. E., & Méndez, C. A. (2020). A stochastic approach for integrated production and distribution planning in dairy supply chains. Computers and Chemical Engineering, 140. https://doi.org/10.1016/j.compchemeng.2020.106966
