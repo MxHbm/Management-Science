@@ -4,15 +4,6 @@ class Parameters:
 
     def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
 
-        # Sets for creating the parameters
-        self.T = T
-        self.F = F
-        self.S = S
-        self.FT = FT
-        self.MP = MP
-        self.CT = CT
-        self.L = L
-
         #First definition of parameters and call for implementing them
         self.fty = self.create_fty()
         self.cty = self.create_cty()
