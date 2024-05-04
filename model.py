@@ -2,6 +2,7 @@
 
 #### Import python scrips
 from data_generation import *  #Werte für Parameter
+from scenario_reduction import * 
 import globals #Globale variablen
 #from gurobipy import * #Gurobi
 import gurobipy as gp
@@ -63,9 +64,10 @@ def main():
     L = [i for i in range(globals.L_end)]
 
     ### Get the needed parameters
-
     data = Parameters_FirstStage(T,F,S,FT,MP,CT,L)
 
+    #Create the set of reduced scenarios
+    Scenarios = Scenario_Analyse()
 
 
     print('data.cmin: ', data.cmin)
