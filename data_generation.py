@@ -1,4 +1,5 @@
 from gurobipy import *
+from gurobipy import GRB
 
 ### Script for generating data fpr our model
 

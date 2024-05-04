@@ -3,7 +3,8 @@
 #### Import python scrips
 from data_generation import *  #Werte für Parameter
 import globals #Globale variablen
-from gurobipy import * #Gurobi
+#from gurobipy import * #Gurobi
+import gurobipy as gp
 
 def Objective_Function(data, decisionVariables_FirstStage, model, T, F, S, FT, MP, CT, L):
     ''' objective function:
@@ -70,7 +71,7 @@ def main():
     print('data: ', data)
 
     # Create a new model
-    model = Model("FirstStage")
+    model = gp.Model("FirstStage")
 
     # get the needed decision variables
     decisionVariables_FirstStage = DecisionVariables_FirstStage(model, T, F, S, FT, MP, CT, L)
