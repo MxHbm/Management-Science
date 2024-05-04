@@ -1,10 +1,24 @@
+from gurobipy import *
+
 ### Script for generating data fpr our model
 
 class Parameters_FirstStage:
 
     def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        ''' Constructor for this class.
+        :param T: list of time periods
+        :param F: list of families
+        :param S: list of sites
+        :param FT: list of family types
+        :param MP: list of manufacturing plants
+        :param CT: list of customer types
+        :param L: list of locations (Distribution Centers)
+
+        '''
+
 
         #First definition of parameters and call for implementing them
+        self.hl = self.create_hl()
         #Haoran
         self.fty = self.create_fty()
         self.cty = self.create_cty()
@@ -26,7 +40,7 @@ class Parameters_FirstStage:
         self.alpha = self.create_alpha()
         self.ost = self.create_ost()
         #Christoph
-        self.wp = self.create_wp(MP, T, self.sigma)
+        self.wp = self.create_wp(MP, T)
         self.el_min = self.create_el_min(F)
         self.el_max = self.create_el_max(F)
         self.is_ = self.create_is(MP)
@@ -48,6 +62,11 @@ class Parameters_FirstStage:
         # Additonal
         self.names_DC = self.create_names_DC()
 
+    def create_hl(self) -> int:
+        ''' Add description of the function here '''
+        hl = 30         # 30 days in the paper 
+        hl = 5         # just for debugging (not real number)   
+        return hl
 
     def create_fty(self) -> list:
         ''' Add description of the function here '''
@@ -90,11 +109,13 @@ class Parameters_FirstStage:
 
     def create_tl_min(self) -> list:
         ''' Add description of the function here '''
-        pass
+        tl_min = 0      # just for debugging (not real number)
+        return tl_min
 
     def create_tl_max(self) -> list:
         ''' Add description of the function here '''
-        pass
+        tl_max = 250     # just for debugging (not real number)
+        return tl_max
 
     def create_r0(self) -> list:
         ''' Add description of the function here '''
@@ -124,11 +145,11 @@ class Parameters_FirstStage:
         ''' Add description of the function here '''
         pass
 
-    def create_wp(self, M, T, sigma ) -> list:
+    def create_wp(self, M, T ) -> list:
         ''' m: manufacturing plant, 
             t: time (days), 
             sigma: process time for family produced in manufacturing plant m'''
-
+        # self.sigma
         pass
 
     def create_el_min(self, F) -> list:
@@ -174,7 +195,8 @@ class Parameters_FirstStage:
 
     def create_zmax(self) -> list:
         ''' Für schichtbasierte Produktion maximale Schichten, sonst 1'''
-        pass
+        zmax = 1        # just for debugging (not real number)
+        return zmax
 
     def create_sc(self) -> list:
         ''' Produktionskapazität der Produktionsstätte m einer Arbeitsschich '''
@@ -212,3 +234,40 @@ class Parameters_FirstStage:
         """ Namen der Distribution center """
 
         return ["DC-SAL", "DC-CBA", "DC-CTE","DC-POS","DC-RAF","DC-MZA", "DC-ROS", "DC_NQN", "DC-BUE"]
+
+
+class DecisionVariables_FirstStage:
+
+    def __init__(self, model, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        """    self.CreateDecisionVariables(model, T, F, S, FT, MP, CT, L)
+
+    def CreateDecisionVariables(self, model, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        ''' Add description of the function here '''
+    """
+        self.EXI = model.addVar(vtype=GRB.CONTINUOUS, name="EXI")
+        self.ENB = model.addVar(lb=0, name="ENB")
+        self.TCOST = model.addVar(lb=0, name="TCOST")
+        self.SN = model.addVar(lb=0, name="SN")
+        self.RMt = model.addVars(MP, T, lb=0, name="RMt")
+        self.IFf_t = model.addVars(F, T, lb=0, name="IFf_t")
+        self.FPf_t = model.addVars(F, T, lb=0, name="FPf_t")
+        self.Vi_l_t = model.addVars(F, L, T, lb=0, name="Vi_l_t")
+        self.DVf_l_t = model.addVars(F, L, T, lb=0, name="DVf_l_t")
+        self.Am_t = model.addVars(MP, T, lb=0, name="Am_t")
+        self.MOm_t = model.addVars(MP, T, lb=0, name="MOm_t")
+        self.IWIPm_t = model.addVars(MP, T, lb=0, name="IWIPm_t")
+        self.Qm_t = model.addVars(MP, T, lb=0, name="Qm_t")
+        self.Z1m_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Z1m_t")
+        self.Z2m_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Z2m_t")
+        self.Auxm_t = model.addVars(MP, T, lb=0, name="Auxm_t")
+
+        #return model
+
+class IntegerVariables:
+
+    def __init__(self, model, parameters_FirstStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        self.TRi_l_t = model.addVars(FT, L, T, lb=0, name="TRi_l_t")
+        self.Ef_t = model.addVars(F, T, lb=0, name="Ef_t")
+        self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=parameters_FirstStage.zmax, name="Zm_t")
+        
+
