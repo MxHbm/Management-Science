@@ -1,5 +1,14 @@
-### Script for generating data fpr our model
+import random
 
+### RANODM NUMBER GENERATOR 
+
+# Create an instance of the Random class
+rng = random.Random()
+
+# Seed the random number generator for reproducibility
+rng.seed(42)
+
+### Script for generating data fpr our model
 class Parameters_FirstStage:
 
     def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
@@ -39,7 +48,7 @@ class Parameters_FirstStage:
         self.imax = self.create_imax()
         self.zmax = self.create_zmax()
         self.sc = self.create_sc()
-        self.beta = self.create_beta()
+        self.beta = self.create_beta(MP)
         self.sigma = self.create_sigma()
         self.iwip0 = self.create_iwip0()
         self.tc = self.create_tc()
@@ -54,8 +63,15 @@ class Parameters_FirstStage:
         pass
 
     def create_cty(self) -> list:
-        ''' Add description of the function here '''
-        pass
+        ''' Campaign type for production plant m -> Which work model is used in manufacturing plant m 
+        
+            0 = Lengthbased
+            1 = Shiftbased
+        '''
+        
+        cty = [0,1,1,1]
+        
+        return cty
 
     def create_fpr(self) -> list:
         ''' Add description of the function here '''
@@ -78,11 +94,11 @@ class Parameters_FirstStage:
         pass
 
     def create_tau(self) -> list[int]:
-        ''' Transportzeit von Fabrik zu verteilzentrum in tagen'''
+        ''' Transportation time from factory to distribution center in days'''
 
-        transportzeit_fabrik_dc = [2,1,1,2,0,1,0,2,1]
+        transport_time_factory_dc = [2,1,1,2,0,1,0,2,1]
         
-        return transportzeit_fabrik_dc
+        return transport_time_factory_dc
 
     def create_i_0(self) -> list:
         ''' Add description of the function here '''
@@ -149,7 +165,7 @@ class Parameters_FirstStage:
         pass
 
     def create_omega_dc(self, F) -> list:
-        ''' distrinution center shelf-life of products of family f'''
+        ''' distribution center shelf-life of products of family f'''
         pass
 
     def create_rr(self, F) -> list:
@@ -165,50 +181,83 @@ class Parameters_FirstStage:
         pass
 
     def create_imax(self) -> list[list[int]]:
-        ''' Maximale Lagerbestände am Standort l für frische und trockene Produktfamilien '''
+        ''' Maximum storage capacities at location l for fresh and dry product families '''
 
-        max_lager_produktgruppen = [[12,10],[68, 114],[16, 35],[16,40],[9, 27],
+        max_storage_product_groups = [[12,10],[68, 114],[16, 35],[16,40],[9, 27],
                                     [31,54],[20, 81],[20,58],[58,195]]
         
-        return max_lager_produktgruppen
+        return max_storage_product_groups
 
-    def create_zmax(self) -> list:
-        ''' Für schichtbasierte Produktion maximale Schichten, sonst 1'''
-        pass
+    def create_zmax(self) -> list[int]:
+        ''' For shift-based production, maximum shifts, otherwise 1
+            Retrieved from paper
+        '''
 
-    def create_sc(self) -> list:
-        ''' Produktionskapazität der Produktionsstätte m einer Arbeitsschich '''
-        pass
+        zmax = [1,3,3,3]
 
-    def create_beta(self) -> list:
-        ''' Verschlechterungskoeffizient für Produkte, die in Werk m hergestellt werden '''
-        pass
+        return zmax
+
+    def create_sc(self) -> list[float]:
+        ''' Production capacity of the manufacturing plant m per work shift in metric tons
+            Retrieved from paper
+            0 for lenghtbased production plants
+        '''
+
+        sc = [0,110,150,16.66]
+
+        return sc
+
+    def create_beta(self) -> list[float]:
+        ''' Deterioration coefficient for products manufactured at factory m 
+            Coeffeicient ranodmly selected from [0, 0.05]
+        '''
+
+        #List for deterioration coefficients
+        # Powdered Milk, UHT Milk, Yogurt, Cheese
+        beta = [0.1,0,0,0]
+
+        return beta
 
     def create_sigma(self) -> list:
-        ''' Prozesszeit in Perioden für die in der Produktionsstätte m hergestellte Produktfamilie '''
-        pass
+        ''' Process time in periods for the family produced at manufacturing plant m
+
+        List for availability of product lines 
+        Powdered Milk: Need to be quality tested -> 1 day 
+        UHT Milk: Nothing mentioned -> 0 day
+        Yogurt: Nothing mentioned -> 0 day
+        Cheese: Ripening phase -> 4 days'''
+
+        # Powdered Milk, UHT Milk, Yogurt, Cheese
+
+        sigma = [1,0,0,4]
+
+        return sigma 
 
     def create_iwip0(self) -> list:
-        ''' Bestand unfertiger Erzeugnisse aus vorherigem Planungshorizont in Produktionsstätte m '''
-        pass
+        ''' Inventory of work-in-progress from previous planning horizon at manufacturing plant m '''
+        
+        # No data given -> Assume there is nothing given
+
+        iwip = [0,0,0,0]
+
+        return iwip
 
     def create_tc(self) -> list[list[int]]:
-        ''' Transportkosten vom Produktionskomplex zum Verteilzentrum '''
+        ''' Transportation costs from the production complex to the distribution center '''
         
-        transportkosten_produktgruppen_matrix = [[15.641,13.034],[4.956, 4.13],[10.332,8.61],[14.818, 12.348],[0.067, 0.056],
-                                                 [14.364, 11.97],[4.032, 3.36],[21.638,18.032],[9.021,7.518]]
+        transport_costs_product_group_matrix = [[15.641,13.034],[4.956, 4.13],[10.332,8.61],[14.818, 12.348],[0.067, 0.056],
+                                                [14.364, 11.97],[4.032, 3.36],[21.638,18.032],[9.021,7.518]]
         
-        return transportkosten_produktgruppen_matrix
-    
+        return transport_costs_product_group_matrix
 
     def create_sco(self) -> int:
-        ''' Setup Kosten in Monetary Units'''
+        ''' Setup costs in Monetary Units'''
         
         setup = 20 # unit is MU
 
         return setup
 
     def create_names_DC(self) -> list[str]: 
-        """ Namen der Distribution center """
+        """ Names of the distribution centers """
 
         return ["DC-SAL", "DC-CBA", "DC-CTE","DC-POS","DC-RAF","DC-MZA", "DC-ROS", "DC_NQN", "DC-BUE"]
