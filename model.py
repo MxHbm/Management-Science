@@ -5,6 +5,7 @@ from data_generation import *  #Werte für Parameter
 import globals #Globale variablen
 #from gurobipy import * #Gurobi
 import gurobipy as gp
+import datetime
 
 def Objective_Function(data, decisionVariables_FirstStage, model, T, F, S, FT, MP, CT, L):
     ''' objective function:
@@ -89,13 +90,23 @@ def main():
     model.optimize()
 
     # Print the results
-    for v in model.getVars():
-        print('%s %g' % (v.varName, v.x))
+    #for v in model.getVars():
+    #    print('%s %g' % (v.varName, v.x))
 
+    #print('Attr:', model.getAttr('X'))
     print('Obj: %g' % model.objVal)
 
+    # Save the model
+    # Add timestamp to file name
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    file_name = f"results/result_FirstStage_LP_{timestamp}.lp"
+    model.write(file_name)
 
+    file_name = f"results/result_FirstStage_MPS_{timestamp}.mps"
+    model.write(file_name)
 
+    file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
+    model.write(file_name)
 
 if __name__ == "__main__":
     main()
