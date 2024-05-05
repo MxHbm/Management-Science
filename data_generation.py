@@ -33,14 +33,14 @@ class Parameters_FirstStage:
         #First definition of parameters and call for implementing them
         self.hl = self.create_hl()
         #Haoran
-        self.fty = self.create_fty()
-        self.cty = self.create_cty()
-        self.fpr = self.create_fpr()
-        self.fy = self.create_fy()
-        self.rsc = self.create_rsc()
-        self.roc = self.create_roc()
-        self.el = self.create_el()
-        self.tau = self.create_tau()
+        self.fty = self.create_fty(F)
+        self.cty = self.create_cty(CT)
+        self.fpr = self.create_fpr(F)
+        self.fy = self.create_fy(F)
+        self.rsc = self.create_rsc(S)
+        self.roc = self.create_roc(S)
+        self.el = self.create_el(F)
+        self.tau = self.create_tau(L)
         #Julien
         self.i_0 = self.create_i_0()
         self.tl_min = self.create_tl_min()
@@ -81,11 +81,11 @@ class Parameters_FirstStage:
         hl = 5         # just for debugging (not real number)   
         return hl
 
-    def create_fty(self) -> list:
-        ''' Add description of the function here '''
+    def create_fty(self, F) -> list:
+        ''' The type (Fresh or Dry) of family f '''
         pass
 
-    def create_cty(self) -> list:
+    def create_cty(self, CT) -> list:
         ''' Campaign type for production plant m -> Which work model is used in manufacturing plant m 
         
             0 = Lengthbased
@@ -96,27 +96,27 @@ class Parameters_FirstStage:
         
         return cty
 
-    def create_fpr(self) -> list:
-        ''' Add description of the function here '''
+    def create_fpr(self, F) -> list:
+        ''' The family produced by manufacturing plant m '''
         pass
 
-    def create_fy(self) -> list:
-        ''' Add description of the function here '''
+    def create_fy(self, F) -> list:
+        ''' Family f production yield for ua nit of processed raw milk '''
         pass
 
-    def create_rsc(self) -> list:
-        ''' Add description of the function here '''
+    def create_rsc(self, S) -> list:
+        ''' Raw milk third supplier cost '''
         pass
 
-    def create_roc(self) -> list:
-        ''' Add description of the function here '''
+    def create_roc(self, S) -> list:
+        ''' Raw milk over stock cost per volume unit '''
         pass
 
-    def create_el(self) -> list:
-        ''' Add description of the function here '''
+    def create_el(self, F) -> list:
+        ''' Export lot size in metric tons of family f '''
         pass
 
-    def create_tau(self) -> list[int]:
+    def create_tau(self, L) -> list[int]:
         ''' Transportation time from factory to distribution center in days'''
 
         transport_time_factory_dc = [2,1,1,2,0,1,0,2,1]
