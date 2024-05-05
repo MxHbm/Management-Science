@@ -33,14 +33,14 @@ class Parameters_FirstStage:
         #First definition of parameters and call for implementing them
         self.hl = self.create_hl()
         #Haoran
-        self.fty = self.create_fty()
-        self.cty = self.create_cty()
-        self.fpr = self.create_fpr()
-        self.fy = self.create_fy()
-        self.rsc = self.create_rsc()
-        self.roc = self.create_roc()
-        self.el = self.create_el()
-        self.tau = self.create_tau()
+        self.fty = self.create_fty(F)
+        self.cty = self.create_cty(CT)
+        self.fpr = self.create_fpr(F)
+        self.fy = self.create_fy(F)
+        self.rsc = self.create_rsc(S)
+        self.roc = self.create_roc(S)
+        self.el = self.create_el(F)
+        self.tau = self.create_tau(L)
         #Julien
         self.i_0 = self.create_i_0()
         self.tl_min = self.create_tl_min()
