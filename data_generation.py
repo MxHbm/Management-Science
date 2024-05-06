@@ -31,7 +31,7 @@ class Parameters_FirstStage:
 
 
         #First definition of parameters and call for implementing them
-        self.hl = self.create_hl()
+        self.hl = self.create_hl(T)
         #Haoran
         self.fty = self.create_fty(F)
         self.cty = self.create_cty(CT)
@@ -66,7 +66,7 @@ class Parameters_FirstStage:
         self.imax = self.create_imax()
         self.zmax = self.create_zmax()
         self.sc = self.create_sc()
-        self.beta = self.create_beta(MP)
+        self.beta = self.create_beta()
         self.sigma = self.create_sigma()
         self.iwip0 = self.create_iwip0()
         self.tc = self.create_tc()
@@ -75,10 +75,10 @@ class Parameters_FirstStage:
         # Additonal
         self.names_DC = self.create_names_DC()
 
-    def create_hl(self) -> int:
+    def create_hl(self, T) -> int:
         ''' Add description of the function here '''
-        hl = 30         # 30 days in the paper 
-        hl = 5         # just for debugging (not real number)   
+        hl = T[-1] + 1        # 30 days in the paper 
+
         return hl
 
     def create_fty(self, F) -> list:
@@ -319,8 +319,9 @@ class DecisionVariables_FirstStage:
 class IntegerVariables:
 
     def __init__(self, model, parameters_FirstStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
-        self.TRi_l_t = model.addVars(FT, L, T, lb=0, name="TRi_l_t")
-        self.Ef_t = model.addVars(F, T, lb=0, name="Ef_t")
-        self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=parameters_FirstStage.zmax, name="Zm_t")
+        self.TRi_l_t = model.addVars(FT, L, T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t")
+        self.Ef_t = model.addVars(F, T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
+        #self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=parameters_FirstStage.zmax, name="Zm_t")
+        self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
         
 

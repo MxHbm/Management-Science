@@ -7,11 +7,14 @@ import matplotlib.pyplot as plt
 class Scenario_Analyse:
     """ Creates a object containing the base scenarios and some logic to compute a Cluster analysis to get a set of reduced sceanrios """
 
-    def __init__(self, K:int = 9, epsilon:float = 0.0001, N:int = 10000) -> None:
+    def __init__(self, K:int = 9, epsilon:int = 15, N:int = 10000) -> None:
         
         # Initialize with default parameters for scenario analysis
+        ''' Target number Of Scenarios (K>1)'''
         self._K = K
-        self._epsilon = epsilon
+        ''' epsilon ... minimum allowed expected frequency (integer value) '''
+        self._epsilon = epsilon         
+
         self._N = N
 
         # Define scenarios and their probabilities
@@ -38,6 +41,23 @@ class Scenario_Analyse:
 
         #Compute K-means Clustering and create the set of reduced scenarios
         self.apply_K_means_Clustering()
+
+    def __str__(self):
+        ''' Print the base scenarios, their probabilities and the reduced scenarios with their probabilities '''
+
+        # maybe use pretty print library to print the output in a more readable way
+        output = "Base Scenarios:\n"
+        output += str(self._base_scenarios) + "\n"
+        output += "Probabilities of Base Scenarios:\n"
+        output += str(self._p_base_scenarios) + "\n"
+        output += "Reduced Scenarios:\n"
+        output += str(self._reduced_scenarios) + "\n"
+        output += "Probabilities of Reduced Scenarios:\n"
+        output += str(self._p_reduced_scenarios) + "\n"
+        return output
+
+
+
 
 
     def create_base_scenarios_and_p(self) -> None: 
@@ -68,6 +88,7 @@ class Scenario_Analyse:
             present multiple timnes dependent on the probability!
         '''
 
+        ''' W is a dataset with m fields, corresponding to the m number of components in a scenario vector. '''
         self.W = []  # Initialize the dataset W.
         
         # Loop through each scenario in the original _base_scenarios vector.
@@ -75,6 +96,8 @@ class Scenario_Analyse:
             
             # Calculate the frequency of the current scenario based on its probability.
             f_scenario = round(self._N * self._p_base_scenarios[i])
+
+            #print(f'{i}, f_scenario: {self._N} * {self._p_base_scenarios[i]} = {f_scenario}')
 
              # Check if the frequency meets a certain threshold (epsilon).
             if(f_scenario >= self._epsilon): 
@@ -149,7 +172,7 @@ class Scenario_Analyse:
         data = self.normalize_dataset(self.W)
 
         # Create a K-means clustering model with specified number of clusters and a fixed random state for reproducibility.
-        kmeans = KMeans(n_clusters=self._K, random_state=0)
+        kmeans = KMeans(n_clusters=self._K, random_state=0, n_init='auto')
         
         # Fit the K-means model on the normalized data.
         kmeans.fit(data)
