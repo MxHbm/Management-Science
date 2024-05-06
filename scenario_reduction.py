@@ -1,6 +1,7 @@
 
 import numpy as np
 from sklearn.cluster import KMeans
+import pprint
 import matplotlib.pyplot as plt
 
 
@@ -45,15 +46,14 @@ class Scenario_Analyse:
     def __str__(self):
         ''' Print the base scenarios, their probabilities and the reduced scenarios with their probabilities '''
 
-        # maybe use pretty print library to print the output in a more readable way
         output = "Base Scenarios:\n"
-        output += str(self._base_scenarios) + "\n"
+        output += pprint.pformat(self._base_scenarios) + "\n"
         output += "Probabilities of Base Scenarios:\n"
-        output += str(self._p_base_scenarios) + "\n"
+        output += pprint.pformat(self._p_base_scenarios) + "\n"
         output += "Reduced Scenarios:\n"
-        output += str(self._reduced_scenarios) + "\n"
+        output += pprint.pformat(self._reduced_scenarios) + "\n"
         output += "Probabilities of Reduced Scenarios:\n"
-        output += str(self._p_reduced_scenarios) + "\n"
+        output += pprint.pformat(self._p_reduced_scenarios) + "\n"
         return output
 
 

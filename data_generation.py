@@ -1,4 +1,5 @@
 
+from pprint import pprint
 import random
 
 ### RANODM NUMBER GENERATOR 
@@ -319,9 +320,14 @@ class DecisionVariables_FirstStage:
 class IntegerVariables:
 
     def __init__(self, model, parameters_FirstStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        print(parameters_FirstStage.zmax)
         self.TRi_l_t = model.addVars(FT, L, T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t")
         self.Ef_t = model.addVars(F, T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
-        #self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=parameters_FirstStage.zmax, name="Zm_t")
+        #self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=[parameters_FirstStage.zmax[m] for m in MP], name="Zm_t")
         self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
+
+        for m in MP:
+            for t in T:
+                self.Zm_t[(m, t)].ub = parameters_FirstStage.zmax[m]
         
 
