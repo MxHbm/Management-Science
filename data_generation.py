@@ -42,16 +42,16 @@ class Parameters_FirstStage:
         self.el = self.create_el(F)
         self.tau = self.create_tau(L)
         #Julien
-        self.i_0 = self.create_i_0()
-        self.tl_min = self.create_tl_min()
-        self.tl_max = self.create_tl_max()
-        self.r0 = self.create_r0()
-        self.r_max = self.create_r_max()
-        self.dmax = self.create_dmax()
-        self.cmin = self.create_cmin()
-        self.cmax = self.create_cmax()
-        self.alpha = self.create_alpha()
-        self.ost = self.create_ost()
+        self.i_0 = self.create_i_0(F, L)
+        self.tl_min = self.create_tl_min(F)
+        self.tl_max = self.create_tl_max(F)
+        self.r0 = self.create_r0(F)
+        self.r_max = self.create_r_max(F)
+        self.dmax = self.create_dmax(T, MP)
+        self.cmin = self.create_cmin(MP)
+        self.cmax = self.create_cmax(MP)
+        self.alpha = self.create_alpha(T, MP)
+        self.ost = self.create_ost(T, MP)
         #Christoph
         self.wp = self.create_wp(MP, T)
         self.el_min = self.create_el_min(F)
@@ -123,46 +123,47 @@ class Parameters_FirstStage:
         
         return transport_time_factory_dc
 
-    def create_i_0(self) -> list:
-        ''' Add description of the function here '''
+    def create_i_0(self, F, L) -> list:
+        ''' Family f Initial inventory at location l.e '''
         pass
 
-    def create_tl_min(self) -> list:
-        ''' Add description of the function here '''
+    def create_tl_min(self, F) -> list:
+        ''' Minimum  truckload capacity, respectively. '''
+
         tl_min = 0      # just for debugging (not real number)
         return tl_min
-
-    def create_tl_max(self) -> list:
-        ''' Add description of the function here '''
+    
+    def create_tl_max(self, F) -> list:
+        '''  Maximum truckload capacity, respectively. '''
         tl_max = 250     # just for debugging (not real number)
         return tl_max
 
-    def create_r0(self) -> list:
-        ''' Add description of the function here '''
+    def create_r0(self, F) -> list:
+        ''' Raw milk initial inventory. '''
         pass
 
-    def create_r_max(self) -> list:
-        ''' Add description of the function here '''
+    def create_r_max(self, F) -> list:
+        ''' Maximum raw milk inventory. '''
         pass
 
-    def create_dmax(self) -> list:
-        ''' Add description of the function here '''
+    def create_dmax(self, T, MP) -> list:
+        ''' Maximum campaign length (in days) for plant m. '''
         pass
 
-    def create_cmin(self) -> list:
-        ''' Add description of the function here '''
+    def create_cmin(self, MP) -> list:
+        ''' Minimum daily production capacity at manufacturing plant m '''
         pass
 
-    def create_cmax(self) -> list:
-        ''' Add description of the function here '''
+    def create_cmax(self, MP) -> list:
+        ''' Maximum daily production capacity at manufacturing plant m '''
         pass
 
-    def create_alpha(self) -> list:
-        ''' Add description of the function here '''
+    def create_alpha(self, T, MP) -> list:
+        ''' Setup time in periods for production plant m '''
         pass
 
-    def create_ost(self) -> list:
-        ''' Add description of the function here '''
+    def create_ost(self, T, MP) -> list:
+        ''' Remaining days to finish an ongoing setup task at manufacturing plant m '''
         pass
 
     def create_wp(self, M, T ) -> list:
