@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 class Scenario_Analyse:
     """ Creates a object containing the base scenarios and some logic to compute a Cluster analysis to get a set of reduced sceanrios """
 
-    def __init__(self, K:int = 9, epsilon:int = 15, N:int = 10000) -> None:
+    def __init__(self, K:int = 9, epsilon:float = 0.0001, N:int = 10000) -> None:
         
         # Initialize with default parameters for scenario analysis
         ''' Target number Of Scenarios (K>1)'''
