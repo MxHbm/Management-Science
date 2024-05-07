@@ -12,7 +12,11 @@ import datetime
 def Objective_Function(data, decisionVariables_FirstStage: DecisionVariables_FirstStage, model, T, F, S, FT, MP, CT, L):
 =======
 def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, model, T, F, S, FT, MP, CT, L):
+<<<<<<< HEAD
 >>>>>>> 58e4615 (:sparkles: new decision variables and objective function)
+=======
+
+>>>>>>> d7869e2 (small adaptiosn to the branch)
     ''' objective function:
     TCOST ... total costs
     ENB ... expected net benefit
