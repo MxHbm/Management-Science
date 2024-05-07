@@ -1,4 +1,3 @@
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -163,6 +162,3 @@ cython_debug/
 
 # Results folder
 results/
-
-#pychache folder 
-__pycache__/

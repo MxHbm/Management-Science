@@ -13,13 +13,7 @@ def Objective_Function(data, decisionVariables_FirstStage, model, T, F, S, FT, M
     TCOST ... total costs
     ENB ... expected net benefit
     '''
-    print('FT:',  FT)
-    print('L:',  L)
-    print('data.tc:',  data.tc)
-
-    print(decisionVariables_FirstStage)
-
-
+    # Objective function
     model.setObjective( sum(data.tc[l][i] for i in FT for l in L ), GRB.MINIMIZE)     #for t in T
 
     return model
@@ -28,8 +22,6 @@ def Objective_Function(data, decisionVariables_FirstStage, model, T, F, S, FT, M
 def Constraints(data, decisionVariables_FirstStage, integerVariables, model, T, F, S, FT, MP, CT, L):
     ''' constraints: 
     '''
-
-    print(decisionVariables_FirstStage)
 
     # Constraint 1
 
@@ -52,27 +44,7 @@ def Constraints(data, decisionVariables_FirstStage, integerVariables, model, T, 
 
     return model
 
-def main():
-
-    # Erzeuge Sets für das Gurobi Modell
-    T = [i for i in range(globals.T_end)]
-    F = [i for i in range(globals.F_end)]
-    S = [i for i in range(globals.S_end)]
-    FT = globals.FT_values
-    MP = [i for i in range(globals.MP_end)]
-    CT = globals.CT_values
-    L = [i for i in range(globals.L_end)]
-
-    ### Get the needed parameters
-    data = Parameters_FirstStage(T,F,S,FT,MP,CT,L)
-
-    #Create the set of reduced scenarios
-    Scenarios = Scenario_Analyse()
-
-
-    print('data.cmin: ', data.cmin)
-    print('data: ', data)
-
+def Run_Model(data, T, F, S, FT, MP, CT, L):
     # Create a new model
     model = gp.Model("FirstStage")
 
@@ -109,6 +81,29 @@ def main():
 
     file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
     model.write(file_name)
+
+def main():
+
+    # Erzeuge Sets für das Gurobi Modell
+    T = [i for i in range(globals.T_end)]
+    F = [i for i in range(globals.F_end)]
+    S = [i for i in range(globals.S_end)]
+    FT = globals.FT_values
+    MP = [i for i in range(globals.MP_end)]
+    CT = globals.CT_values
+    L = [i for i in range(globals.L_end)]
+
+    ### Get the needed parameters
+    data = Parameters_FirstStage(T,F,S,FT,MP,CT,L)
+
+    #Create the set of reduced scenarios
+    Scenarios = Scenario_Analyse()
+
+    print(Scenarios)
+
+    # Model
+    Run_Model(data, T, F, S, FT, MP, CT, L)
+    
 
 if __name__ == "__main__":
     main()
