@@ -3,6 +3,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
@@ -163,6 +164,3 @@ cython_debug/
 
 # Results folder
 results/
-
-#pychache folder 
-__pycache__/
