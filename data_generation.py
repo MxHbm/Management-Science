@@ -428,28 +428,48 @@ class Parameters_SecondStage:
         self.dri_s_t = self.create_dri_s_t(S, T)
         
     def create_dp(self, S, F, L, T) -> list:
-        ''' Demand of product f at location l in time period t '''
+        ''' Family demand for distribution center l on day t under scenario s. '''
         pass
 
     def create_rho_s(self, S) -> list:
-        ''' Production capacity of site s in metric tons '''
-        pass
+        ''' probability of scenario s'''
+        supply_scenarios = 3
+        family_scenarios = 5
+        
+        rho_s = [ #  UHT, Powdered Milk, Yogurt, Cheese, Raw Milk
+                    [0.4,   0.25,        0.4,   0.3,     0.5],         # scenario 1
+                    [0.35,  0.35,        0.3,   0.4,     0.15],        # scenario 2
+                    [0.25,  0.4,         0.3,   0.3,     0.35]         # scenario 3
+        ]
+
+        rho_s = [1/243 for _ in range(243)]     # dummy values
+
+        return rho_s
+    
 
     def create_dri_s_t(self, S, T) -> list:
-        ''' Raw milk inflow at site s in time period t '''
+        ''' Raw milk daily input on day t under scenario s'''
         pass
 
 class DecisionVariables_SecondStage:
 
-    def __init__(self, model, parameters_SecondStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+    def __init__(self, model, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
         self.SAs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="SAs_f_l_t")
         self.SOs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="SOs_f_l_t")
         self.OSs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="OSs_f_l_t")
-        self.RCs_s = model.addVars(S, lb=0, name="RCs_s")
-        self.RSs_t = model.addVars(T, lb=0, name="RSs_t")
-        self.ROs_t = model.addVars(T, lb=0, name="ROs_t")
-        self.RIs_t = model.addVars(T, lb=0, name="RIs_t")
+        self.RCs = model.addVars(S, lb=0, name="RCs_s")
+        self.RSs_t = model.addVars(S, T, lb=0, name="RSs_t")
+        self.ROs_t = model.addVars(S, T, lb=0, name="ROs_t")
+        self.RIs_t = model.addVars(S, T, lb=0, name="RIs_t")
         self.IDs_f_l_t = model.addVars(S, F, L, T, lb=0, name="IDs_f_l_t")
+
+class BinaryVariables:
+
+    def __init__(self, model, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        self.R1m_t = model.addVars(MP, T, vtype=GRB.BINARY, name="R1m_t")
+        self.R2m_t = model.addVars(MP, T, vtype=GRB.BINARY, name="R2m_t")
+        self.Ym_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
+
 
 class IntegerVariables:
 

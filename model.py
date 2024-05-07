@@ -8,7 +8,7 @@ import globals #Globale variablen
 import gurobipy as gp
 import datetime
 
-def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, model, T, F, S, FT, MP, CT, L):
+def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L):
     ''' objective function:
     TCOST ... total costs
     ENB ... expected net benefit
@@ -21,9 +21,12 @@ def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStag
     #model.setObjective( sum(data.tc[l][i] for i in FT for l in L ), GRB.MINIMIZE)     #for t in T
 
     model.setObjective(
-        quicksum(decisionVariables_FirstStage.TRi_l_t[i, l, t] * data.tc[l][i] for i in FT for l in L for t in T) +
-        quicksum(decisionVariables_FirstStage.Ym_t[m, t] * data.sco[m] for m in MP for t in T) +
-        data.rho_s * quicksum(decisionVariables_FirstStage.RSs_t[s, t] * data.rsc + decisionVariables_FirstStage.ROs_t[s, t] * data.roc for s in S for t in T),
+        quicksum(integerVariables.TRi_l_t[i, l, t] * data.tc[l][i] for i in FT for l in L for t in T) 
+        + quicksum(binaryVariables.Ym_t[m, t] * data.sco for m in MP for t in T) 
+        + parameters_SecondStage.rho_s[0] 
+            * quicksum(decisionVariables_SecondStage.RSs_t[s, t] * data.rsc 
+                   + decisionVariables_SecondStage.ROs_t[s, t] * data.roc 
+                   for s in S for t in T),
         GRB.MINIMIZE
     )
 
@@ -34,14 +37,15 @@ def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStag
     
     model.setObjective((
         quicksum(
-            data.re[f] * data.ls_f[f] * IntegerVariables.Ef_t[f, t]
+            data.re[f] * data.ls_f[f] * integerVariables.Ef_t[f, t]
             for f in F for t in T
         )
-        + data.rho_s 
+        + parameters_SecondStage.rho_s 
             * quicksum(
                 quicksum(
                     data.r[f] 
-                    * (parameters_SecondStage.dps_f_l_t[s][f][l][t] - decisionVariables_SecondStage.SO_sflt[s, f, l, t])
+                    * (parameters_SecondStage.dps_f_l_t[s][f][l][t] 
+                       - decisionVariables_SecondStage.SO_sflt[s, f, l, t])
                     for l in L for f in F for t in T
                 )
                 + quicksum(
@@ -51,6 +55,7 @@ def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStag
                 for s in S )
         ) - model.getObjective().getValue(),
         GRB.MAXIMIZE) 
+    
 
     return model
 
@@ -88,6 +93,9 @@ def Run_Model(data, T, F, S, FT, MP, CT, L):
     decisionVariables_FirstStage = DecisionVariables_FirstStage(model, T, F, S, FT, MP, CT, L)
 
     # get the needed integer variables
+    binaryVariables = BinaryVariables(model, T, F, S, FT, MP, CT, L)
+
+    # get the needed integer variables
     integerVariables = IntegerVariables(model, data, T, F, S, FT, MP, CT, L)
 
     # get the needed second stage parameters
@@ -97,7 +105,7 @@ def Run_Model(data, T, F, S, FT, MP, CT, L):
     decisionVariables_SecondStage = DecisionVariables_SecondStage(model, T, F, S, FT, MP, CT, L)
 
     # Add the objective function
-    model = Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, model, T, F, S, FT, MP, CT, L)
+    model = Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L)
 
     # Add the constraints
     model = Constraints(data, decisionVariables_FirstStage, integerVariables, model, T, F, S, FT, MP, CT, L)
