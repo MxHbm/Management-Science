@@ -34,8 +34,8 @@ class Parameters_FirstStage:
         #First definition of parameters and call for implementing them
         self.hl = self.create_hl(T)
         #Haoran
-        self.fty = self.create_fty(F)
-        self.cty = self.create_cty(CT)
+        self.fty = self.create_fty()
+        self.cty = self.create_cty()
         self.fpr = self.create_fpr(F)
         self.fy = self.create_fy(F)
         self.rsc = self.create_rsc(S)
@@ -44,8 +44,8 @@ class Parameters_FirstStage:
         self.tau = self.create_tau(L)
         #Julien
         self.i_0 = self.create_i_0(F, L)
-        self.tl_min = self.create_tl_min(F)
-        self.tl_max = self.create_tl_max(F)
+        self.tl_min = self.create_tl_min()
+        self.tl_max = self.create_tl_max()
         self.r0 = self.create_r0(F)
         self.r_max = self.create_r_max(F)
         self.dmax = self.create_dmax(T, MP)
@@ -83,10 +83,18 @@ class Parameters_FirstStage:
         return hl
 
     def create_fty(self, F) -> list:
-        ''' The type (Fresh or Dry) of family f '''
-        pass
+        ''' The type (Fresh or Dry) of family f 
+        dry (not refrigerated) for products of the UHT and Powdered Milk families; and fresh (refrigerated), for
+        products of the Yogurt and Cheese families
 
-    def create_cty(self, CT) -> list:
+        Dry = 0
+        Fresh = 1
+        '''
+
+        return [0,0,1,1]
+        
+
+    def create_cty(self) -> list:
         ''' Campaign type for production plant m -> Which work model is used in manufacturing plant m 
         
             0 = Lengthbased
@@ -105,9 +113,10 @@ class Parameters_FirstStage:
         ''' Family f production yield for ua nit of processed raw milk '''
         pass
 
-    def create_rsc(self, S) -> list:
+    def create_rsc(self) -> int:
         ''' Raw milk third supplier cost '''
-        pass
+        
+        return 2
 
     def create_roc(self, S) -> list:
         ''' Raw milk over stock cost per volume unit '''
@@ -128,15 +137,16 @@ class Parameters_FirstStage:
         ''' Family f Initial inventory at location l.e '''
         pass
 
-    def create_tl_min(self, F) -> list:
+    def create_tl_min(self) -> list:
         ''' Minimum  truckload capacity, respectively. '''
 
-        tl_min = 0      # just for debugging (not real number)
+        tl_min = 4    
         return tl_min
     
-    def create_tl_max(self, F) -> list:
+    def create_tl_max(self) -> list:
         '''  Maximum truckload capacity, respectively. '''
-        tl_max = 250     # just for debugging (not real number)
+
+        tl_max = 8    
         return tl_max
 
     def create_r0(self, F) -> list:
@@ -174,38 +184,65 @@ class Parameters_FirstStage:
         # self.sigma
         pass
 
-    def create_el_min(self, F) -> list:
-        ''' F: lots of family f to be exported; here: Minimum number'''
-        pass
+    def create_el_min(self) -> list:
+        ''' F: lots of family f to be exported; here: Minimum number
+            UHT and Powdered Milk, Yogurt, Cheese
+        '''
+        return [0,25,0,0]
 
-    def create_el_max(self, F) -> list:
-        ''' F: lots of family f to be exported; here: Maximum number'''
 
-        pass
+    def create_el_max(self) -> list:
+        ''' F: lots of family f to be exported; here: Maximum number
+            UHT and Powdered Milk, Yogurt, Cheese
+        '''
+
+        return [0,120,0,0]
+
 
     def create_is(self, M) -> list:
         ''' M: maximum portion of total capacity that can be left idle during a production campaign  at manufacturing plant m with [0,1) value'''
         pass
 
-    def create_omega_fw(self, F) -> list:
-        ''' factory warehouse shelf-life of products of family f'''
+    def create_omega_fw(self) -> list:
+        ''' factory warehouse shelf-life of products of family f
+            UHT and Powdered Milk, Yogurt, Cheese
+            100 as a high number for long time span
+        '''
+
+        return [100,100,5,10]
+
         pass
 
-    def create_omega_dc(self, F) -> list:
-        ''' distribution center shelf-life of products of family f'''
-        pass
+    def create_omega_dc(self) -> list:
+        ''' distribution center shelf-life of products of family f
+            UHT and Powdered Milk, Yogurt, Cheese
+            100 as a high number for long time span
+        '''
 
-    def create_rr(self, F) -> list:
-        ''' revenue from reduced price selling of products of family f over stock (distressed sales) '''
-        pass
+        return [100,100,7,14]
 
-    def create_r(self, F) -> list:
-        ''' revenue from selling one ton of family f in any distribution center of the Supply Chain '''
-        pass
 
-    def create_re(self, F) -> list:
-        ''' revenue from exporting a batch of family f '''
-        pass
+    def create_rr(self) -> list:
+        ''' revenue from reduced price selling of products of family f over stock (distressed sales) 
+            UHT and Powdered Milk, Yogurt, Cheese
+        '''
+
+        return [1,  3.75, 0, 0]
+
+    def create_r(self) -> list:
+        ''' revenue from selling one ton of family f in any distribution center of the Supply Chain 
+            UHT and Powdered Milk, Yogurt, Cheese
+        '''
+        return [3.425,  12.5, 5, 12]
+
+
+    def create_re(self) -> list:
+        ''' revenue from exporting a batch of family f 
+            UHT and Powdered Milk, Yogurt, Cheese
+            only for powdered milk! 
+        '''
+        return [0,5,0,0]
+
 
     def create_imax(self) -> list[list[int]]:
         ''' Maximum storage capacities at location l for fresh and dry product families '''
@@ -219,7 +256,6 @@ class Parameters_FirstStage:
         ''' For shift-based production, maximum shifts, otherwise 1
             Retrieved from paper
         '''
-
 
         zmax = [1,3,3,3]
 
