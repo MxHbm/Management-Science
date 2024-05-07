@@ -8,15 +8,8 @@ import globals #Globale variablen
 import gurobipy as gp
 import datetime
 
-<<<<<<< HEAD
-def Objective_Function(data, decisionVariables_FirstStage: DecisionVariables_FirstStage, model, T, F, S, FT, MP, CT, L):
-=======
-def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, model, T, F, S, FT, MP, CT, L):
-<<<<<<< HEAD
->>>>>>> 58e4615 (:sparkles: new decision variables and objective function)
-=======
 
->>>>>>> d7869e2 (small adaptiosn to the branch)
+def Objective_Function(data:Parameters_FirstStage, decisionVariables_FirstStage: DecisionVariables_FirstStage, parameters_SecondStage:Parameters_SecondStage, decisionVariables_SecondStage: DecisionVariables_SecondStage, model, T, F, S, FT, MP, CT, L):
     ''' objective function:
     TCOST ... total costs
     ENB ... expected net benefit
@@ -29,9 +22,9 @@ def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStag
     #model.setObjective( sum(data.tc[l][i] for i in FT for l in L ), GRB.MINIMIZE)     #for t in T
 
     model.setObjective(
-        quicksum(decisionVariables_FirstStage.TRi_l_t[i, l, t] * data.tc[l][i] for i in FT for l in L for t in T) +
-        quicksum(decisionVariables_FirstStage.Ym_t[m, t] * data.sco[m] for m in MP for t in T) +
-        data.rho_s * quicksum(decisionVariables_FirstStage.RSs_t[s, t] * data.rsc + decisionVariables_FirstStage.ROs_t[s, t] * data.roc for s in S for t in T),
+        gp.gp.quicksum(decisionVariables_FirstStage.TRi_l_t[i, l, t] * data.tc[l][i] for i in FT for l in L for t in T) +
+        gp.gp.quicksum(decisionVariables_FirstStage.Ym_t[m, t] * data.sco[m] for m in MP for t in T) +
+        data.rho_s * gp.quicksum(decisionVariables_FirstStage.RSs_t[s, t] * data.rsc + decisionVariables_FirstStage.ROs_t[s, t] * data.roc for s in S for t in T),
         GRB.MINIMIZE
     )
 
@@ -41,18 +34,18 @@ def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStag
         each of families.'''
     
     model.setObjective((
-        quicksum(
+        gp.quicksum(
             data.re[f] * data.ls_f[f] * IntegerVariables.Ef_t[f, t]
             for f in F for t in T
         )
         + data.rho_s 
-            * quicksum(
-                quicksum(
+            * gp.quicksum(
+                gp.quicksum(
                     data.r[f] 
                     * (parameters_SecondStage.dps_f_l_t[s][f][l][t] - decisionVariables_SecondStage.SO_sflt[s, f, l, t])
                     for l in L for f in F for t in T
                 )
-                + quicksum(
+                + gp.quicksum(
                     decisionVariables_SecondStage.OSs_f_l_t[s, f, l, t] * data.rr[f]
                     for l in L for f in F for t in T
                 )
@@ -63,7 +56,8 @@ def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStag
     return model
 
 
-def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: DecisionVariables_FirstStage, integerVariables:IntegerVariables, model, T, F, S, FT, MP, CT, L):
+def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: DecisionVariables_FirstStage,parameters_SecondStage:Parameters_SecondStage, decisionVariables_SecondStage: DecisionVariables_SecondStage,
+                integerVariables:IntegerVariables, model, T, F, S, FT, MP, CT, L):
     ''' constraints: 
     '''
 
@@ -79,6 +73,16 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
     in progress, this is reflected in the parameter ostm > 0, constraint (38) keeping campaign indicator variable to 0 until the task is finished.
     """
     model.addConstrs(integerVariables.Zm_t[m, t-1] <= data.zmax[m] * (1 - integerVariables.Zm_t[m, t-1]) for m in MP for t in T if t > 0)
+    model.addConstrs(integerVariables.R2m_t[m,t] >= integerVariables.Ym_t[m,t] for m in MP for t in T)
+    model.addConstrs(integerVariables.R2m_t[m,t] - integerVariables.Zm_t[m, t-1] <= integerVariables.Ym_t[m,t] for m in MP for t in T if t > 0)
+    model.addConstrs>(integerVariables.Zm_t[m, t - t1] <= data.zmax[m] * (1 - integerVariables.Ym_t[m,t]) for m in MP for t in T for t1 in range(data.alpha[m]) if data.alpha[m] > 0 & t - t1 >= 0)
+    model.addConstrs(integerVariables.Zm_t[m,t] <= 0 for m in MP for t in T if t < data.ost[m])
+
+    #5.1.8. Factory inventory balances
+    """ The following constraints model the filling of factory inventory with finished products and the shipments and exports that deplete this
+    inventory."""
+
+    model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] == data.i_0[f,t] + gp.quicksum(decisionVariables_FirstStage.FPf_t[f,t1] for t1 in T if t1 <= t) - gp.quicksum(decisionVariables_FirstStage.Ef_t[f,t1] * data.el[f] for t1 in T if t1 <= t) - gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for l in L for t1 in T if t1 <= t) for f in F for t in T)
 
     
 

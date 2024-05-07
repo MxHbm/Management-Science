@@ -460,6 +460,9 @@ class IntegerVariables:
         self.Ef_t = model.addVars(F, T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
         #self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=[parameters_FirstStage.zmax[m] for m in MP], name="Zm_t")
         self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
+        self.R1m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R1m_t")
+        self.R2m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R2m_t")
+        self.Ym_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
 
         for m in MP:
             for t in T:
