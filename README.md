@@ -10,9 +10,13 @@ Welcome to the GitHub repository for our project developed as part of a task at 
 
 # Important Definitions 
 
+### :goal_net: Types of the products 
+- Dry = 0
+- Fresh = 1
+
 ### :goal_net: Order of the production plant 
 -> Each plant produces one of these products: PM,UHT,Yogurt,Cheese
-Please use exactly this order for generating the data
+Please use exactly this order for generating the dat
 
 ### :goal_net: Order of the distribution centers 
 -> In Fig. 3 all the DCs are shown, i used the following order for all lists! 
