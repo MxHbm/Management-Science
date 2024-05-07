@@ -75,6 +75,8 @@ class Parameters_FirstStage:
 
         # Additonal
         self.names_DC = self.create_names_DC()
+        self.ls_f = self.create_ls_f(F)
+        self.ls_p = self.create_ls_p(MP)
 
     def create_hl(self, T) -> int:
         ''' Add description of the function here '''
@@ -325,6 +327,20 @@ class Parameters_FirstStage:
         """ Names of the distribution centers """
 
         return ["DC-SAL", "DC-CBA", "DC-CTE","DC-POS","DC-RAF","DC-MZA", "DC-ROS", "DC_NQN", "DC-BUE"]
+    
+    def create_ls_f(self, F) -> list:
+        ''' Lot size for family f '''
+
+        lot_size = [1 for f in range(len(F))]         # dummy values
+
+        return lot_size
+    
+    def create_ls_p(self, MP) -> list:
+        ''' Lot size for plant m '''
+
+        lot_size = [1 for m in range(len(MP))]         # dummy values
+
+        return lot_size
 
 
 class DecisionVariables_FirstStage:
@@ -354,10 +370,53 @@ class DecisionVariables_FirstStage:
 
         #return model
 
+class Parameters_SecondStage:
+
+    def __init__(self, data, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        ''' Constructor for this class.
+        :param T: list of time periods
+        :param F: list of families
+        :param S: list of sites
+        :param FT: list of family types
+        :param MP: list of manufacturing plants
+        :param CT: list of customer types
+        :param L: list of locations (Distribution Centers)
+
+        '''
+        #First definition of parameters and call for implementing them
+        self.dps_f_l_t = self.create_dp(S, F, L, T)
+        self.rho_s = self.create_rho_s(S)
+        self.dri_s_t = self.create_dri_s_t(S, T)
+        
+    def create_dp(self, S, F, L, T) -> list:
+        ''' Demand of product f at location l in time period t '''
+        pass
+
+    def create_rho_s(self, S) -> list:
+        ''' Production capacity of site s in metric tons '''
+        pass
+
+    def create_dri_s_t(self, S, T) -> list:
+        ''' Raw milk inflow at site s in time period t '''
+        pass
+
+class DecisionVariables_SecondStage:
+
+    def __init__(self, model, parameters_SecondStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        self.SAs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="SAs_f_l_t")
+        self.SOs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="SOs_f_l_t")
+        self.OSs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="OSs_f_l_t")
+        self.RCs_s = model.addVars(S, lb=0, name="RCs_s")
+        self.RSs_t = model.addVars(T, lb=0, name="RSs_t")
+        self.ROs_t = model.addVars(T, lb=0, name="ROs_t")
+        self.RIs_t = model.addVars(T, lb=0, name="RIs_t")
+        self.IDs_f_l_t = model.addVars(S, F, L, T, lb=0, name="IDs_f_l_t")
+
 class IntegerVariables:
 
     def __init__(self, model, parameters_FirstStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
         print(parameters_FirstStage.zmax)
+
         self.TRi_l_t = model.addVars(FT, L, T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t")
         self.Ef_t = model.addVars(F, T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
         #self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=[parameters_FirstStage.zmax[m] for m in MP], name="Zm_t")
