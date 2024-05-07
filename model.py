@@ -9,7 +9,9 @@ import gurobipy as gp
 import datetime
 
 
+
 def Objective_Function(data:Parameters_FirstStage, decisionVariables_FirstStage: DecisionVariables_FirstStage, parameters_SecondStage:Parameters_SecondStage, decisionVariables_SecondStage: DecisionVariables_SecondStage, model, T, F, S, FT, MP, CT, L):
+
     ''' objective function:
     TCOST ... total costs
     ENB ... expected net benefit
@@ -34,6 +36,7 @@ def Objective_Function(data:Parameters_FirstStage, decisionVariables_FirstStage:
         each of families.'''
     
     model.setObjective((
+
         gp.quicksum(
             data.re[f] * data.ls_f[f] * IntegerVariables.Ef_t[f, t]
             for f in F for t in T
@@ -46,6 +49,7 @@ def Objective_Function(data:Parameters_FirstStage, decisionVariables_FirstStage:
                     for l in L for f in F for t in T
                 )
                 + gp.quicksum(
+
                     decisionVariables_SecondStage.OSs_f_l_t[s, f, l, t] * data.rr[f]
                     for l in L for f in F for t in T
                 )
@@ -144,6 +148,9 @@ def Run_Model(data, T, F, S, FT, MP, CT, L):
     decisionVariables_FirstStage = DecisionVariables_FirstStage(model, T, F, S, FT, MP, CT, L)
 
     # get the needed integer variables
+    binaryVariables = BinaryVariables(model, T, F, S, FT, MP, CT, L)
+
+    # get the needed integer variables
     integerVariables = IntegerVariables(model, data, T, F, S, FT, MP, CT, L)
 
     # get the needed second stage parameters
@@ -153,7 +160,8 @@ def Run_Model(data, T, F, S, FT, MP, CT, L):
     decisionVariables_SecondStage = DecisionVariables_SecondStage(model, T, F, S, FT, MP, CT, L)
 
     # Add the objective function
-    model = Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, model, T, F, S, FT, MP, CT, L)
+
+    model = Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L)
 
     # Add the constraints
     model = Constraints(data, decisionVariables_FirstStage, integerVariables, model, T, F, S, FT, MP, CT, L)

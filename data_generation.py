@@ -377,6 +377,7 @@ class Parameters_FirstStage:
     def create_ls_p(self, MP) -> list:
         ''' Lot size for plant m '''
 
+
         lot_size = [1 for m in range(len(MP))]         # dummy values
 
         return lot_size
@@ -472,15 +473,24 @@ class DecisionVariables_FirstStage:
 
 class DecisionVariables_SecondStage:
 
-    def __init__(self, model, parameters_SecondStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+    def __init__(self, model, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
         self.SAs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="SAs_f_l_t")
         self.SOs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="SOs_f_l_t")
         self.OSs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="OSs_f_l_t")
-        self.RCs_s = model.addVars(S, lb=0, name="RCs_s")
-        self.RSs_t = model.addVars(T, lb=0, name="RSs_t")
-        self.ROs_t = model.addVars(T, lb=0, name="ROs_t")
-        self.RIs_t = model.addVars(T, lb=0, name="RIs_t")
+        self.RCs = model.addVars(S, lb=0, name="RCs_s")
+        self.RSs_t = model.addVars(S, T, lb=0, name="RSs_t")
+        self.ROs_t = model.addVars(S, T, lb=0, name="ROs_t")
+        self.RIs_t = model.addVars(S, T, lb=0, name="RIs_t")
         self.IDs_f_l_t = model.addVars(S, F, L, T, lb=0, name="IDs_f_l_t")
+
+class BinaryVariables:
+
+    def __init__(self, model, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        self.R1m_t = model.addVars(MP, T, vtype=GRB.BINARY, name="R1m_t")
+        self.R2m_t = model.addVars(MP, T, vtype=GRB.BINARY, name="R2m_t")
+        self.Ym_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
+
+
 
 class IntegerVariables:
 
