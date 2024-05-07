@@ -27,53 +27,45 @@ class Parameters_FirstStage:
         :param MP: list of manufacturing plants
         :param CT: list of customer types
         :param L: list of locations (Distribution Centers)
-
         '''
-
 
         #First definition of parameters and call for implementing them
         self.hl = self.create_hl(T)
-        #Haoran
         self.fty = self.create_fty()
         self.cty = self.create_cty()
-        self.fpr = self.create_fpr(F)
-        self.fy = self.create_fy(F)
-        self.rsc = self.create_rsc(S)
-        self.roc = self.create_roc(S)
-        self.el = self.create_el(F)
-        self.tau = self.create_tau(L)
-        #Julien
-        self.i_0 = self.create_i_0(F, L)
+        self.fpr = self.create_fpr()
+        self.fy = self.create_fy()
+        self.rsc = self.create_rsc()
+        self.roc = self.create_roc()
+        self.el = self.create_el()
+        self.tau = self.create_tau()
+        self.i_0 = self.create_i_0(F, L) 
         self.tl_min = self.create_tl_min()
         self.tl_max = self.create_tl_max()
-        self.r0 = self.create_r0(F)
-        self.r_max = self.create_r_max(F)
-        self.dmax = self.create_dmax(T, MP)
-        self.cmin = self.create_cmin(MP)
-        self.cmax = self.create_cmax(MP)
-        self.alpha = self.create_alpha(T, MP)
-        self.ost = self.create_ost(T, MP)
-        #Christoph
+        self.r0 = self.create_r0()
+        self.r_max = self.create_r_max()
+        self.dmax = self.create_dmax()
+        self.cmin = self.create_cmin()
+        self.cmax = self.create_cmax()
+        self.alpha = self.create_alpha()
+        self.ost = self.create_ost(MP)
         self.wp = self.create_wp(MP, T)
-        self.el_min = self.create_el_min(F)
-        self.el_max = self.create_el_max(F)
+        self.el_min = self.create_el_min()
+        self.el_max = self.create_el_max()
         self.is_ = self.create_is(MP)
-        self.omega_fw = self.create_omega_fw(F)
-        self.omega_dc = self.create_omega_dc(F)
-        self.rr = self.create_rr(F)
-        self.r = self.create_r(F)
-        self.re = self.create_re(F)
-        #Max
+        self.omega_fw = self.create_omega_fw()
+        self.omega_dc = self.create_omega_dc()
+        self.rr = self.create_rr()
+        self.r = self.create_r()
+        self.re = self.create_re()
         self.imax = self.create_imax()
         self.zmax = self.create_zmax()
         self.sc = self.create_sc()
         self.beta = self.create_beta()
         self.sigma = self.create_sigma()
-        self.iwip0 = self.create_iwip0()
+        self.iwip0 = self.create_iwip0(MP)
         self.tc = self.create_tc()
         self.sco = self.create_sco()
-
-        # Additonal
         self.names_DC = self.create_names_DC()
 
     def create_hl(self, T) -> int:
@@ -82,7 +74,7 @@ class Parameters_FirstStage:
 
         return hl
 
-    def create_fty(self, F) -> list:
+    def create_fty(self) -> list[int]:
         ''' The type (Fresh or Dry) of family f 
         dry (not refrigerated) for products of the UHT and Powdered Milk families; and fresh (refrigerated), for
         products of the Yogurt and Cheese families
@@ -94,7 +86,7 @@ class Parameters_FirstStage:
         return [0,0,1,1]
         
 
-    def create_cty(self) -> list:
+    def create_cty(self) -> list[int]:
         ''' Campaign type for production plant m -> Which work model is used in manufacturing plant m 
         
             0 = Lengthbased
@@ -105,93 +97,138 @@ class Parameters_FirstStage:
         
         return cty
 
-    def create_fpr(self, F) -> list:
-        ''' The family produced by manufacturing plant m '''
-        pass
+    def create_fpr(self) -> list[float]:
+        ''' The family produced by manufacturing plant m 
+            UHT and Powdered Milk, Yogurt, Cheese
+            Differnece between production plants of Powedered Milk and Rest !!! '''
+        
+        return [110, 120, 150, 16.66]
 
-    def create_fy(self, F) -> list:
-        ''' Family f production yield for ua nit of processed raw milk '''
-        pass
+    def create_fy(self) -> list[float]:
+        ''' Family f production yield for ua nit of processed raw milk 
+            UHT and Powdered Milk, Yogurt, Cheese'''
+        
+        return [0.975, 0.12, 0.9, 0.11]
 
     def create_rsc(self) -> int:
         ''' Raw milk third supplier cost '''
         
         return 2
 
-    def create_roc(self, S) -> list:
-        ''' Raw milk over stock cost per volume unit '''
-        pass
+    def create_roc(self) -> int:
+        ''' Raw milk over stock cost per volume unit 
+            NOTHING MENTIONED - ASSUMPTION, THAT IT IS THREE TIMES THE NORMAL PRICE!
+        '''
 
-    def create_el(self, F) -> list:
-        ''' Export lot size in metric tons of family f '''
-        pass
+        return self.rsc * rng.randint(3,3)
 
-    def create_tau(self, L) -> list[int]:
+    def create_el(self) -> list[int]:
+        ''' Export lot size in metric tons of family f 
+            Lot size is 25 metric tons
+        '''
+        return [25,25,25,25]
+        
+    def create_tau(self) -> list[int]:
         ''' Transportation time from factory to distribution center in days'''
 
         transport_time_factory_dc = [2,1,1,2,0,1,0,2,1]
         
         return transport_time_factory_dc
 
-    def create_i_0(self, F, L) -> list:
+    def create_i_0(self, F, L) -> list[list[int]]:
         ''' Family f Initial inventory at location l.e '''
-        pass
+        
+        intitial_inventory = []
+        for f in F:
+            family_inventory = []
+            for l in L:
+                family_inventory.append(rng.randint(0,50))
 
-    def create_tl_min(self) -> list:
+            intitial_inventory.append(family_inventory)
+
+        return intitial_inventory
+
+    def create_tl_min(self) -> int:
         ''' Minimum  truckload capacity, respectively. '''
 
         tl_min = 4    
         return tl_min
     
-    def create_tl_max(self) -> list:
+    def create_tl_max(self) -> int:
         '''  Maximum truckload capacity, respectively. '''
 
         tl_max = 8    
         return tl_max
 
-    def create_r0(self, F) -> list:
+    def create_r0(self) -> int:
         ''' Raw milk initial inventory. '''
-        pass
 
-    def create_r_max(self, F) -> list:
+        initial_inventory = rng.randint(100,200)
+
+        return initial_inventory
+
+    def create_r_max(self) -> int:
         ''' Maximum raw milk inventory. '''
-        pass
 
-    def create_dmax(self, T, MP) -> list:
-        ''' Maximum campaign length (in days) for plant m. '''
-        pass
+        maximum_inventory = rng.randint(2000,2000)
 
-    def create_cmin(self, MP) -> list:
-        ''' Minimum daily production capacity at manufacturing plant m '''
-        pass
+        return maximum_inventory
+        
 
-    def create_cmax(self, MP) -> list:
-        ''' Maximum daily production capacity at manufacturing plant m '''
-        pass
+    def create_dmax(self) -> list[int]:
+        ''' Maximum campaign length (in days) for plant m. 
 
-    def create_alpha(self, T, MP) -> list:
-        ''' Setup time in periods for production plant m '''
-        pass
+        Only one value given for Length-Based Campaign --> Assumnption that shift based campaign are unlimited!
+        '''
+        
+        return [30,15,30,30]
 
-    def create_ost(self, T, MP) -> list:
-        ''' Remaining days to finish an ongoing setup task at manufacturing plant m '''
-        pass
+    def create_cmin(self) -> list[int]:
+        ''' Minimum daily production capacity at manufacturing plant m 
+            Assumption about minimum that it is 0!
+        '''
+        
+        return [0,0,0,0]
 
-    def create_wp(self, M, T ) -> list:
+    def create_cmax(self) -> list[float]:
+        ''' Maximum daily production capacity at manufacturing plant m 
+            Assumption about maximum, but already given! 
+        '''
+        #rng.randint()
+        return [110,120,150,16.66]
+
+    def create_alpha(self) -> list[int]:
+        ''' Setup time in periods for production plant m 
+            Assunmption, that setup is only needed for Powdered Milk!
+        '''
+
+        setup_time_days = rng.randint(0,3)
+
+        return [0,setup_time_days,0,0]
+
+    def create_ost(self, MP) -> list[int]:
+        ''' Remaining days to finish an ongoing setup task at manufacturing plant m 
+            Assumption no ongoing setup tasks at manufacturing plant m
+            '''
+        return [rng.randint(0,0) for m in MP]
+
+    def create_wp(self, MP, T) -> list[list[int]]:
         ''' m: manufacturing plant, 
             t: time (days), 
-            sigma: process time for family produced in manufacturing plant m'''
-        # self.sigma
-        pass
+            sigma: process time for family produced in manufacturing plant m
+            Assumption no ongoing setup tasks at manufacturing plant m
+        '''
 
-    def create_el_min(self) -> list:
+        return [[rng.randint(0,0) for t in T ] for m in MP]
+
+    def create_el_min(self) -> list[int]:
         ''' F: lots of family f to be exported; here: Minimum number
             UHT and Powdered Milk, Yogurt, Cheese
         '''
         return [0,25,0,0]
 
 
-    def create_el_max(self) -> list:
+    def create_el_max(self) -> list[int]:
         ''' F: lots of family f to be exported; here: Maximum number
             UHT and Powdered Milk, Yogurt, Cheese
         '''
@@ -199,11 +236,12 @@ class Parameters_FirstStage:
         return [0,120,0,0]
 
 
-    def create_is(self, M) -> list:
+    def create_is(self, MP) -> list[float]:
         ''' M: maximum portion of total capacity that can be left idle during a production campaign  at manufacturing plant m with [0,1) value'''
-        pass
+        
+        return [rng.uniform(0,0.2) for m in MP]
 
-    def create_omega_fw(self) -> list:
+    def create_omega_fw(self) -> list[int]:
         ''' factory warehouse shelf-life of products of family f
             UHT and Powdered Milk, Yogurt, Cheese
             100 as a high number for long time span
@@ -211,9 +249,8 @@ class Parameters_FirstStage:
 
         return [100,100,5,10]
 
-        pass
 
-    def create_omega_dc(self) -> list:
+    def create_omega_dc(self) -> list[int]:
         ''' distribution center shelf-life of products of family f
             UHT and Powdered Milk, Yogurt, Cheese
             100 as a high number for long time span
@@ -222,25 +259,27 @@ class Parameters_FirstStage:
         return [100,100,7,14]
 
 
-    def create_rr(self) -> list:
+    def create_rr(self) -> list[float]:
         ''' revenue from reduced price selling of products of family f over stock (distressed sales) 
             UHT and Powdered Milk, Yogurt, Cheese
         '''
 
         return [1,  3.75, 0, 0]
 
-    def create_r(self) -> list:
+    def create_r(self) -> list[float]:
         ''' revenue from selling one ton of family f in any distribution center of the Supply Chain 
             UHT and Powdered Milk, Yogurt, Cheese
         '''
+
         return [3.425,  12.5, 5, 12]
 
 
-    def create_re(self) -> list:
+    def create_re(self) -> list[int]:
         ''' revenue from exporting a batch of family f 
             UHT and Powdered Milk, Yogurt, Cheese
             only for powdered milk! 
         '''
+
         return [0,5,0,0]
 
 
@@ -282,7 +321,7 @@ class Parameters_FirstStage:
 
         return beta
 
-    def create_sigma(self) -> list:
+    def create_sigma(self) -> list[int]:
         ''' Process time in periods for the family produced at manufacturing plant m
 
         List for availability of product lines 
@@ -297,12 +336,12 @@ class Parameters_FirstStage:
 
         return sigma 
 
-    def create_iwip0(self) -> list:
+    def create_iwip0(self, MP) -> list[int]:
         ''' Inventory of work-in-progress from previous planning horizon at manufacturing plant m '''
         
         # No data given -> Assume there is nothing given
 
-        iwip = [0,0,0,0]
+        iwip = [rng.randint(0,0) for m in MP]
 
         return iwip
 
