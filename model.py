@@ -8,13 +8,49 @@ import globals #Globale variablen
 import gurobipy as gp
 import datetime
 
-def Objective_Function(data, decisionVariables_FirstStage, model, T, F, S, FT, MP, CT, L):
+def Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, model, T, F, S, FT, MP, CT, L):
     ''' objective function:
     TCOST ... total costs
     ENB ... expected net benefit
     '''
     # Objective function
-    model.setObjective( sum(data.tc[l][i] for i in FT for l in L ), GRB.MINIMIZE)     #for t in T
+    ''' The following variables aid the definition of the objectives for the aggregated planning stochastic model.
+        Total costs are composed of the sum of transport costs, setups costs and raw milk costs per scenario multiplied by their respective
+        probability. Raw milk costs per scenario are calculated for the cases of overstock and understock. In cases of understock are the costs
+        obtained from buying raw milk from a third party and for the case of overstock are production costs.'''
+    #model.setObjective( sum(data.tc[l][i] for i in FT for l in L ), GRB.MINIMIZE)     #for t in T
+
+    model.setObjective(
+        quicksum(decisionVariables_FirstStage.TRi_l_t[i, l, t] * data.tc[l][i] for i in FT for l in L for t in T) +
+        quicksum(decisionVariables_FirstStage.Ym_t[m, t] * data.sco[m] for m in MP for t in T) +
+        data.rho_s * quicksum(decisionVariables_FirstStage.RSs_t[s, t] * data.rsc + decisionVariables_FirstStage.ROs_t[s, t] * data.roc for s in S for t in T),
+        GRB.MINIMIZE
+    )
+
+
+    ''' The expected net benefit is obtained from income minus total costs. The incomes include from left to right, the export sales income, sales
+        income, and overstock incomes. Overstock incomes are produced from selling at a reduced price by the quantity produced in overstock for
+        each of families.'''
+    
+    model.setObjective((
+        quicksum(
+            data.re[f] * data.ls_f[f] * IntegerVariables.Ef_t[f, t]
+            for f in F for t in T
+        )
+        + data.rho_s 
+            * quicksum(
+                quicksum(
+                    data.r[f] 
+                    * (parameters_SecondStage.dps_f_l_t[s][f][l][t] - decisionVariables_SecondStage.SO_sflt[s, f, l, t])
+                    for l in L for f in F for t in T
+                )
+                + quicksum(
+                    decisionVariables_SecondStage.OSs_f_l_t[s, f, l, t] * data.rr[f]
+                    for l in L for f in F for t in T
+                )
+                for s in S )
+        ) - model.getObjective().getValue(),
+        GRB.MAXIMIZE) 
 
     return model
 
@@ -54,8 +90,14 @@ def Run_Model(data, T, F, S, FT, MP, CT, L):
     # get the needed integer variables
     integerVariables = IntegerVariables(model, data, T, F, S, FT, MP, CT, L)
 
+    # get the needed second stage parameters
+    parameters_SecondStage = Parameters_SecondStage(data, T, F, S, FT, MP, CT, L)
+
+    # get the needed decision variables for the second stage
+    decisionVariables_SecondStage = DecisionVariables_SecondStage(model, T, F, S, FT, MP, CT, L)
+
     # Add the objective function
-    model = Objective_Function(data, decisionVariables_FirstStage,  model, T, F, S, FT, MP, CT, L)
+    model = Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, model, T, F, S, FT, MP, CT, L)
 
     # Add the constraints
     model = Constraints(data, decisionVariables_FirstStage, integerVariables, model, T, F, S, FT, MP, CT, L)
