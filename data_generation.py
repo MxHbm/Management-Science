@@ -377,10 +377,72 @@ class Parameters_FirstStage:
     def create_ls_p(self, MP) -> list:
         ''' Lot size for plant m '''
 
+
         lot_size = [1 for m in range(len(MP))]         # dummy values
 
         return lot_size
+    
+### Script for generating data fpr our model
+class Parameters_SecondStage:
 
+    def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        ''' Constructor for this class.
+        :param T: list of time periods
+        :param F: list of families
+        :param S: list of sites
+        :param FT: list of family types
+        :param MP: list of manufacturing plants
+        :param CT: list of customer types
+        :param L: list of locations (Distribution Centers)
+        '''
+
+        #First definition of parameters and call for implementing them
+        self.dp = self.create_dp(S, F, L, T)
+        self.rho = self.create_rho()
+        self.dri = self.create_dri()
+
+    def create_hl(self, S, F, L, T) -> list[list[list[list[int]]]]:
+        ''' Family demand for distribution center l on day t under scenario s. '''
+        
+        # Create a list for the demand of each family
+        demand = []
+        for s in S:
+            scenario_demand = []
+            for f in F:
+                family_demand = []
+                for l in L:
+                    location_demand = []
+                    for t in T:
+                        location_demand.append(rng.randint(0,100))
+                    family_demand .append(location_demand)
+                scenario_demand .append(family_demand )
+            demand.append(scenario_demand )
+
+        return demand
+
+    def create_rho(self) -> list[float]:
+        ''' The probability of scenario s.
+        '''
+
+        return [0,0,1,1]
+        
+
+    def create_dri(self) -> list[list[int]]:
+        ''' Raw milk daily input on day t under scenario s
+        '''
+        
+        return [0,1,1,1]
+
+    def create_fpr(self) -> list[float]:
+        ''' The family produced by manufacturing plant m 
+            UHT and Powdered Milk, Yogurt, Cheese
+            Differnece between production plants of Powedered Milk and Rest !!! '''
+        
+        return [110, 120, 150, 16.66]
+
+ 
+        ''' Family f Initial inventory at location l.e '''
+  
 
 class DecisionVariables_FirstStage:
 
@@ -409,48 +471,6 @@ class DecisionVariables_FirstStage:
 
         #return model
 
-class Parameters_SecondStage:
-
-    def __init__(self, data, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
-        ''' Constructor for this class.
-        :param T: list of time periods
-        :param F: list of families
-        :param S: list of sites
-        :param FT: list of family types
-        :param MP: list of manufacturing plants
-        :param CT: list of customer types
-        :param L: list of locations (Distribution Centers)
-
-        '''
-        #First definition of parameters and call for implementing them
-        self.dps_f_l_t = self.create_dp(S, F, L, T)
-        self.rho_s = self.create_rho_s(S)
-        self.dri_s_t = self.create_dri_s_t(S, T)
-        
-    def create_dp(self, S, F, L, T) -> list:
-        ''' Family demand for distribution center l on day t under scenario s. '''
-        pass
-
-    def create_rho_s(self, S) -> list:
-        ''' probability of scenario s'''
-        supply_scenarios = 3
-        family_scenarios = 5
-        
-        rho_s = [ #  UHT, Powdered Milk, Yogurt, Cheese, Raw Milk
-                    [0.4,   0.25,        0.4,   0.3,     0.5],         # scenario 1
-                    [0.35,  0.35,        0.3,   0.4,     0.15],        # scenario 2
-                    [0.25,  0.4,         0.3,   0.3,     0.35]         # scenario 3
-        ]
-
-        rho_s = [1/243 for _ in range(243)]     # dummy values
-
-        return rho_s
-    
-
-    def create_dri_s_t(self, S, T) -> list:
-        ''' Raw milk daily input on day t under scenario s'''
-        pass
-
 class DecisionVariables_SecondStage:
 
     def __init__(self, model, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
@@ -471,6 +491,7 @@ class BinaryVariables:
         self.Ym_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
 
 
+
 class IntegerVariables:
 
     def __init__(self, model, parameters_FirstStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
@@ -480,6 +501,9 @@ class IntegerVariables:
         self.Ef_t = model.addVars(F, T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
         #self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=[parameters_FirstStage.zmax[m] for m in MP], name="Zm_t")
         self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
+        self.R1m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R1m_t")
+        self.R2m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R2m_t")
+        self.Ym_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
 
         for m in MP:
             for t in T:
