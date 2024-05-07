@@ -380,7 +380,68 @@ class Parameters_FirstStage:
         lot_size = [1 for m in range(len(MP))]         # dummy values
 
         return lot_size
+    
+### Script for generating data fpr our model
+class Parameters_SecondStage:
 
+    def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+        ''' Constructor for this class.
+        :param T: list of time periods
+        :param F: list of families
+        :param S: list of sites
+        :param FT: list of family types
+        :param MP: list of manufacturing plants
+        :param CT: list of customer types
+        :param L: list of locations (Distribution Centers)
+        '''
+
+        #First definition of parameters and call for implementing them
+        self.dp = self.create_dp(S, F, L, T)
+        self.rho = self.create_rho()
+        self.dri = self.create_dri()
+
+    def create_hl(self, S, F, L, T) -> list[list[list[list[int]]]]:
+        ''' Family demand for distribution center l on day t under scenario s. '''
+        
+        # Create a list for the demand of each family
+        demand = []
+        for s in S:
+            scenario_demand = []
+            for f in F:
+                family_demand = []
+                for l in L:
+                    location_demand = []
+                    for t in T:
+                        location_demand.append(rng.randint(0,100))
+                    family_demand .append(location_demand)
+                scenario_demand .append(family_demand )
+            demand.append(scenario_demand )
+
+        return demand
+
+    def create_rho(self) -> list[float]:
+        ''' The probability of scenario s.
+        '''
+
+        return [0,0,1,1]
+        
+
+    def create_dri(self) -> list[list[int]]:
+        ''' Raw milk daily input on day t under scenario s
+        '''
+        
+        return [0,1,1,1]
+
+    def create_fpr(self) -> list[float]:
+        ''' The family produced by manufacturing plant m 
+            UHT and Powdered Milk, Yogurt, Cheese
+            Differnece between production plants of Powedered Milk and Rest !!! '''
+        
+        return [110, 120, 150, 16.66]
+
+ 
+        ''' Family f Initial inventory at location l.e '''
+  
 
 class DecisionVariables_FirstStage:
 
@@ -408,36 +469,6 @@ class DecisionVariables_FirstStage:
         self.Auxm_t = model.addVars(MP, T, lb=0, name="Auxm_t")
 
         #return model
-
-class Parameters_SecondStage:
-
-    def __init__(self, data, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
-        ''' Constructor for this class.
-        :param T: list of time periods
-        :param F: list of families
-        :param S: list of sites
-        :param FT: list of family types
-        :param MP: list of manufacturing plants
-        :param CT: list of customer types
-        :param L: list of locations (Distribution Centers)
-
-        '''
-        #First definition of parameters and call for implementing them
-        self.dps_f_l_t = self.create_dp(S, F, L, T)
-        self.rho_s = self.create_rho_s(S)
-        self.dri_s_t = self.create_dri_s_t(S, T)
-        
-    def create_dp(self, S, F, L, T) -> list:
-        ''' Demand of product f at location l in time period t '''
-        pass
-
-    def create_rho_s(self, S) -> list:
-        ''' Production capacity of site s in metric tons '''
-        pass
-
-    def create_dri_s_t(self, S, T) -> list:
-        ''' Raw milk inflow at site s in time period t '''
-        pass
 
 class DecisionVariables_SecondStage:
 

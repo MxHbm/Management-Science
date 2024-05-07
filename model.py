@@ -85,15 +85,39 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
     model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] == data.i_0[f,t] + gp.quicksum(decisionVariables_FirstStage.FPf_t[f,t1] for t1 in T if t1 <= t) - gp.quicksum(decisionVariables_FirstStage.Ef_t[f,t1] * data.el[f] for t1 in T if t1 <= t) - gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for l in L for t1 in T if t1 <= t) for f in F for t in T)
 
     
+    # Constraint 1.9: Inventory at DCs
+    """A shipment departed from factory inventory at period t, arrives to a distribution center l at period (t + τl ), where τl is the lead time for
+    l. Inventory at distribution centers is scenario dependent accordingly to future demand realization (dps, f, l, t). Possible inventory fluctuation
+    due to understock and overstock quantities are represented by scenario variables SOs, f, l, t,OSs, f, l, t, respectively.
+    """
+    model.addConstrs(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] == data.i_0[f][l] + gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for t1 in T if (t1+data.tau[l]) <= t) -
+                    gp.quicksum(parameters_SecondStage.dps_f_l_t[s,f,l,t1] for t1 in T if (t1) <= t) - 
+                    gp.quicksum(decisionVariables_SecondStage.SO_sflt[s,f,l,t1] for t1 in T if t1 <= t) - 
+                    gp.quicksum(decisionVariables_SecondStage.OSs_f_l_t[s,f,l,t1] for t1 in T if t1 <= t) for s in S for f in F for l in L for t in T)
+    
 
+    # INDEX OF TAU WAS WRONG !! i INSTEAD OF l
 
-    # Constraint 1.8: Required Number of Trucks
+    '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
 
-    # Constraint 1.9: Required Number of Trucks
+    model.addConstrs(gp.quicksum(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] for f in F if data.fty[f] == i) <= data.imax[i][l] for s in S for l in L for i in FT for t in T)
+    # RUNNING PARAMETER FOR T IS MISSING!!! 
 
-    # Constraint 1.10: Required Number of Trucks
+    # Constraint 1.10: Shelf life constraints
+    """Shelf life constraints at FW. Based on the concept discussed above in subSection 4.2, the following two constraints are introduced into
+    the planning model to enforce the shelf-life indirectly. This constraint ensures that a product family will be transported to the distribution
+    centers before the end of its warehouse shelf-life. 
+    """
+    model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] <= gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for l in L for t1 in range(t+1,t+data.omega_fw[f] + 1)) for f in F for t in T if data.fty[f]== 1 and (t + data.omega_fw[f] <= data.hl))
 
+    model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] <= gp.quicksum((decisionVariables_FirstStage.DVf_l_t[f,l,t1]/data.omega_fw[f])*(t+data.omega_fw[f]-data.hl) for t1 in range(t - data.omega_fw[f]+1,t+1) for l in L) + 
+                     gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t2] for t2 in range(t+1,t+data.omega_fw[f] + 1) for l in L if t2 <= data.hl) for f in F for t in T if data.fty[f] == 1 and (t + data.omega_fw[f] > data.hl))
+    
+    model.addConstrs(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] <= gp.quicksum(parameters_SecondStage.dp[s][f][l][t1] for t1 in range(t+1,t+data.omega_dc[f] + 1)) for l in L for f in F for t in T for s in S if data.fty[f]== 1 and (t + data.omega_dc[f] <= data.hl))
 
+    model.addConstrs(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] <= gp.quicksum((parameters_SecondStage.dp[s][f][l][t1]/data.omega_dc[f])*(t+data.omega_dc[f]-data.hl) for t1 in range(t - data.omega_dc[f]+1,t+1)) +
+                        gp.quicksum(parameters_SecondStage.dp[s][f][l][t2] for t2 in range(t+1,t+data.omega_dc[f] + 1) if t2 <= data.hl) for l in L for f in F for t in T for s in S if data.fty[f] == 1 and (t + data.omega_dc[f] > data.hl))
+                                                                         
     # Constraint 1.12: Required Number Of Trucks
     """ The volume shipped from factory inventory to DC l needs to be loaded in trucks. The number of required trucks (TRi, l, t ) is calculated
         in the following constraints. A shipment to a distribution center may require n trucks, only one of these n trucks is allowed to have less
