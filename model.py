@@ -8,7 +8,7 @@ import globals #Globale variablen
 import gurobipy as gp
 import datetime
 
-def Objective_Function(data, decisionVariables_FirstStage, model, T, F, S, FT, MP, CT, L):
+def Objective_Function(data, decisionVariables_FirstStage: DecisionVariables_FirstStage, model, T, F, S, FT, MP, CT, L):
     ''' objective function:
     TCOST ... total costs
     ENB ... expected net benefit
@@ -19,11 +19,31 @@ def Objective_Function(data, decisionVariables_FirstStage, model, T, F, S, FT, M
     return model
 
 
-def Constraints(data, decisionVariables_FirstStage, integerVariables, model, T, F, S, FT, MP, CT, L):
+def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: DecisionVariables_FirstStage, integerVariables:IntegerVariables, model, T, F, S, FT, MP, CT, L):
     ''' constraints: 
     '''
 
     # Constraint 1
+
+    # Constraint 1.7: Campaign Setups
+    """In order to model these features, the binary variable Ym, t is introduced. This variable takes value 1 when a new production campaign
+    starts at t, if and only if R2m, t > 0 and Zm,t−1 = 0, which is ensured by constraints (34) - (35) – (36). We emphasize the redundancy of
+    constraint (36) which was included to improve the computational performance of the family aggregated model.
+    If at any period t, a production campaign for a manufacturing plant start (Ym,t = 1), then on periods t− t1 : t1 ∈ 0..(αm− 1) setup
+    tasks may be required and therefore production is not allowed in these periods . In this way if Ym,t = 1 keeps Zm,t−t1 = 0 (there is no
+    production) until finish the setup task (constraint (37)). Now for the special case that at the beginning of the horizon there is a setup task
+    in progress, this is reflected in the parameter ostm > 0, constraint (38) keeping campaign indicator variable to 0 until the task is finished.
+    """
+    model.addConstrs(integerVariables.Zm_t[m, t-1] <= data.zmax[m] * (1 - integerVariables.Zm_t[m, t-1]) for m in MP for t in T if t > 0)
+
+    
+
+
+    # Constraint 1.8: Required Number of Trucks
+
+    # Constraint 1.9: Required Number of Trucks
+
+    # Constraint 1.10: Required Number of Trucks
 
 
     # Constraint 1.12: Required Number Of Trucks

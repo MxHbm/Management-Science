@@ -19,13 +19,13 @@ class Scenario_Analyse:
         self._N = N
 
         # Define scenarios and their probabilities
-        self._demand_supply = np.array([
+        self._demand_supply = np.array(
             [6400, 8000, 12000],
             [600, 1000, 1200],
             [2800, 4000, 8000],
             [300, 500, 600],
             [862.5, 1725, 3450]
-        ])
+        )
         self._p = np.array([
             [0.4, 0.35, 0.25],
             [0.25, 0.35, 0.4],
@@ -36,6 +36,7 @@ class Scenario_Analyse:
 
         #Create lists for scenarios and their probabilities 
         self.create_base_scenarios_and_p()
+
 
         #Create dataset W 
         self.create_vector_W()
