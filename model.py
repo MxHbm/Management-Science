@@ -83,6 +83,88 @@ def Constraints(data, decisionVariables_FirstStage, integerVariables, model, T, 
     """
     model.addConstrs( decisionVariables_FirstStage.Vi_l_t[i, l, t] == 0 for i in FT for l in L for t in T ) #if (data.hl - data.tau[l] + 1) > data.hl[l])
 
+    #Constraint 4
+
+    model.addConstrs(IntegerVariables.Zm_t[MP, T]
+                     == decisionVariables_FirstStage.Z1m_t[MP, T] + decisionVariables_FirstStage.Z2m_t[MP, T])
+    
+    model.addConstrs(decisionVariables_FirstStage.Z1m_t[MP, T]
+                     <= Parameters_FirstStage.zmax[MP] * BinaryVariables.R1m_t[MP, T])
+    
+    model.addConstrs(decisionVariables_FirstStage.Z2m_t[MP, T]
+                     <= Parameters_FirstStage.zmax[MP] * BinaryVariables.R2m_t[MP, T])
+    
+    model.addConstrs(BinaryVariables.R1m_t[MP, T]
+                     + BinaryVariables.R2m_t[MP, T] == 1)
+    
+    model.addConstrs(BinaryVariables.R1m_t[MP, T==1]  #T = 1
+                     == 1)
+    
+    model.addConstrs(decisionVariables_FirstStage.Z1m_t[MP, T]
+                     <= IntegerVariables.Zm_t[MP, T]) # t - 1
+    
+    model.addConstrs(decisionVariables_FirstStage.Z1m_t[MP, T]
+                     >= BinaryVariables.R1m_t[MP, T] * IntegerVariables.Zm_t[MP, T-1]) # t - 1
+    
+    model.addConstrs(decisionVariables_FirstStage.Auxm_t[MP, T]
+                     <= IntegerVariables.Zm_t[MP, T-1]) # t - 1
+    
+    model.addConstrs(decisionVariables_FirstStage.Auxm_t[MP, T]
+                     >= IntegerVariables.Zm_t[MP, T-1] - Parameters_FirstStage.zmax[MP] * (1 - BinaryVariables.R1m_t[MP, T])) # t - 1
+    
+    model.addConstrs(decisionVariables_FirstStage.Auxm_t[MP, T]
+                     <= IntegerVariables.Zm_t[MP, T-1]) 
+    
+    model.addConstrs(decisionVariables_FirstStage.Auxm_t[MP, T]
+                     <= BinaryVariables.R1m_t[MP, T] * Parameters_FirstStage.zmax[MP]) 
+    
+    #Constraint 5
+
+    model.addConstrs((DecisionVariables_FirstStage.Qm_t[MP, T] / Parameters_FirstStage.cmin[0]) 
+                     <= IntegerVariables.Zm_t[MP, T]
+                    )
+    
+    model.addConstrs((DecisionVariables_FirstStage.Qm_t[MP, T] / Parameters_FirstStage.cmax[MP]) 
+                     >= IntegerVariables.Zm_t[MP, T]
+                    )
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[MP, T]  
+                     <= DecisionVariables_FirstStage.Am_t[MP, T-1] + IntegerVariables.Zm_t[MP, T]
+                    ) #t>=1
+
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[MP, T]  
+                     >= DecisionVariables_FirstStage.Am_t[MP, T-1] + IntegerVariables.Zm_t[MP, T] - 
+                     (Parameters_FirstStage.dmax[MP]/ Parameters_FirstStage.cmin[0] * BinaryVariables.R2m_t[MP, T])
+                    ) # MP für dmax und am_t: t-1 und t>=1
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[MP, T]  
+                     >= IntegerVariables.Zm_t[MP, T]
+                    )
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[MP, T]
+                    <= (Parameters_FirstStage.dmax[MP]/ Parameters_FirstStage.cmin[0])
+                    )
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[MP, T==1]  # T=1
+                    <= IntegerVariables.Zm_t[MP, T==1] # T=1
+                    )
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[MP, T==1]  # T=1
+                    <= (Parameters_FirstStage.dmax[MP]/ Parameters_FirstStage.cmin[0])
+                    ) 
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[MP, T==1]  # T=1
+                    >= IntegerVariables.Zm_t[MP, T==1] - ((Parameters_FirstStage.dmax[MP]/ Parameters_FirstStage.cmin[0]) * BinaryVariables.R2m_t[MP, T==1]) # T = 1
+                    ) 
+
+#Constraint 6
+    model.addConstrs((DecisionVariables_FirstStage.Qm_t[MP, T] / Parameters_FirstStage.sc [MP])
+                    <= IntegerVariables.Zm_t[MP, T] 
+                    ) 
+    
+    model.addConstrs(DecisionVariables_FirstStage.AQm_t[MP, T] / (Parameters_FirstStage.sc [MP] * (1-Parameters_FirstStage.is_[MP]))
+                    >= IntegerVariables.Zm_t[MP, T] 
+                    ) 
     return model
 
 def Run_Model(data, T, F, S, FT, MP, CT, L):
