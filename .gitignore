@@ -165,3 +165,8 @@ cython_debug/
 
 # Results folder
 results/
+
+# pychache
+__pycache__/data_generation.cpython-310.pyc
+__pycache__/globals.cpython-310.pyc
+__pycache__/scenario_reduction.cpython-310.pyc
