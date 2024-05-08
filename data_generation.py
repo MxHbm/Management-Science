@@ -401,7 +401,7 @@ class Parameters_SecondStage:
         self.rho = self.create_rho()
         self.dri = self.create_dri()
 
-    def create_hl(self, S, F, L, T) -> list[list[list[list[int]]]]:
+    def create_dp(self, S, F, L, T) -> list[list[list[list[int]]]]:
         ''' Family demand for distribution center l on day t under scenario s. '''
         
         # Create a list for the demand of each family
@@ -424,7 +424,16 @@ class Parameters_SecondStage:
         ''' The probability of scenario s.
         '''
 
-        return [0,0,1,1]
+        rho_s = [ #  UHT, Powdered Milk, Yogurt, Cheese, Raw Milk
+            [0.4,   0.25,        0.4,   0.3,     0.5],         # scenario 1
+            [0.35,  0.35,        0.3,   0.4,     0.15],        # scenario 2
+            [0.25,  0.4,         0.3,   0.3,     0.35]         # scenario 3
+        ]
+
+        rho_s = [1/243 for _ in range(243)]     # dummy values
+
+        #return [0,0,1,1]
+        return rho_s
         
 
     def create_dri(self) -> list[list[int]]:
@@ -474,9 +483,9 @@ class DecisionVariables_FirstStage:
 class DecisionVariables_SecondStage:
 
     def __init__(self, model, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
-        self.SAs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="SAs_f_l_t")
-        self.SOs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="SOs_f_l_t")
-        self.OSs_f_l_t = model.addVars(FT, F, L, T, lb=0, name="OSs_f_l_t")
+        self.SAs_f_l_t = model.addVars(S, F, L, T, lb=0, name="SAs_f_l_t")
+        self.SO_sflt = model.addVars(S, F, L, T, lb=0, name="SOs_f_l_t")
+        self.OSs_f_l_t = model.addVars(S, F, L, T, lb=0, name="OSs_f_l_t")
         self.RCs = model.addVars(S, lb=0, name="RCs_s")
         self.RSs_t = model.addVars(S, T, lb=0, name="RSs_t")
         self.ROs_t = model.addVars(S, T, lb=0, name="ROs_t")
