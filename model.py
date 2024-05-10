@@ -73,7 +73,87 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
     ''' constraints: 
     '''
 
-    # Constraint 1
+    # Constraint 4
+    model.addConstrs(IntegerVariables.Zm_t[m, t]
+                     == decisionVariables_FirstStage.Z1m_t[m, t] + decisionVariables_FirstStage.Z2m_t[m, t] for m in MP for t in T)
+    
+    model.addConstrs(decisionVariables_FirstStage.Z1m_t[m, t]
+                     <= Parameters_FirstStage.zmax[m] * BinaryVariables.R1m_t[m, t] for m in MP for t in T)
+    
+    model.addConstrs(decisionVariables_FirstStage.Z2m_t[m, t]
+                     <= Parameters_FirstStage.zmax[m] * BinaryVariables.R2m_t[m, t] for m in MP for t in T)
+    
+    model.addConstrs(BinaryVariables.R1m_t[m, t]
+                     + BinaryVariables.R2m_t[m, t] == 1 for m in MP for t in T)
+    
+    model.addConstrs(BinaryVariables.R1m_t[m, t==1]  #T = 1
+                     == 1 for m in MP for t in T)
+    
+    model.addConstrs(decisionVariables_FirstStage.Z1m_t[m, t]
+                     <= IntegerVariables.Zm_t[m, t] for m in MP for t in T if t > 1 )# t - 1
+    
+    model.addConstrs(decisionVariables_FirstStage.Z1m_t[m, t]
+                     >= BinaryVariables.R1m_t[m, t] * IntegerVariables.Zm_t[m, t-1] for m in MP for t in T if t > 1) # t - 1
+    
+    model.addConstrs(decisionVariables_FirstStage.Auxm_t[m, t]
+                     <= IntegerVariables.Zm_t[m, t-1] for m in MP for t in T if t > 1) # t - 1
+    
+    model.addConstrs(decisionVariables_FirstStage.Auxm_t[m, t]
+                     >= IntegerVariables.Zm_t[m, t-1] - Parameters_FirstStage.zmax[m] * (1 - BinaryVariables.R1m_t[m, t]) for m in MP for t in T if t > 1) # t - 1
+    
+    model.addConstrs(decisionVariables_FirstStage.Auxm_t[m, t]
+                     <= IntegerVariables.Zm_t[m, t-1] for m in MP for t in T) 
+    
+    model.addConstrs(decisionVariables_FirstStage.Auxm_t[m, t]
+                     <= BinaryVariables.R1m_t[m, t] * Parameters_FirstStage.zmax[m] for m in MP for t in T) 
+    
+    #Constraint 5
+
+    model.addConstrs((DecisionVariables_FirstStage.Qm_t[m, t] / Parameters_FirstStage.cmin[0]) 
+                     <= IntegerVariables.Zm_t[m, t] for m in MP for t in T
+                    )
+    
+    model.addConstrs((DecisionVariables_FirstStage.Qm_t[m, t] / Parameters_FirstStage.cmax[m]) 
+                     >= IntegerVariables.Zm_t[m, t] for m in MP for t in T
+                    )
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t]  
+                     <= DecisionVariables_FirstStage.Am_t[m, t-1] + IntegerVariables.Zm_t[m, t] for m in MP for t in T if t > 1
+                    ) #t>=1
+
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t]  
+                     >= DecisionVariables_FirstStage.Am_t[m, t-1] + IntegerVariables.Zm_t[m, t] - 
+                     (Parameters_FirstStage.dmax[m]/ Parameters_FirstStage.cmin[0] * BinaryVariables.R2m_t[m, t]) for m in MP for t in T if t > 1
+                    ) # MP für dmax und am_t: t-1 und t>=1
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t]  
+                     >= IntegerVariables.Zm_t[m, t] for m in MP for t in T
+                    )
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t]
+                    <= (Parameters_FirstStage.dmax[m]/ Parameters_FirstStage.cmin[0]) for m in MP for t in T if t > 1
+                    )
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t==1]  # T=1
+                    <= IntegerVariables.Zm_t[m, t==1] for m in MP for t in T
+                    )
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t==1]  # T=1
+                    <= (Parameters_FirstStage.dmax[m]/ Parameters_FirstStage.cmin[0]) for m in MP for t in T
+                    ) 
+    
+    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t==1]  # T=1
+                    >= IntegerVariables.Zm_t[m, t==1] - ((Parameters_FirstStage.dmax[m]/ Parameters_FirstStage.cmin[0]) * BinaryVariables.R2m_t[m, t==1]) for m in MP for t in T
+                    ) 
+
+    #Constraint 6
+    model.addConstrs((DecisionVariables_FirstStage.Qm_t[m, t] / Parameters_FirstStage.sc[MP])
+                    <= IntegerVariables.Zm_t[m, t] for m in MP for t in T
+                    ) 
+    
+    model.addConstrs(DecisionVariables_FirstStage.AQm_t[m, t] / (Parameters_FirstStage.sc[MP] * (1-Parameters_FirstStage.is_[MP]))
+                    >= IntegerVariables.Zm_t[m, t] for m in MP for t in T
+                    ) 
 
     # Constraint 1.7: Campaign Setups
     """In order to model these features, the binary variable Ym, t is introduced. This variable takes value 1 when a new production campaign
