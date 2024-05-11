@@ -40,6 +40,7 @@ class Parameters_FirstStage:
         self.el = self.create_el()
         self.tau = self.create_tau()
         self.i_0 = self.create_i_0(F, L) 
+        self.i0_ft = self.create_i_0(F, T)        # not in the paper
         self.tl_min = self.create_tl_min()
         self.tl_max = self.create_tl_max()
         self.r0 = self.create_r0()
@@ -149,6 +150,20 @@ class Parameters_FirstStage:
             intitial_inventory.append(family_inventory)
 
         return intitial_inventory
+    
+    def create_i0_ft(self, F, T) -> list[list[int]]:
+        # notin the paper, but needed for the model
+        ''' Family f Initial inventory at time t.e '''
+        
+        intitial_inventory = []
+        for f in F:
+            family_inventory = []
+            for t in T:
+                family_inventory.append(rng.randint(0,50))
+
+            intitial_inventory.append(family_inventory)
+
+        return intitial_inventory
 
     def create_tl_min(self) -> int:
         ''' Minimum  truckload capacity, respectively. '''
@@ -188,9 +203,10 @@ class Parameters_FirstStage:
     def create_cmin(self) -> list[int]:
         ''' Minimum daily production capacity at manufacturing plant m 
             Assumption about minimum that it is 0!
+            # assumption update: it cannot be 0, because cmin is a divisor in a constraint, so that would lead to division by zero
         '''
         
-        return [0,0,0,0]
+        return [1, 1, 1, 1]
 
     def create_cmax(self) -> list[float]:
         ''' Maximum daily production capacity at manufacturing plant m 
@@ -474,8 +490,8 @@ class DecisionVariables_FirstStage:
         self.MOm_t = model.addVars(MP, T, lb=0, name="MOm_t")
         self.IWIPm_t = model.addVars(MP, T, lb=0, name="IWIPm_t")
         self.Qm_t = model.addVars(MP, T, lb=0, name="Qm_t")
-        self.Z1m_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Z1m_t")
-        self.Z2m_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Z2m_t")
+        self.Z1m_t = model.addVars(MP, T, name="Z1m_t")
+        self.Z2m_t = model.addVars(MP, T, name="Z2m_t")
         self.Auxm_t = model.addVars(MP, T, lb=0, name="Auxm_t")
 
         #return model
