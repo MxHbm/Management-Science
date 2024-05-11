@@ -228,6 +228,7 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
     """
     model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] <= gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for l in L for t1 in range(t+1,t+data.omega_fw[f] + 1)) for f in F for t in T if data.fty[f]== 1 and (t + data.omega_fw[f] <= data.hl))
 
+
     model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] <= gp.quicksum((decisionVariables_FirstStage.DVf_l_t[f,l,t1]/data.omega_fw[f])*(t+data.omega_fw[f]-data.hl) for t1 in range(t - data.omega_fw[f]+1,t+1) for l in L) + 
                      gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t2] for t2 in range(t+1,t+data.omega_fw[f] + 1) for l in L if t2 <= data.hl) for f in F for t in T if data.fty[f] == 1 and (t + data.omega_fw[f] > data.hl))
     
@@ -264,7 +265,8 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
     """ Bounds for the number of lots to be exported for each family f on the horizon
     """
 
-    model.addConstrs( data.el_min[f] <= gp.quicksum(decisionVariables_FirstStage.Ef_t[f, t] for t in T) <= data.el_max[f] for f in F)
+    model.addConstrs( data.el_min[f] <= gp.quicksum(integerVariables.Ef_t[f, t] for t in T) for f in F)
+    model.addConstrs( gp.quicksum(integerVariables.Ef_t[f, t] for t in T) <= data.el_max[f] for f in F)
 
     return model
 

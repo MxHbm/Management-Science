@@ -67,13 +67,15 @@ class Parameters_FirstStage:
         self.iwip0 = self.create_iwip0(MP)
         self.tc = self.create_tc()
         self.sco = self.create_sco()
+        # additional parameters
         self.names_DC = self.create_names_DC()
         self.ls_f = self.create_ls_f(F)
         self.ls_p = self.create_ls_p(MP)
+        self.i0_ft = self.create_i0_ft(F, T)
 
     def create_hl(self, T) -> int:
         ''' Add description of the function here '''
-        hl = T[-1] + 1        # 30 days in the paper 
+        hl = T[-1]        # 30 days in the paper 
 
         return hl
 
@@ -140,7 +142,7 @@ class Parameters_FirstStage:
 
     def create_i_0(self, F, L) -> list[list[int]]:
         ''' Family f Initial inventory at location l.e '''
-        
+
         intitial_inventory = []
         for f in F:
             family_inventory = []
@@ -304,10 +306,18 @@ class Parameters_FirstStage:
     def create_imax(self) -> list[list[int]]:
         ''' Maximum storage capacities at location l for fresh and dry product families '''
 
-        max_storage_product_groups = [[12,10],[68, 114],[16, 35],[16,40],[9, 27],
-                                    [31,54],[20, 81],[20,58],[58,195]]
+        # Fresh and Dry                l , i
+        max_storage_product_groups = [[12,10],
+                                      [68, 114],
+                                      [16, 35],
+                                      [16,40],
+                                      [9, 27],
+                                      [31,54],
+                                      [20, 81],
+                                      [20,58],
+                                      [58,195]]
         
-        return max_storage_product_groups
+        return list(map(list, zip(*max_storage_product_groups)))        # transpose the matrix because we want to have [i, l]
 
     def create_zmax(self) -> list[int]:
         ''' For shift-based production, maximum shifts, otherwise 1
@@ -377,6 +387,8 @@ class Parameters_FirstStage:
         setup = 20 # unit is MU
 
         return setup
+    
+    # additional parameters
 
     def create_names_DC(self) -> list[str]: 
         """ Names of the distribution centers """
@@ -397,6 +409,13 @@ class Parameters_FirstStage:
         lot_size = [1 for m in range(len(MP))]         # dummy values
 
         return lot_size
+    
+    def create_i0_ft(self, F, T) -> list:
+        ''' Initial inventory of family f at time t '''
+
+        initial_inventory = [[rng.randint(0,50) for t in T] for f in F]
+
+        return initial_inventory
     
 ### Script for generating data fpr our model
 class Parameters_SecondStage:
@@ -520,7 +539,7 @@ class BinaryVariables:
 class IntegerVariables:
 
     def __init__(self, model, parameters_FirstStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
-        print(parameters_FirstStage.zmax)
+        #print(parameters_FirstStage.zmax)
 
         self.TRi_l_t = model.addVars(FT, L, T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t")
         self.Ef_t = model.addVars(F, T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
