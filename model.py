@@ -69,90 +69,106 @@ def Objective_Function(                  data:Parameters_FirstStage,    decision
 
 def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: DecisionVariables_FirstStage,
                 parameters_SecondStage:Parameters_SecondStage, decisionVariables_SecondStage: DecisionVariables_SecondStage,
-                integerVariables:IntegerVariables, model, T, F, S, FT, MP, CT, L):
+                binaryVariables:BinaryVariables, integerVariables:IntegerVariables, model, T, F, S, FT, MP, CT, L):
     ''' constraints: 
     '''
 
     # Constraint 4
-    model.addConstrs(IntegerVariables.Zm_t[m, t]
+    model.addConstrs(integerVariables.Zm_t[m, t]
                      == decisionVariables_FirstStage.Z1m_t[m, t] + decisionVariables_FirstStage.Z2m_t[m, t] for m in MP for t in T)
     
     model.addConstrs(decisionVariables_FirstStage.Z1m_t[m, t]
-                     <= Parameters_FirstStage.zmax[m] * BinaryVariables.R1m_t[m, t] for m in MP for t in T)
+                     <= data.zmax[m] * binaryVariables.R1m_t[m, t] for m in MP for t in T)
     
     model.addConstrs(decisionVariables_FirstStage.Z2m_t[m, t]
-                     <= Parameters_FirstStage.zmax[m] * BinaryVariables.R2m_t[m, t] for m in MP for t in T)
+                     <= data.zmax[m] * binaryVariables.R2m_t[m, t] for m in MP for t in T)
     
-    model.addConstrs(BinaryVariables.R1m_t[m, t]
-                     + BinaryVariables.R2m_t[m, t] == 1 for m in MP for t in T)
+    model.addConstrs(binaryVariables.R1m_t[m, t]
+                     + binaryVariables.R2m_t[m, t] == 1 for m in MP for t in T)
     
-    model.addConstrs(BinaryVariables.R1m_t[m, t==1]  #T = 1
+    model.addConstrs(binaryVariables.R1m_t[m, t==1]  #T = 1
                      == 1 for m in MP for t in T)
     
     model.addConstrs(decisionVariables_FirstStage.Z1m_t[m, t]
-                     <= IntegerVariables.Zm_t[m, t] for m in MP for t in T if t > 1 )# t - 1
+                     <= integerVariables.Zm_t[m, t] for m in MP for t in T if t > 1 )# t - 1
     
     model.addConstrs(decisionVariables_FirstStage.Z1m_t[m, t]
-                     >= BinaryVariables.R1m_t[m, t] * IntegerVariables.Zm_t[m, t-1] for m in MP for t in T if t > 1) # t - 1
+                     >= binaryVariables.R1m_t[m, t] * integerVariables.Zm_t[m, t-1] for m in MP for t in T if t > 1) # t - 1
     
     model.addConstrs(decisionVariables_FirstStage.Auxm_t[m, t]
-                     <= IntegerVariables.Zm_t[m, t-1] for m in MP for t in T if t > 1) # t - 1
+                     <= integerVariables.Zm_t[m, t-1] for m in MP for t in T if t > 1) # t - 1
     
     model.addConstrs(decisionVariables_FirstStage.Auxm_t[m, t]
-                     >= IntegerVariables.Zm_t[m, t-1] - Parameters_FirstStage.zmax[m] * (1 - BinaryVariables.R1m_t[m, t]) for m in MP for t in T if t > 1) # t - 1
+                     >= integerVariables.Zm_t[m, t-1] - data.zmax[m] * (1 - binaryVariables.R1m_t[m, t]) for m in MP for t in T if t > 1) # t - 1
     
     model.addConstrs(decisionVariables_FirstStage.Auxm_t[m, t]
-                     <= IntegerVariables.Zm_t[m, t-1] for m in MP for t in T) 
+                     <= integerVariables.Zm_t[m, t-1] for m in MP for t in T if t > 1) 
     
     model.addConstrs(decisionVariables_FirstStage.Auxm_t[m, t]
-                     <= BinaryVariables.R1m_t[m, t] * Parameters_FirstStage.zmax[m] for m in MP for t in T) 
+                     <= binaryVariables.R1m_t[m, t] * data.zmax[m] for m in MP for t in T) 
     
-    #Constraint 5
-
-    model.addConstrs((DecisionVariables_FirstStage.Qm_t[m, t] / Parameters_FirstStage.cmin[0]) 
-                     <= IntegerVariables.Zm_t[m, t] for m in MP for t in T
+    #Constraint 5: Length-based campaign
+    """ The level of production capacity during a production campaign of a length-based plant is set """
+    model.addConstrs((decisionVariables_FirstStage.Qm_t[m, t] 
+                      / data.cmin[m]) 
+                     <= integerVariables.Zm_t[m, t] for m in MP for t in T if data.cty[m] == 0
                     )
     
-    model.addConstrs((DecisionVariables_FirstStage.Qm_t[m, t] / Parameters_FirstStage.cmax[m]) 
-                     >= IntegerVariables.Zm_t[m, t] for m in MP for t in T
+    model.addConstrs((decisionVariables_FirstStage.Qm_t[m, t] / data.cmax[m]) 
+                     >= integerVariables.Zm_t[m, t] for m in MP for t in T if data.cty[m] == 0
                     )
     
-    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t]  
-                     <= DecisionVariables_FirstStage.Am_t[m, t-1] + IntegerVariables.Zm_t[m, t] for m in MP for t in T if t > 1
+    """ In this type of campaigns, a variable Am, t accounts for accumulated production days at manufacturing plant m on day t. This accumula-
+        tion (constraints (25) and (26)) continues until the current campaign ends. Parameter dmax
+        m represents maximal value of Am, t . If a campaign        ends on day t, then the mandatory accumulation of production on day t + 1 (i.e. Am,t+1 ) is relaxed (constraint (26)). This allows to set the
+        accumulator variable in a new campaign to zero in a posterior campaign. In these equations the Boolean variable R2m, t (previously de-
+        fined), is used to model the start or end of a length-based campaign. Constraints (27) and (28) define upper and lower bounds for Am, t .
+        The quotient dmax_m / cmin_m, represents the maximum number of campaigns that might take place for manufacturing plant m within the current
+        planning horizon"
+    """
+    model.addConstrs(decisionVariables_FirstStage.Am_t[m, t]  
+                     <= decisionVariables_FirstStage.Am_t[m, t-1] + integerVariables.Zm_t[m, t] for m in MP for t in T if t > 1 if data.cty[m] == 0
                     ) #t>=1
 
-    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t]  
-                     >= DecisionVariables_FirstStage.Am_t[m, t-1] + IntegerVariables.Zm_t[m, t] - 
-                     (Parameters_FirstStage.dmax[m]/ Parameters_FirstStage.cmin[0] * BinaryVariables.R2m_t[m, t]) for m in MP for t in T if t > 1
+    model.addConstrs(decisionVariables_FirstStage.Am_t[m, t]  
+                     >= decisionVariables_FirstStage.Am_t[m, t-1] + integerVariables.Zm_t[m, t] - 
+                     (data.dmax[m]/ data.cmin[0] * binaryVariables.R2m_t[m, t]) for m in MP for t in T if t > 1 if data.cty[m] == 0
                     ) # MP für dmax und am_t: t-1 und t>=1
     
-    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t]  
-                     >= IntegerVariables.Zm_t[m, t] for m in MP for t in T
+    model.addConstrs(decisionVariables_FirstStage.Am_t[m, t]  
+                     >= integerVariables.Zm_t[m, t] for m in MP for t in T if data.cty[m] == 0
                     )
     
-    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t]
-                    <= (Parameters_FirstStage.dmax[m]/ Parameters_FirstStage.cmin[0]) for m in MP for t in T if t > 1
+    model.addConstrs(decisionVariables_FirstStage.Am_t[m, t]
+                    <= (data.dmax[m]/ data.cmin[0]) for m in MP for t in T if t > 1 if data.cty[m] == 0
                     )
     
-    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t==1]  # T=1
-                    <= IntegerVariables.Zm_t[m, t==1] for m in MP for t in T
+    """ Accumulated production at the beginning of the horizon. The following equations (constraints (29) and (30)) model the remaining quantity
+    production for the special case of t = 1."""
+    model.addConstrs(decisionVariables_FirstStage.Am_t[m, t==1]  # T=1
+                    <= integerVariables.Zm_t[m, t==1] for m in MP for t in T if data.cty[m] == 0
                     )
     
-    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t==1]  # T=1
-                    <= (Parameters_FirstStage.dmax[m]/ Parameters_FirstStage.cmin[0]) for m in MP for t in T
+    model.addConstrs(decisionVariables_FirstStage.Am_t[m, t==1]  # T=1
+                    <= (data.dmax[m]/ data.cmin[0]) for m in MP for t in T if data.cty[m] == 0
                     ) 
     
-    model.addConstrs(DecisionVariables_FirstStage.Am_t[m, t==1]  # T=1
-                    >= IntegerVariables.Zm_t[m, t==1] - ((Parameters_FirstStage.dmax[m]/ Parameters_FirstStage.cmin[0]) * BinaryVariables.R2m_t[m, t==1]) for m in MP for t in T
+    model.addConstrs(decisionVariables_FirstStage.Am_t[m, t==1]  # T=1
+                    >= integerVariables.Zm_t[m, t==1] - ((data.dmax[m]/ data.cmin[0]) * binaryVariables.R2m_t[m, t==1]) for m in MP for t in T if data.cty[m] == 0
                     ) 
 
     #Constraint 6
-    model.addConstrs((DecisionVariables_FirstStage.Qm_t[m, t] / Parameters_FirstStage.sc[MP])
-                    <= IntegerVariables.Zm_t[m, t] for m in MP for t in T
+    """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
+    according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
+    capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
+    can be idle.
+    """
+    model.addConstrs((decisionVariables_FirstStage.Qm_t[m, t] / data.sc[m])
+                    <= integerVariables.Zm_t[m, t] for m in MP for t in T if data.cty == 1
                     ) 
     
-    model.addConstrs(DecisionVariables_FirstStage.AQm_t[m, t] / (Parameters_FirstStage.sc[MP] * (1-Parameters_FirstStage.is_[MP]))
-                    >= IntegerVariables.Zm_t[m, t] for m in MP for t in T
+    model.addConstrs(decisionVariables_FirstStage.AQm_t[m, t] / (data.sc[m] * (1-data.is_[m]))
+                    >= integerVariables.Zm_t[m, t] for m in MP for t in T if data.cty == 1
                     ) 
 
     # Constraint 1.7: Campaign Setups
@@ -175,9 +191,43 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
     inventory."""
 
     model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] 
-                     <= gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for t1 in range(t+1, t+data.omega_fw[f] + 1) for l in L)
-                    for f in F for t in T 
-                    if (data.fty[f] == 1) and (t + data.omega_fw[f] <= data.hl))
+                     == data.i0_ft[f][t] 
+                     + gp.quicksum(decisionVariables_FirstStage.FPf_t[f,t1] for t1 in T if t1 <= t) 
+                     - gp.quicksum(integerVariables.Ef_t[f,t1] * data.el[f] for t1 in T if t1 <= t) 
+                     - gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for l in L for t1 in T if t1 <= t) 
+                    for f in F for t in T)
+
+    
+    # Constraint 1.9: Inventory at DCs
+    """A shipment departed from factory inventory at period t, arrives to a distribution center l at period (t + τl ), where τl is the lead time for
+    l. Inventory at distribution centers is scenario dependent accordingly to future demand realization (dps, f, l, t). Possible inventory fluctuation
+    due to understock and overstock quantities are represented by scenario variables SOs, f, l, t,OSs, f, l, t, respectively.
+    """
+    model.addConstrs(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] 
+                     == data.i_0[f][l] 
+                     + gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for t1 in T if (t1+data.tau[l]) <= t)
+                     - gp.quicksum(parameters_SecondStage.dp[s][f][l][t1] for t1 in T if t1 <= t) 
+                     - gp.quicksum(decisionVariables_SecondStage.SO_sflt[s,f,l,t1] for t1 in T if t1 <= t) 
+                     - gp.quicksum(decisionVariables_SecondStage.OSs_f_l_t[s,f,l,t1] for t1 in T if t1 <= t) 
+                    for s in S for f in F for l in L for t in T)
+    
+
+    # INDEX OF TAU WAS WRONG !! i INSTEAD OF l
+
+    '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
+
+    model.addConstrs(gp.quicksum(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] for f in F if data.fty[f] == i) 
+                     <= data.imax[i][l] 
+                    for s in S for l in L for i in FT for t in T)
+    # RUNNING PARAMETER FOR T IS MISSING!!! 
+
+    # Constraint 1.10: Shelf life constraints
+    """Shelf life constraints at FW. Based on the concept discussed above in subSection 4.2, the following two constraints are introduced into
+    the planning model to enforce the shelf-life indirectly. This constraint ensures that a product family will be transported to the distribution
+    centers before the end of its warehouse shelf-life. 
+    """
+    model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] <= gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for l in L for t1 in range(t+1,t+data.omega_fw[f] + 1)) for f in F for t in T if data.fty[f]== 1 and (t + data.omega_fw[f] <= data.hl))
+
 
     model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] <= gp.quicksum((decisionVariables_FirstStage.DVf_l_t[f,l,t1]/data.omega_fw[f])*(t+data.omega_fw[f]-data.hl) for t1 in range(t - data.omega_fw[f]+1,t+1) for l in L) + 
                      gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t2] for t2 in range(t+1,t+data.omega_fw[f] + 1) for l in L if t2 <= data.hl) for f in F for t in T if data.fty[f] == 1 and (t + data.omega_fw[f] > data.hl))
@@ -244,7 +294,7 @@ def Run_Model(data, T, F, S, FT, MP, CT, L):
     model = Objective_Function(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L)
 
     # Add the constraints
-    model = Constraints(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, integerVariables, model, T, F, S, FT, MP, CT, L)
+    model = Constraints(data, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L)
 
     # Optimize model
     model.optimize()
