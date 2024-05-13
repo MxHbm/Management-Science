@@ -77,35 +77,44 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
     """ The following constraints model raw milk inventory flow within the industrial complex. In some scenarios the purchase of raw milk to
         a third-party supplier (RSs, t) or its disposal (ROs, t) due to overstock may arise. For every scenario, dris, t is raw milk daily input (parameter)
         and RMt (independent of scenarios) is the variable modeling the raw milk consumption of all plants in the complex. """
-    model.addConstrs(decisionVariables_FirstStage.dris_t[s][t1]
+    model.addConstrs(decisionVariables_SecondStage.RIs_t[s, t]
                      == data.r0
-                     + gp.quicksum(parameters_SecondStage.dris_t[s,t1] for t1 in T if t1 <= t) 
-                     - gp.quicksum(decisionVariables_FirstStage.RM_t[t1] for t1 in T if t1 <= t) 
-                     + gp.quicksum(decisionVariables_FirstStage.RSs_t[s,t1] for t1 in T if t1 <= t)
-                     - gp.quicksum(decisionVariables_FirstStage.ROs_t[s,t1] for t1 in T if t1<= t)
+                     + gp.quicksum(parameters_SecondStage.dri[s][t1] for t1 in T if t1 <= t) 
+                     #- gp.quicksum(decisionVariables_FirstStage.RMt[t1] for t1 in T if t1 <= t) 
+                     + gp.quicksum(decisionVariables_SecondStage.RSs_t[s,t1] for t1 in T if t1 <= t)
+                     - gp.quicksum(decisionVariables_SecondStage.ROs_t[s,t1] for t1 in T if t1<= t)
                     for s in S for t in T)
 
-    model.addConstrs(decisionVariables_FirstStage.RIs_t[s,t] <= data.fy.rmax for s in S for t in T)
-    
-    model.addConstrs(decisionVariables_FirstStage.RMt[t] == gp.quicksum(decisionVariables_FirstStage.Qm_t[m,t]/data.fy(fpr[m]) for m in MP)
-                     for t in T)
+    model.addConstrs(decisionVariables_SecondStage.RIs_t[s,t] <= data.r_max for s in S for t in T)
+    # auskommentiert for debugging 
+    """model.addConstrs(decisionVariables_FirstStage.RMt[t] 
+                     #== gp.quicksum(decisionVariables_FirstStage.Qm_t[m,t]/data.fy(data.fpr[m]) for m in MP)
+                     == gp.quicksum(decisionVariables_FirstStage.Qm_t[m,t]/data.fpr[m] for m in MP)         # just for debugging
+                    for t in T)"""
     
     # Constraint 2: General production constraints
     """ Family f production of all plants in the complex is equal to the manufacturing output of plants producing f. """
-    model.addConstrs(integerVariables.FPf_t[f,t] = gp.quicksum(decisionVariables_FirstStage.MOm_t[m,t] for m in MP if data.fpr[m] = f)
-                     for f in F for t in T)
+    model.addConstrs(decisionVariables_FirstStage.FPf_t[f,t] 
+                     == gp.quicksum(decisionVariables_FirstStage.MOm_t[m,t] for m in MP if data.fpr[m] == f)
+                    for f in F for t in T)
 
-    model.addConstrs(integerVariables.MOm_t[m,t] = (1 - data.betam[m]) * decisionVariables.Qm_t-[m,t-data.sigma[m]] for m in MP for t in T if t > data.sigma[m])
+    model.addConstrs(decisionVariables_FirstStage.MOm_t[m,t] 
+                     == (1 - data.beta[m]) * decisionVariables_FirstStage.Qm_t[m,t-data.sigma[m]] 
+                    for m in MP for t in T if t > data.sigma[m])
     
-    model.addConstrs(integerVariables.MOm_t[m,t] = (1 - data.betam[m]) * data.wp[m,t] for m in MP for t in T if t <= data.sigma[m])
+    model.addConstrs(decisionVariables_FirstStage.MOm_t[m,t] 
+                     == (1 - data.beta[m]) * data.wp[m][t] 
+                    for m in MP for t in T if t <= data.sigma[m])
 
     # Constraint 3: Work-in-progress (WIP) inventory constraints
     """ Manufacturing products with σ m > 0 generate WIP inventory which is depleted by the volume of finished products in period t represented by the variable MOm, t. Parameter iwip0
         m represents inventory from the previous planning horizon at manufacturing plant m. """
-    model.addConstrs(decisionVariables_FirstStage.IWIPm_t[m,t] = data.iwip0[m]
-                     + gp.quicksum(decisionVariables_FirstStage.Qm_t[m,t1]) for t1 in T if t1 <= t
-                     - gp.quicksum(decisionVariables_FirstStage.MOm_t[m,t1]) for t1 in T if t1 <= t
-                     for m in MP for t in T if data.sigma[m] > 0)
+    model.addConstrs(decisionVariables_FirstStage.IWIPm_t[m,t] 
+                     == data.iwip0[m]
+                     + gp.quicksum(decisionVariables_FirstStage.Qm_t[m,t1] for t1 in T if t1 <= t)
+                     - gp.quicksum(decisionVariables_FirstStage.MOm_t[m,t1] for t1 in T if t1 <= t)
+                     for m in MP for t in T 
+                    if data.sigma[m] > 0)
     
     # Constraint 4
     model.addConstrs(integerVariables.Zm_t[m, t]

@@ -437,7 +437,7 @@ class Parameters_SecondStage:
         #First definition of parameters and call for implementing them
         self.dp = self.create_dp(S, F, L, T)
         self.rho = self.create_rho()
-        self.dri = self.create_dri()
+        self.dri = self.create_dri(S, T)
 
     def create_dp(self, S, F, L, T) -> list[list[list[list[int]]]]:
         ''' Family demand for distribution center l on day t under scenario s. '''
@@ -485,11 +485,19 @@ class Parameters_SecondStage:
         return rho_s
         
 
-    def create_dri(self) -> list[list[int]]:
+    def create_dri(self, S, T) -> list[list[int]]:
         ''' Raw milk daily input on day t under scenario s
         '''
+
+        milk_input = []
+        for s in S:
+            scenario_milk_input = []
+            for t in T:
+                scenario_milk_input.append(rng.randint(0,100))
+
+            milk_input.append(scenario_milk_input) 
         
-        return [0,1,1,1]
+        return milk_input
 
     def create_fpr(self) -> list[float]:
         ''' The family produced by manufacturing plant m 
