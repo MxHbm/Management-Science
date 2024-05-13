@@ -12,6 +12,9 @@ rng.seed(42)
 
 from gurobipy import *
 from gurobipy import GRB
+import csv
+import csv
+import pandas as pd
 
 
 
@@ -40,7 +43,7 @@ class Parameters_FirstStage:
         self.el = self.create_el()
         self.tau = self.create_tau()
         self.i_0 = self.create_i_0(F, L) 
-        self.i0_ft = self.create_i_0(F, T)        # not in the paper
+        self.i0_ft = self.create_i0_ft(F, T)        # not in the paper
         self.tl_min = self.create_tl_min()
         self.tl_max = self.create_tl_max()
         self.r0 = self.create_r0()
@@ -71,7 +74,7 @@ class Parameters_FirstStage:
         self.names_DC = self.create_names_DC()
         self.ls_f = self.create_ls_f(F)
         self.ls_p = self.create_ls_p(MP)
-        self.i0_ft = self.create_i0_ft(F, T)
+        #self.i0_ft = self.create_i0_ft(F, T)
 
     def create_hl(self, T) -> int:
         ''' Add description of the function here '''
@@ -129,7 +132,7 @@ class Parameters_FirstStage:
 
     def create_el(self) -> list[int]:
         ''' Export lot size in metric tons of family f 
-            Lot size is 25 metric tons
+            Lot size is 25 metric ton
         '''
         return [25,25,25,25]
         
@@ -147,7 +150,7 @@ class Parameters_FirstStage:
         for f in F:
             family_inventory = []
             for l in L:
-                family_inventory.append(rng.randint(0,50))
+                family_inventory.append(rng.randint(0,100))
 
             intitial_inventory.append(family_inventory)
 
@@ -161,7 +164,7 @@ class Parameters_FirstStage:
         for f in F:
             family_inventory = []
             for t in T:
-                family_inventory.append(rng.randint(0,50))
+                family_inventory.append(rng.randint(0,100))
 
             intitial_inventory.append(family_inventory)
 
@@ -438,7 +441,7 @@ class Parameters_SecondStage:
 
     def create_dp(self, S, F, L, T) -> list[list[list[list[int]]]]:
         ''' Family demand for distribution center l on day t under scenario s. '''
-        
+
         # Create a list for the demand of each family
         demand = []
         for s in S:
@@ -452,7 +455,18 @@ class Parameters_SecondStage:
                     family_demand .append(location_demand)
                 scenario_demand .append(family_demand )
             demand.append(scenario_demand )
+        
+        # Save demand as CSV file
+        with open('demand.csv', 'w', newline='') as csvfile:
+            writer = csv.writer(csvfile)
+            for s in range(len(S)):
+                for f in range(len(F)):
+                    for l in range(len(L)):
+                        for t in range(len(T)):
+                            writer.writerow([s, f, l, t, demand[s][f][l][t]])
 
+        #print(f"Demand (S={len(S)}, F={len(F)}, L={len(L)}, T={len(T)} ): ")
+        #pprint(demand, compact=True, width=200)
         return demand
 
     def create_rho(self) -> list[float]:
@@ -545,9 +559,9 @@ class IntegerVariables:
         self.Ef_t = model.addVars(F, T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
         #self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=[parameters_FirstStage.zmax[m] for m in MP], name="Zm_t")
         self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
-        self.R1m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R1m_t")
-        self.R2m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R2m_t")
-        self.Ym_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
+        #self.R1m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R1m_t")
+        #self.R2m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R2m_t")
+        #self.Ym_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
 
         for m in MP:
             for t in T:
