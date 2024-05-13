@@ -132,7 +132,7 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
 
     model.addConstrs(decisionVariables_FirstStage.Am_t[m, t]  
                      >= decisionVariables_FirstStage.Am_t[m, t-1] + integerVariables.Zm_t[m, t] - 
-                     (data.dmax[m]/ data.cmin[0] * binaryVariables.R2m_t[m, t]) for m in MP for t in T if t > 1 if data.cty[m] == 0
+                     (data.dmax[m]/ data.cmin[m] * binaryVariables.R2m_t[m, t]) for m in MP for t in T if t > 1 if data.cty[m] == 0
                     ) # MP für dmax und am_t: t-1 und t>=1
     
     model.addConstrs(decisionVariables_FirstStage.Am_t[m, t]  
@@ -140,7 +140,7 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
                     )
     
     model.addConstrs(decisionVariables_FirstStage.Am_t[m, t]
-                    <= (data.dmax[m]/ data.cmin[0]) for m in MP for t in T if t > 1 if data.cty[m] == 0
+                    <= (data.dmax[m]/ data.cmin[m]) for m in MP for t in T if t > 1 if data.cty[m] == 0
                     )
     
     """ Accumulated production at the beginning of the horizon. The following equations (constraints (29) and (30)) model the remaining quantity
@@ -150,11 +150,11 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
                     )
     
     model.addConstrs(decisionVariables_FirstStage.Am_t[m, t==1]  # T=1
-                    <= (data.dmax[m]/ data.cmin[0]) for m in MP for t in T if data.cty[m] == 0
+                    <= (data.dmax[m]/ data.cmin[m]) for m in MP for t in T if data.cty[m] == 0
                     ) 
     
     model.addConstrs(decisionVariables_FirstStage.Am_t[m, t==1]  # T=1
-                    >= integerVariables.Zm_t[m, t==1] - ((data.dmax[m]/ data.cmin[0]) * binaryVariables.R2m_t[m, t==1]) for m in MP for t in T if data.cty[m] == 0
+                    >= integerVariables.Zm_t[m, t==1] - ((data.dmax[m]/ data.cmin[m]) * binaryVariables.R2m_t[m, t==1]) for m in MP for t in T if data.cty[m] == 0
                     ) 
 
     #Constraint 6
@@ -180,22 +180,23 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
     production) until finish the setup task (constraint (37)). Now for the special case that at the beginning of the horizon there is a setup task
     in progress, this is reflected in the parameter ostm > 0, constraint (38) keeping campaign indicator variable to 0 until the task is finished.
     """
-    model.addConstrs(integerVariables.Zm_t[m, t-1] <= data.zmax[m] * (1 - integerVariables.Zm_t[m, t-1]) for m in MP for t in T if t > 0)
-    model.addConstrs(integerVariables.R2m_t[m,t] >= integerVariables.Ym_t[m,t] for m in MP for t in T)
-    model.addConstrs(integerVariables.R2m_t[m,t] - integerVariables.Zm_t[m, t-1] <= integerVariables.Ym_t[m,t] for m in MP for t in T if t > 0)
-    model.addConstrs(integerVariables.Zm_t[m, t - t1] <= data.zmax[m] * (1 - integerVariables.Ym_t[m,t]) for m in MP for t in T for t1 in range(data.alpha[m]) if (data.alpha[m] > 0)  and (t - t1 >= 0))
-    model.addConstrs(integerVariables.Zm_t[m,t] <= 0 for m in MP for t in T if t < data.ost[m])
+    model.addConstrs((integerVariables.Zm_t[m, t-1] <= data.zmax[m] * (1 - integerVariables.Zm_t[m, t-1]) for m in MP for t in T if t > 0), "Constraint_1.7a")
+    model.addConstrs((binaryVariables.R2m_t[m,t] >= binaryVariables.Ym_t[m,t] for m in MP for t in T), "Constraint_1.7b")
+    model.addConstrs((binaryVariables.R2m_t[m,t] - integerVariables.Zm_t[m, t-1] <= binaryVariables.Ym_t[m,t] for m in MP for t in T if t > 0), "Constraint_1.7c")
+    model.addConstrs((integerVariables.Zm_t[m, t - t1] <= data.zmax[m] * (1 - binaryVariables.Ym_t[m,t]) for m in MP for t in T for t1 in range(data.alpha[m]) if (data.alpha[m] > 0)  and (t - t1 >= 0)), "Constraint_1.7d")
+    model.addConstrs((integerVariables.Zm_t[m,t] <= 0 for m in MP for t in T if t < data.ost[m]), "Constraint_1.7e")
 
     #5.1.8. Factory inventory balances
     """ The following constraints model the filling of factory inventory with finished products and the shipments and exports that deplete this
     inventory."""
 
-    model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] 
+    model.addConstrs((decisionVariables_FirstStage.IFf_t[f,t] 
                      == data.i0_ft[f][t] 
                      + gp.quicksum(decisionVariables_FirstStage.FPf_t[f,t1] for t1 in T if t1 <= t) 
                      - gp.quicksum(integerVariables.Ef_t[f,t1] * data.el[f] for t1 in T if t1 <= t) 
                      - gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for l in L for t1 in T if t1 <= t) 
-                    for f in F for t in T)
+                    for f in F for t in T),
+                    'Constraint_1.8')
 
     
     # Constraint 1.9: Inventory at DCs
@@ -203,13 +204,14 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
     l. Inventory at distribution centers is scenario dependent accordingly to future demand realization (dps, f, l, t). Possible inventory fluctuation
     due to understock and overstock quantities are represented by scenario variables SOs, f, l, t,OSs, f, l, t, respectively.
     """
-    model.addConstrs(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] 
-                     == data.i_0[f][l] 
+    model.addConstrs((decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] 
+                     ==  data.i_0[f][l] 
                      + gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for t1 in T if (t1+data.tau[l]) <= t)
                      - gp.quicksum(parameters_SecondStage.dp[s][f][l][t1] for t1 in T if t1 <= t) 
                      - gp.quicksum(decisionVariables_SecondStage.SO_sflt[s,f,l,t1] for t1 in T if t1 <= t) 
                      - gp.quicksum(decisionVariables_SecondStage.OSs_f_l_t[s,f,l,t1] for t1 in T if t1 <= t) 
-                    for s in S for f in F for l in L for t in T)
+                    for s in S for f in F for l in L for t in T),
+                    'Constraint_1.9')
     
 
     # INDEX OF TAU WAS WRONG !! i INSTEAD OF l
@@ -226,23 +228,37 @@ def Constraints(data:Parameters_FirstStage, decisionVariables_FirstStage: Decisi
     the planning model to enforce the shelf-life indirectly. This constraint ensures that a product family will be transported to the distribution
     centers before the end of its warehouse shelf-life. 
     """
-    model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] <= gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for l in L for t1 in range(t+1,t+data.omega_fw[f] + 1)) for f in F for t in T if data.fty[f]== 1 and (t + data.omega_fw[f] <= data.hl))
+    model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] 
+                     <= gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for l in L for t1 in range(t+1,t+data.omega_fw[f] + 1)) 
+                    for f in F for t in T 
+                    if data.fty[f]== 1 and (t + data.omega_fw[f] <= data.hl))
 
 
-    model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] <= gp.quicksum((decisionVariables_FirstStage.DVf_l_t[f,l,t1]/data.omega_fw[f])*(t+data.omega_fw[f]-data.hl) for t1 in range(t - data.omega_fw[f]+1,t+1) for l in L) + 
-                     gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t2] for t2 in range(t+1,t+data.omega_fw[f] + 1) for l in L if t2 <= data.hl) for f in F for t in T if data.fty[f] == 1 and (t + data.omega_fw[f] > data.hl))
+    model.addConstrs(decisionVariables_FirstStage.IFf_t[f,t] 
+                     <= gp.quicksum((decisionVariables_FirstStage.DVf_l_t[f,l,t1]/data.omega_fw[f])*(t+data.omega_fw[f]-data.hl) for t1 in range(t - data.omega_fw[f]+1,t+1) for l in L) 
+                     +  gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t2] for t2 in range(t+1,t+data.omega_fw[f] + 1) for l in L if t2 <= data.hl) 
+                    for f in F for t in T 
+                    if data.fty[f] == 1 and (t + data.omega_fw[f] > data.hl))
     
-    model.addConstrs(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] <= gp.quicksum(parameters_SecondStage.dp[s][f][l][t1] for t1 in range(t+1,t+data.omega_dc[f] + 1)) for l in L for f in F for t in T for s in S if data.fty[f]== 1 and (t + data.omega_dc[f] <= data.hl))
+    model.addConstrs(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] 
+                     <= gp.quicksum(parameters_SecondStage.dp[s][f][l][t1] for t1 in range(t+1,t+data.omega_dc[f] + 1)) 
+                    for l in L for f in F for t in T for s in S 
+                    if (data.fty[f]== 1) and (t + data.omega_dc[f] <= data.hl))
 
-    model.addConstrs(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] <= gp.quicksum((parameters_SecondStage.dp[s][f][l][t1]/data.omega_dc[f])*(t+data.omega_dc[f]-data.hl) for t1 in range(t - data.omega_dc[f]+1,t+1)) +
-                        gp.quicksum(parameters_SecondStage.dp[s][f][l][t2] for t2 in range(t+1,t+data.omega_dc[f] + 1) if t2 <= data.hl) for l in L for f in F for t in T for s in S if data.fty[f] == 1 and (t + data.omega_dc[f] > data.hl))
+    model.addConstrs(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] 
+                     <= gp.quicksum((parameters_SecondStage.dp[s][f][l][t1]/data.omega_dc[f])*(t+data.omega_dc[f]-data.hl) for t1 in range(t - data.omega_dc[f]+1,t+1)) 
+                     + gp.quicksum(parameters_SecondStage.dp[s][f][l][t2] for t2 in range(t+1,t+data.omega_dc[f] + 1) if t2 <= data.hl) 
+                    for l in L for f in F for t in T for s in S 
+                    if data.fty[f] == 1 and (t + data.omega_dc[f] > data.hl))
 
     # Constraint 1.11: Shipments consolidation
     """ Shipments (Vi, l, t ) from the factory inventory to DCs l are consolidated into fresh and dry shipments with variables DVf, l, t according to
     their refrigerated transportation requirements.
     """
 
-    model.addConstrs(decisionVariables_FirstStage.Vi_l_t[i,l,t] == gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t] for f in F if data.fty[f] == i) for i in FT for l in L for t in T)
+    model.addConstrs(decisionVariables_FirstStage.Vi_l_t[i,l,t] 
+                     == gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t] for f in F if data.fty[f] == i)
+                    for i in FT for l in L for t in T)
 
     # Constraint 1.12: Required Number Of Trucks
     """ The volume shipped from factory inventory to DC l needs to be loaded in trucks. The number of required trucks (TRi, l, t ) is calculated
@@ -304,7 +320,14 @@ def Run_Model(data, T, F, S, FT, MP, CT, L):
     #    print('%s %g' % (v.varName, v.x))
 
     #print('Attr:', model.getAttr('X'))
-    print('Obj: %g' % model.objVal)
+    print('model.status:', model.status)
+    if model.status == GRB.Status.OPTIMAL:
+        print('Obj: %g' % model.objVal)
+    else:
+            # find infeasibilities
+        model.computeIIS()
+        model.write("results/infeasible.ilp")
+    
 
     # Save the model
     # Add timestamp to file name
@@ -317,6 +340,9 @@ def Run_Model(data, T, F, S, FT, MP, CT, L):
 
     file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
     model.write(file_name)
+
+
+
 
 def main():
 
