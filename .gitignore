@@ -165,6 +165,7 @@ cython_debug/
 
 # Results folder
 results/
+demand.csv
 
 # pychache
 __pycache__/data_generation.cpython-310.pyc
