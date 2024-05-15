@@ -113,7 +113,7 @@ class Parameters_FirstStage:
         return [110, 120, 150, 16.66]
 
     def create_fy(self) -> list[float]:
-        ''' Family f production yield for ua nit of processed raw milk 
+        ''' Family f production yield for  a unit of processed raw milk 
             UHT and Powdered Milk, Yogurt, Cheese'''
         
         return [0.975, 0.12, 0.9, 0.11]
@@ -185,14 +185,14 @@ class Parameters_FirstStage:
     def create_r0(self) -> int:
         ''' Raw milk initial inventory. '''
 
-        initial_inventory = rng.randint(100,200)
+        initial_inventory = rng.randint(50,200)
 
         return initial_inventory
 
     def create_r_max(self) -> int:
         ''' Maximum raw milk inventory. '''
 
-        maximum_inventory = rng.randint(2000,2000)
+        maximum_inventory = rng.randint(1000,2000)
 
         return maximum_inventory
         
@@ -377,10 +377,22 @@ class Parameters_FirstStage:
         return iwip
 
     def create_tc(self) -> list[list[int]]:
-        ''' Transportation costs from the production complex to the distribution center '''
+        ''' Transportation costs from the production complex to the distribution center l 
         
-        transport_costs_product_group_matrix = [[15.641,13.034],[4.956, 4.13],[10.332,8.61],[14.818, 12.348],[0.067, 0.056],
-                                                [14.364, 11.97],[4.032, 3.36],[21.638,18.032],[9.021,7.518]]
+        Names Of Distribution Centers:
+        ["DC-SAL", "DC-CBA", "DC-CTE","DC-POS","DC-RAF","DC-MZA", "DC-ROS", "DC_NQN", "DC-BUE"]
+
+        '''
+                                                #   0   , 1         // Fresh and Dry
+        transport_costs_product_group_matrix = [[15.641,13.034],
+                                                [4.956, 4.13],
+                                                [10.332,8.61],
+                                                [14.818, 12.348],
+                                                [0.067, 0.056],
+                                                [14.364, 11.97],
+                                                [4.032, 3.36],
+                                                [21.638,18.032],
+                                                [9.021,7.518]]
         
         return transport_costs_product_group_matrix
 
@@ -522,7 +534,7 @@ class DecisionVariables_FirstStage:
         self.ENB = model.addVar(lb=0, name="ENB")
         self.TCOST = model.addVar(lb=0, name="TCOST")
         self.SN = model.addVar(lb=0, name="SN")
-        self.RMt = model.addVars(MP, T, lb=0, name="RMt")
+        self.RMt = model.addVars(T, lb=0, name="RMt")
         self.IFf_t = model.addVars(F, T, lb=0, name="IFf_t")
         self.FPf_t = model.addVars(F, T, lb=0, name="FPf_t")
         self.Vi_l_t = model.addVars(F, L, T, lb=0, name="Vi_l_t")
