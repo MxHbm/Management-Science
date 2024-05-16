@@ -159,20 +159,20 @@ class Model:
         model.addConstrs((decisionVariables_FirstStage.Z1[m, t]
                         <= integerVariables.Z[m, t-1] 
                         for m in MP for t in T 
-                        if t > 1 ),
+                        if t > 0 ),
                         'Constraint_1.4f') # t - 1
         
         model.addConstrs((decisionVariables_FirstStage.Z1[m, t]
                         >= binaryVariables.R1[m, t] 
                         * integerVariables.Z[m, t-1] 
                         for m in MP for t in T 
-                        if t > 1),
+                        if t > 0),
                         'Constraint_1.4g') 
         
         model.addConstrs((decisionVariables_FirstStage.Aux[m, t]
                         <= integerVariables.Z[m, t-1] 
                         for m in MP for t in T 
-                        if t > 1),
+                        if t > 0),
                         'Constraint_1.4h') 
         
         model.addConstrs((decisionVariables_FirstStage.Aux[m, t]
@@ -180,7 +180,7 @@ class Model:
                         - parameters_FirstStage.zmax[m] 
                             * (1 - binaryVariables.R1[m, t]) 
                         for m in MP for t in T 
-                        if t > 1),
+                        if t > 0),
                         'Constraint_1.4i')
         
         model.addConstrs((decisionVariables_FirstStage.Aux[m, t]
@@ -222,7 +222,7 @@ class Model:
                         <= decisionVariables_FirstStage.A[m, t-1] 
                         + integerVariables.Z[m, t] 
                         for m in MP for t in T 
-                        if (t > 1) and (parameters_FirstStage.cty[m] == 0)),
+                        if (t > 0) and (parameters_FirstStage.cty[m] == 0)),
                         'Constraint_1.5c')
 
         model.addConstrs((decisionVariables_FirstStage.A[m, t]  
@@ -232,7 +232,7 @@ class Model:
                             / parameters_FirstStage.cmin[m] )
                             * binaryVariables.R2[m, t]) 
                         for m in MP for t in T 
-                        if (t > 1) and (parameters_FirstStage.cty[m] == 0)),
+                        if (t > 0) and (parameters_FirstStage.cty[m] == 0)),
                         'Constraint_1.5d')
         
         model.addConstrs((decisionVariables_FirstStage.A[m, t]  
@@ -245,7 +245,7 @@ class Model:
                         <= (parameters_FirstStage.dmax[m]
                             / parameters_FirstStage.cmin[m]) 
                         for m in MP for t in T 
-                        if (t > 1) and (parameters_FirstStage.cty[m] == 0)),
+                        if (t > 0) and (parameters_FirstStage.cty[m] == 0)),
                         'Constraint_1.5f')
         
         """ Accumulated production at the beginning of the horizon. The following equations (constraints (29) and (30)) model the remaining quantity
