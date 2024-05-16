@@ -27,14 +27,14 @@ class Model:
             obtained from buying raw milk from a third party and for the case of overstock are production costs.'''
 
         # TCOST
-        TCOST = (gp.quicksum(integerVariables.TRi_l_t[i, l, t] 
+        TCOST = (gp.quicksum(integerVariables.TR[i, l, t] 
                             * parameters_FirstStage.tc[l][i] for i in FT for l in L for t in T) 
-                + gp.quicksum(binaryVariables.Ym_t[m, t] 
+                + gp.quicksum(binaryVariables.Y[m, t] 
                             * parameters_FirstStage.sco for m in MP for t in T) 
                 + gp.quicksum(parameters_SecondStage.rho[s] 
-                            * (decisionVariables_SecondStage.RSs_t[s, t] 
+                            * (decisionVariables_SecondStage.RS[s, t] 
                                 * parameters_FirstStage.rsc 
-                                + decisionVariables_SecondStage.ROs_t[s, t] 
+                                + decisionVariables_SecondStage.RO[s, t] 
                                 * parameters_FirstStage.roc) 
                             for s in S for t in T))
 
@@ -45,15 +45,15 @@ class Model:
         
         # BENEFIT
         BENEFIT = ( gp.quicksum( parameters_FirstStage.re[f] 
-                                * parameters_FirstStage.ls_f[f] 
-                                * integerVariables.Ef_t[f, t]
+                                * parameters_FirstStage.ls[f] 
+                                * integerVariables.E[f, t]
                                 for f in F for t in T)
                     + gp.quicksum(  parameters_SecondStage.rho[s]
                                     * ( gp.quicksum(parameters_FirstStage.r[f] 
                                         * (parameters_SecondStage.dp[s][f][l][t] 
-                                            - decisionVariables_SecondStage.SO_sflt[s, f, l, t])
+                                            - decisionVariables_SecondStage.SO[s, f, l, t])
                                         for l in L for f in F for t in T)
-                                        + gp.quicksum(decisionVariables_SecondStage.OSs_f_l_t[s, f, l, t] 
+                                        + gp.quicksum(decisionVariables_SecondStage.OS[s, f, l, t] 
                                                         * parameters_FirstStage.rr[f]
                                         for l in L for f in F for t in T)
                                         )
@@ -75,42 +75,42 @@ class Model:
         # Constraint 1: Raw milk supply consumption
         """ The following constraints model raw milk inventory flow within the industrial complex. In some scenarios the purchase of raw milk to
             a third-party supplier (RSs, t) or its disposal (ROs, t) due to overstock may arise. For every scenario, dris, t is raw milk daily input (parameter)
-            and RMt (independent of scenarios) is the variable modeling the raw milk consumption of all plants in the complex. """
-        model.addConstrs((decisionVariables_SecondStage.RIs_t[s, t]
+            and RM (independent of scenarios) is the variable modeling the raw milk consumption of all plants in the complex. """
+        model.addConstrs((decisionVariables_SecondStage.RI[s, t]
                         == parameters_FirstStage.r0
                         + gp.quicksum(parameters_SecondStage.dri[s][t1] for t1 in T if t1 <= t) 
-                        - gp.quicksum(decisionVariables_FirstStage.RMt[t1] for t1 in T if t1 <= t) 
-                        + gp.quicksum(decisionVariables_SecondStage.RSs_t[s,t1] for t1 in T if t1 <= t)
-                        - gp.quicksum(decisionVariables_SecondStage.ROs_t[s,t1] for t1 in T if t1<= t)
+                        - gp.quicksum(decisionVariables_FirstStage.RM[t1] for t1 in T if t1 <= t) 
+                        + gp.quicksum(decisionVariables_SecondStage.RS[s,t1] for t1 in T if t1 <= t)
+                        - gp.quicksum(decisionVariables_SecondStage.RO[s,t1] for t1 in T if t1<= t)
                         for s in S for t in T),
                         'Constraint_1.1a')
 
-        model.addConstrs((decisionVariables_SecondStage.RIs_t[s,t] 
+        model.addConstrs((decisionVariables_SecondStage.RI[s,t] 
                         <= parameters_FirstStage.r_max 
                         for s in S for t in T),
                         'Constraint_1.1b')
 
-        model.addConstrs((decisionVariables_FirstStage.RMt[t] 
-                        #== gp.quicksum(decisionVariables_FirstStage.Qm_t[m,t]/parameters_FirstStage.fy(parameters_FirstStage.fpr[m]) for m in MP)
-                        == gp.quicksum(decisionVariables_FirstStage.Qm_t[m,t]/parameters_FirstStage.fy[m] for m in MP)         # just for debugging
+        model.addConstrs((decisionVariables_FirstStage.RM[t] 
+                        #== gp.quicksum(decisionVariables_FirstStage.Q[m,t]/parameters_FirstStage.fy(parameters_FirstStage.fpr[m]) for m in MP)
+                        == gp.quicksum(decisionVariables_FirstStage.Q[m,t]/parameters_FirstStage.fy[m] for m in MP)         # just for debugging
                         for t in T),
                         'Constraint_1.1c')
         
         # Constraint 2: General production constraints
         """ Family f production of all plants in the complex is equal to the manufacturing output of plants producing f. """
-        model.addConstrs((decisionVariables_FirstStage.FPf_t[f,t] 
-                        #== gp.quicksum(decisionVariables_FirstStage.MOm_t[m,t] for m in MP if parameters_FirstStage.fpr[m] == f)
-                        == gp.quicksum(decisionVariables_FirstStage.MOm_t[m,t] for m in MP)    # just for debugging, see Issue #41
+        model.addConstrs((decisionVariables_FirstStage.FP[f,t] 
+                        #== gp.quicksum(decisionVariables_FirstStage.MO[m,t] for m in MP if parameters_FirstStage.fpr[m] == f)
+                        == gp.quicksum(decisionVariables_FirstStage.MO[m,t] for m in MP)    # just for debugging, see Issue #41
                         for f in F for t in T),
                         'Constraint_1.2a')
 
-        model.addConstrs((decisionVariables_FirstStage.MOm_t[m,t] 
+        model.addConstrs((decisionVariables_FirstStage.MO[m,t] 
                         == (1 - parameters_FirstStage.beta[m]) 
-                        * decisionVariables_FirstStage.Qm_t[m,t-parameters_FirstStage.sigma[m]] 
+                        * decisionVariables_FirstStage.Q[m,t-parameters_FirstStage.sigma[m]] 
                         for m in MP for t in T if t > parameters_FirstStage.sigma[m]),
                         'Constraint_1.2b')
         
-        model.addConstrs((decisionVariables_FirstStage.MOm_t[m,t] 
+        model.addConstrs((decisionVariables_FirstStage.MO[m,t] 
                         == (1 - parameters_FirstStage.beta[m]) 
                         * parameters_FirstStage.wp[m][t] 
                         for m in MP for t in T if t <= parameters_FirstStage.sigma[m]),
@@ -119,93 +119,93 @@ class Model:
         # Constraint 3: Work-in-progress (WIP) inventory constraints
         """ Manufacturing products with σ m > 0 generate WIP inventory which is depleted by the volume of finished products in period t represented by the variable MOm, t. Parameter iwip0
             m represents inventory from the previous planning horizon at manufacturing plant m. """
-        model.addConstrs((decisionVariables_FirstStage.IWIPm_t[m,t] 
+        model.addConstrs((decisionVariables_FirstStage.IWIP[m,t] 
                         == parameters_FirstStage.iwip0[m]
-                        + gp.quicksum(decisionVariables_FirstStage.Qm_t[m,t1] for t1 in T if t1 <= t)
-                        - gp.quicksum(decisionVariables_FirstStage.MOm_t[m,t1] for t1 in T if t1 <= t)
+                        + gp.quicksum(decisionVariables_FirstStage.Q[m,t1] for t1 in T if t1 <= t)
+                        - gp.quicksum(decisionVariables_FirstStage.MO[m,t1] for t1 in T if t1 <= t)
                         for m in MP for t in T 
                         if parameters_FirstStage.sigma[m] > 0),
                         'Constraint_1.3a')
         
         # Constraint 4
-        model.addConstrs((integerVariables.Zm_t[m, t]
-                        == decisionVariables_FirstStage.Z1m_t[m, t] 
-                        + decisionVariables_FirstStage.Z2m_t[m, t] 
+        model.addConstrs((integerVariables.Z[m, t]
+                        == decisionVariables_FirstStage.Z1[m, t] 
+                        + decisionVariables_FirstStage.Z2[m, t] 
                         for m in MP for t in T),
                         'Constraint_1.4a')
         
-        model.addConstrs((decisionVariables_FirstStage.Z1m_t[m, t]
-                        <= parameters_FirstStage.zmax[m] * binaryVariables.R1m_t[m, t] 
+        model.addConstrs((decisionVariables_FirstStage.Z1[m, t]
+                        <= parameters_FirstStage.zmax[m] * binaryVariables.R1[m, t] 
                         for m in MP for t in T),
                         'Constraint_1.4b')
         
-        model.addConstrs((decisionVariables_FirstStage.Z2m_t[m, t]
+        model.addConstrs((decisionVariables_FirstStage.Z2[m, t]
                         <= parameters_FirstStage.zmax[m] 
-                        * binaryVariables.R2m_t[m, t] 
+                        * binaryVariables.R2[m, t] 
                         for m in MP for t in T),
                         'Constraint_1.4c')
         
-        model.addConstrs((binaryVariables.R1m_t[m, t]
-                        + binaryVariables.R2m_t[m, t] 
+        model.addConstrs((binaryVariables.R1[m, t]
+                        + binaryVariables.R2[m, t] 
                         == 1 
                         for m in MP for t in T),
                         'Constraint_1.4d')
         
-        model.addConstrs((binaryVariables.R1m_t[m, 1]  #T = 1
+        model.addConstrs((binaryVariables.R1[m, 1]  #T = 1
                         == 1 
                         for m in MP for t in T),
                         'Constraint_1.4e')
         
-        model.addConstrs((decisionVariables_FirstStage.Z1m_t[m, t]
-                        <= integerVariables.Zm_t[m, t-1] 
+        model.addConstrs((decisionVariables_FirstStage.Z1[m, t]
+                        <= integerVariables.Z[m, t-1] 
                         for m in MP for t in T 
-                        if t > 1 ),
+                        if t > 0 ),
                         'Constraint_1.4f') # t - 1
         
-        model.addConstrs((decisionVariables_FirstStage.Z1m_t[m, t]
-                        >= binaryVariables.R1m_t[m, t] 
-                        * integerVariables.Zm_t[m, t-1] 
+        model.addConstrs((decisionVariables_FirstStage.Z1[m, t]
+                        >= binaryVariables.R1[m, t] 
+                        * integerVariables.Z[m, t-1] 
                         for m in MP for t in T 
-                        if t > 1),
+                        if t > 0),
                         'Constraint_1.4g') 
         
-        model.addConstrs((decisionVariables_FirstStage.Auxm_t[m, t]
-                        <= integerVariables.Zm_t[m, t-1] 
+        model.addConstrs((decisionVariables_FirstStage.Aux[m, t]
+                        <= integerVariables.Z[m, t-1] 
                         for m in MP for t in T 
-                        if t > 1),
+                        if t > 0),
                         'Constraint_1.4h') 
         
-        model.addConstrs((decisionVariables_FirstStage.Auxm_t[m, t]
-                        >= integerVariables.Zm_t[m, t-1] 
+        model.addConstrs((decisionVariables_FirstStage.Aux[m, t]
+                        >= integerVariables.Z[m, t-1] 
                         - parameters_FirstStage.zmax[m] 
-                            * (1 - binaryVariables.R1m_t[m, t]) 
+                            * (1 - binaryVariables.R1[m, t]) 
                         for m in MP for t in T 
-                        if t > 1),
+                        if t > 0),
                         'Constraint_1.4i')
         
-        model.addConstrs((decisionVariables_FirstStage.Auxm_t[m, t]
-                        <= integerVariables.Zm_t[m, t] 
+        model.addConstrs((decisionVariables_FirstStage.Aux[m, t]
+                        <= integerVariables.Z[m, t] 
                         for m in MP for t in T),
                         'Constraint_1.4j' )
         
-        model.addConstrs((decisionVariables_FirstStage.Auxm_t[m, t]
-                        <= binaryVariables.R1m_t[m, t] 
+        model.addConstrs((decisionVariables_FirstStage.Aux[m, t]
+                        <= binaryVariables.R1[m, t] 
                         * parameters_FirstStage.zmax[m] 
                         for m in MP for t in T),
                         'Constraint_1.4k') 
         
         #Constraint 5: Length-based campaign
         """ The level of production capacity during a production campaign of a length-based plant is set """
-        model.addConstrs(((decisionVariables_FirstStage.Qm_t[m, t] 
+        model.addConstrs(((decisionVariables_FirstStage.Q[m, t] 
                         / parameters_FirstStage.cmin[m]) 
-                        <= integerVariables.Zm_t[m, t] 
+                        <= integerVariables.Z[m, t] 
                         for m in MP for t in T 
                         if parameters_FirstStage.cty[m] == 0),
                         'Constraint_1.5a')
         
-        model.addConstrs(((decisionVariables_FirstStage.Qm_t[m, t] 
+        model.addConstrs(((decisionVariables_FirstStage.Q[m, t] 
                         / parameters_FirstStage.cmax[m]) 
-                        >= integerVariables.Zm_t[m, t] 
+                        >= integerVariables.Z[m, t] 
                         for m in MP for t in T 
                         if parameters_FirstStage.cty[m] == 0),
                         'Constraint_1.5b')
@@ -218,56 +218,56 @@ class Model:
             The quotient dmax_m / cmin_m, represents the maximum number of campaigns that might take place for manufacturing plant m within the current
             planning horizon"
         """
-        model.addConstrs((decisionVariables_FirstStage.Am_t[m, t]  
-                        <= decisionVariables_FirstStage.Am_t[m, t-1] 
-                        + integerVariables.Zm_t[m, t] 
+        model.addConstrs((decisionVariables_FirstStage.A[m, t]  
+                        <= decisionVariables_FirstStage.A[m, t-1] 
+                        + integerVariables.Z[m, t] 
                         for m in MP for t in T 
-                        if (t > 1) and (parameters_FirstStage.cty[m] == 0)),
+                        if (t > 0) and (parameters_FirstStage.cty[m] == 0)),
                         'Constraint_1.5c')
 
-        model.addConstrs((decisionVariables_FirstStage.Am_t[m, t]  
-                        >= decisionVariables_FirstStage.Am_t[m, t-1]
-                        + integerVariables.Zm_t[m, t] 
+        model.addConstrs((decisionVariables_FirstStage.A[m, t]  
+                        >= decisionVariables_FirstStage.A[m, t-1]
+                        + integerVariables.Z[m, t] 
                         - ((parameters_FirstStage.dmax[m]
                             / parameters_FirstStage.cmin[m] )
-                            * binaryVariables.R2m_t[m, t]) 
+                            * binaryVariables.R2[m, t]) 
                         for m in MP for t in T 
-                        if (t > 1) and (parameters_FirstStage.cty[m] == 0)),
+                        if (t > 0) and (parameters_FirstStage.cty[m] == 0)),
                         'Constraint_1.5d')
         
-        model.addConstrs((decisionVariables_FirstStage.Am_t[m, t]  
-                        >= integerVariables.Zm_t[m, t] 
+        model.addConstrs((decisionVariables_FirstStage.A[m, t]  
+                        >= integerVariables.Z[m, t] 
                         for m in MP for t in T 
                         if parameters_FirstStage.cty[m] == 0),
                         'Constraint_1.5e')
         
-        model.addConstrs((decisionVariables_FirstStage.Am_t[m, t]
+        model.addConstrs((decisionVariables_FirstStage.A[m, t]
                         <= (parameters_FirstStage.dmax[m]
                             / parameters_FirstStage.cmin[m]) 
                         for m in MP for t in T 
-                        if (t > 1) and (parameters_FirstStage.cty[m] == 0)),
+                        if (t > 0) and (parameters_FirstStage.cty[m] == 0)),
                         'Constraint_1.5f')
         
         """ Accumulated production at the beginning of the horizon. The following equations (constraints (29) and (30)) model the remaining quantity
         production for the special case of t = 1."""
-        model.addConstrs((decisionVariables_FirstStage.Am_t[m, 1]  # T=1
-                        <= integerVariables.Zm_t[m, 1] 
+        model.addConstrs((decisionVariables_FirstStage.A[m, 1]  # T=1
+                        <= integerVariables.Z[m, 1] 
                         for m in MP
                         if parameters_FirstStage.cty[m] == 0),
                         'Constraint_1.5g')
         
-        model.addConstrs((decisionVariables_FirstStage.Am_t[m, 1]  # T=1
+        model.addConstrs((decisionVariables_FirstStage.A[m, 1]  # T=1
                         <= (parameters_FirstStage.dmax[m]
                             / parameters_FirstStage.cmin[m]) 
                         for m in MP
                         if parameters_FirstStage.cty[m] == 0),
                         'Constraint_1.5h') 
         
-        model.addConstrs((decisionVariables_FirstStage.Am_t[m, 1]  # T=1
-                        >= integerVariables.Zm_t[m, 1] 
+        model.addConstrs((decisionVariables_FirstStage.A[m, 1]  # T=1
+                        >= integerVariables.Z[m, 1] 
                         - ((parameters_FirstStage.dmax[m]
                             / parameters_FirstStage.cmin[m]) 
-                            * binaryVariables.R2m_t[m, 1]) 
+                            * binaryVariables.R2[m, 1]) 
                         for m in MP 
                         if parameters_FirstStage.cty[m] == 0),
                         'Constraint_1.5i') 
@@ -278,17 +278,17 @@ class Model:
         capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
         can be idle.
         """
-        model.addConstrs(((decisionVariables_FirstStage.Qm_t[m, t] 
+        model.addConstrs(((decisionVariables_FirstStage.Q[m, t] 
                         / parameters_FirstStage.sc[m])
-                        <= integerVariables.Zm_t[m, t] 
+                        <= integerVariables.Z[m, t] 
                         for m in MP for t in T 
                         if parameters_FirstStage.cty == 1),
                         'Constraint_1.6a')
         
-        model.addConstrs((decisionVariables_FirstStage.Qm_t[m, t] 
+        model.addConstrs((decisionVariables_FirstStage.Q[m, t] 
                         / (parameters_FirstStage.sc[m] 
                             * (1 - parameters_FirstStage.is_[m]))
-                        >= integerVariables.Zm_t[m, t] 
+                        >= integerVariables.Z[m, t] 
                         for m in MP for t in T 
                         if parameters_FirstStage.cty == 1),
                         'Constraint_1.6b')
@@ -302,29 +302,29 @@ class Model:
         production) until finish the setup task (constraint (37)). Now for the special case that at the beginning of the horizon there is a setup task
         in progress, this is reflected in the parameter ostm > 0, constraint (38) keeping campaign indicator variable to 0 until the task is finished.
         """
-        model.addConstrs((integerVariables.Zm_t[m, t-1] 
+        model.addConstrs((integerVariables.Z[m, t-1] 
                         <= parameters_FirstStage.zmax[m] 
-                        * (1 - binaryVariables.Ym_t[m, t]) 
+                        * (1 - binaryVariables.Y[m, t]) 
                         for m in MP for t in T 
                         if t > 0), "Constraint_1.7a")
         
-        model.addConstrs((binaryVariables.R2m_t[m,t] 
-                        >= binaryVariables.Ym_t[m,t] 
+        model.addConstrs((binaryVariables.R2[m,t] 
+                        >= binaryVariables.Y[m,t] 
                         for m in MP for t in T), "Constraint_1.7b")
         
-        model.addConstrs((binaryVariables.R2m_t[m,t] 
-                        - integerVariables.Zm_t[m, t-1] 
-                        <= binaryVariables.Ym_t[m,t] 
+        model.addConstrs((binaryVariables.R2[m,t] 
+                        - integerVariables.Z[m, t-1] 
+                        <= binaryVariables.Y[m,t] 
                         for m in MP for t in T 
                         if t > 0), "Constraint_1.7c")
         
-        model.addConstrs((integerVariables.Zm_t[m, t - t1] 
+        model.addConstrs((integerVariables.Z[m, t - t1] 
                         <= parameters_FirstStage.zmax[m] 
-                        * (1 - binaryVariables.Ym_t[m,t]) 
+                        * (1 - binaryVariables.Y[m,t]) 
                         for m in MP for t in T for t1 in range(parameters_FirstStage.alpha[m] - 1) 
                         if (parameters_FirstStage.alpha[m] > 0)  and (t - t1 >= 0)), "Constraint_1.7d")
         
-        model.addConstrs((integerVariables.Zm_t[m,t] 
+        model.addConstrs((integerVariables.Z[m,t] 
                         <= 0 
                         for m in MP for t in T 
                         if t <= parameters_FirstStage.ost[m]), "Constraint_1.7e")
@@ -333,11 +333,11 @@ class Model:
         """ The following constraints model the filling of factory inventory with finished products and the shipments and exports that deplete this
         inventory."""
 
-        model.addConstrs((decisionVariables_FirstStage.IFf_t[f,t] 
-                        == parameters_FirstStage.i0_ft[f][t] 
-                        + gp.quicksum(decisionVariables_FirstStage.FPf_t[f,t1] for t1 in T if t1 <= t) 
-                        - gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for l in L for t1 in T if t1 <= t) 
-                        - gp.quicksum(integerVariables.Ef_t[f,t1] * parameters_FirstStage.el[f] for t1 in T if t1 <= t) 
+        model.addConstrs((decisionVariables_FirstStage.IF[f,t] 
+                        == parameters_FirstStage.i0_2[f][t] 
+                        + gp.quicksum(decisionVariables_FirstStage.FP[f,t1] for t1 in T if t1 <= t) 
+                        - gp.quicksum(decisionVariables_FirstStage.DV[f,l,t1] for l in L for t1 in T if t1 <= t) 
+                        - gp.quicksum(integerVariables.E[f,t1] * parameters_FirstStage.el[f] for t1 in T if t1 <= t) 
                         for f in F for t in T),
                         'Constraint_1.8')
 
@@ -347,12 +347,12 @@ class Model:
         l. Inventory at distribution centers is scenario dependent accordingly to future demand realization (dps, f, l, t). Possible inventory fluctuation
         due to understock and overstock quantities are represented by scenario variables SOs, f, l, t,OSs, f, l, t, respectively.
         """
-        model.addConstrs((decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] 
-                        ==  parameters_FirstStage.i_0[f][l] 
-                        + gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for t1 in T if (t1+parameters_FirstStage.tau[l]) <= t)
+        model.addConstrs((decisionVariables_SecondStage.ID[s,f,l,t] 
+                        ==  parameters_FirstStage.i0[f][l] 
+                        + gp.quicksum(decisionVariables_FirstStage.DV[f,l,t1] for t1 in T if (t1+parameters_FirstStage.tau[l]) <= t)
                         - gp.quicksum(parameters_SecondStage.dp[s][f][l][t1] for t1 in T if t1 <= t) 
-                        + gp.quicksum(decisionVariables_SecondStage.SO_sflt[s,f,l,t1] for t1 in T if t1 <= t) 
-                        - gp.quicksum(decisionVariables_SecondStage.OSs_f_l_t[s,f,l,t1] for t1 in T if t1 <= t) 
+                        + gp.quicksum(decisionVariables_SecondStage.SO[s,f,l,t1] for t1 in T if t1 <= t) 
+                        - gp.quicksum(decisionVariables_SecondStage.OS[s,f,l,t1] for t1 in T if t1 <= t) 
                         for s in S for f in F for l in L for t in T),
                         'Constraint_1.9a')
         
@@ -361,7 +361,7 @@ class Model:
 
         '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
 
-        model.addConstrs((gp.quicksum(decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] for f in F if parameters_FirstStage.fty[f] == i) 
+        model.addConstrs((gp.quicksum(decisionVariables_SecondStage.ID[s,f,l,t] for f in F if parameters_FirstStage.fty[f] == i) 
                         <= parameters_FirstStage.imax[i][l] 
                         for s in S for l in L for i in FT for t in T),
                         'Constraint_1.9b')
@@ -373,29 +373,29 @@ class Model:
         the planning model to enforce the shelf-life indirectly. This constraint ensures that a product family will be transported to the distribution
         centers before the end of its warehouse shelf-life. 
         """
-        model.addConstrs((decisionVariables_FirstStage.IFf_t[f,t] 
-                        <= gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t1] for t1 in range(t+1,t+parameters_FirstStage.omega_fw[f]) for l in L) 
+        model.addConstrs((decisionVariables_FirstStage.IF[f,t] 
+                        <= gp.quicksum(decisionVariables_FirstStage.DV[f,l,t1] for t1 in range(t+1,t+parameters_FirstStage.omega_fw[f]) for l in L) 
                         for f in F for t in T 
                         if (parameters_FirstStage.fty[f] == 1) and (t + parameters_FirstStage.omega_fw[f] <= parameters_FirstStage.hl)),
                         'Constraint_1.10a')
 
 
-        model.addConstrs((decisionVariables_FirstStage.IFf_t[f,t] 
-                        <= gp.quicksum((decisionVariables_FirstStage.DVf_l_t[f,l,t1]
+        model.addConstrs((decisionVariables_FirstStage.IF[f,t] 
+                        <= gp.quicksum((decisionVariables_FirstStage.DV[f,l,t1]
                                         / parameters_FirstStage.omega_fw[f])
                                         *(t + parameters_FirstStage.omega_fw[f] - parameters_FirstStage.hl) for t1 in range(t - parameters_FirstStage.omega_fw[f] + 1, t) for l in L) 
-                        +  gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t2] for t2 in range(t + 1, t + parameters_FirstStage.omega_fw[f]) for l in L if t2 <= parameters_FirstStage.hl) 
+                        +  gp.quicksum(decisionVariables_FirstStage.DV[f,l,t2] for t2 in range(t + 1, t + parameters_FirstStage.omega_fw[f]) for l in L if t2 <= parameters_FirstStage.hl) 
                         for f in F for t in T 
                         if (parameters_FirstStage.fty[f] == 1) and (t + parameters_FirstStage.omega_fw[f] > parameters_FirstStage.hl)),
                         'Constraint_1.10b')
         
-        model.addConstrs((decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] 
+        model.addConstrs((decisionVariables_SecondStage.ID[s,f,l,t] 
                         <= gp.quicksum(parameters_SecondStage.dp[s][f][l][t1] for t1 in range(t+1,t+parameters_FirstStage.omega_dc[f] + 1)) 
                         for s in S for f in F for l in L for t in T 
                         if (parameters_FirstStage.fty[f] == 1) and (t + parameters_FirstStage.omega_dc[f] <= parameters_FirstStage.hl)),
                         'Constraint_1.10c')
 
-        model.addConstrs((decisionVariables_SecondStage.IDs_f_l_t[s,f,l,t] 
+        model.addConstrs((decisionVariables_SecondStage.ID[s,f,l,t] 
                         <= gp.quicksum((parameters_SecondStage.dp[s][f][l][t1]
                                         / parameters_FirstStage.omega_dc[f])
                                         * (t + parameters_FirstStage.omega_dc[f] - parameters_FirstStage.hl) for t1 in range(t - parameters_FirstStage.omega_dc[f] + 1, t)) 
@@ -409,8 +409,8 @@ class Model:
         their refrigerated transportation requirements.
         """
 
-        model.addConstrs((decisionVariables_FirstStage.Vi_l_t[i,l,t] 
-                        == gp.quicksum(decisionVariables_FirstStage.DVf_l_t[f,l,t] for f in F if parameters_FirstStage.fty[f] == i)
+        model.addConstrs((decisionVariables_FirstStage.V[i,l,t] 
+                        == gp.quicksum(decisionVariables_FirstStage.DV[f,l,t] for f in F if parameters_FirstStage.fty[f] == i)
                         for i in FT for l in L for t in T),
                         'Constraint_1.11a')
 
@@ -419,14 +419,14 @@ class Model:
             in the following constraints. A shipment to a distribution center may require n trucks, only one of these n trucks is allowed to have less
             than a truck load tlmax and the minimum amount of cargo it can transport is given by parameter tlmin 
         """
-        model.addConstrs( (decisionVariables_FirstStage.Vi_l_t[i, l, t] 
-                            <= integerVariables.TRi_l_t[i, l, t] 
+        model.addConstrs( (decisionVariables_FirstStage.V[i, l, t] 
+                            <= integerVariables.TR[i, l, t] 
                             * parameters_FirstStage.tl_max 
                         for i in FT for l in L for t in T),
                         'Constraint_1.12a')
         
-        model.addConstrs(( decisionVariables_FirstStage.Vi_l_t[i, l, t] 
-                            >= (integerVariables.TRi_l_t[i, l, t] - 1)  
+        model.addConstrs(( decisionVariables_FirstStage.V[i, l, t] 
+                            >= (integerVariables.TR[i, l, t] - 1)  
                             * parameters_FirstStage.tl_max 
                             + parameters_FirstStage.tl_min 
                         for i in FT for l in L for t in T),
@@ -435,7 +435,7 @@ class Model:
         """ Every shipment from a factory warehouse to a DC must be planned to arrive within the horizon. For that, Vi, l, t must be set to zero every
             time t + τl > hl     Vi,l,t = 0, ∀i ∈ F T , l ∈ L, t ∈ (hl - τl + 1 )..hl : τl > 0 
         """
-        model.addConstrs((decisionVariables_FirstStage.Vi_l_t[i, l, t] 
+        model.addConstrs((decisionVariables_FirstStage.V[i, l, t] 
                         == 0 
                         for i in FT for l in L for t in (range(parameters_FirstStage.hl - parameters_FirstStage.tau[l] + 1, parameters_FirstStage.hl))
                         if parameters_FirstStage.tau[l] > 0),
@@ -446,11 +446,11 @@ class Model:
         """
 
         model.addConstrs( (parameters_FirstStage.el_min[f] 
-                        <= gp.quicksum(integerVariables.Ef_t[f, t] for t in T) 
+                        <= gp.quicksum(integerVariables.E[f, t] for t in T) 
                         for f in F),
                         'Constraint_1.13a')
         
-        model.addConstrs( (gp.quicksum(integerVariables.Ef_t[f, t] for t in T) 
+        model.addConstrs( (gp.quicksum(integerVariables.E[f, t] for t in T) 
                         <= parameters_FirstStage.el_max[f] 
                         for f in F),
                         'Constraint_1.13b')
