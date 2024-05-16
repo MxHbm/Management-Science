@@ -457,7 +457,7 @@ class Model:
 
         return model
 
-    def Run_Model(self, T, F, S, FT, MP, CT, L):
+    def Run_Model(self, T, F, S, FT, MP, CT, L, scenarios):
         # Create a new model
         model = gp.Model("FirstStage")
 
@@ -474,17 +474,19 @@ class Model:
         integerVariables = IntegerVariables(model, parameters_FirstStage, T, F, S, FT, MP, CT, L)
 
         # get the needed second stage parameters
-        parameters_SecondStage = Parameters_SecondStage(T, F, S, FT, MP, CT, L)
+        parameters_SecondStage = Parameters_SecondStage(T, F, S, FT, MP, CT, L, scenarios)
 
         # get the needed decision variables for the second stage
         decisionVariables_SecondStage = DecisionVariables_SecondStage(model, T, F, S, FT, MP, CT, L)
 
         # Add the objective function
 
-        model = self.Objective_Function(parameters_FirstStage, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L)
+        model = self.Objective_Function(parameters_FirstStage, decisionVariables_FirstStage, parameters_SecondStage,
+                                        decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L)
 
         # Add the constraints
-        model = self.Constraints(parameters_FirstStage, decisionVariables_FirstStage, parameters_SecondStage, decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L)
+        model = self.Constraints(parameters_FirstStage, decisionVariables_FirstStage, parameters_SecondStage,
+                                 decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L)
 
         # Optimize model
         model.optimize()

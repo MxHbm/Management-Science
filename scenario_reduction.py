@@ -224,6 +224,9 @@ class Scenario_Analyse:
     def get_reduced_scenarios_probabilities(self) -> list[float]:
         return self._p_reduced_scenarios
     
+    def get_len_reduced_scenarios(self) -> int:
+        return len(self._reduced_scenarios)
+    
 
 #### TEST ####
 #S = Scenario_Analyse()

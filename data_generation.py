@@ -435,7 +435,7 @@ class Parameters_FirstStage:
 ### Script for generating data fpr our model
 class Parameters_SecondStage:
 
-    def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
+    def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list, scenarios):
         ''' Constructor for this class.
         :param T: list of time periods
         :param F: list of families
@@ -447,11 +447,11 @@ class Parameters_SecondStage:
         '''
 
         #First definition of parameters and call for implementing them
-        self.dp = self.create_dp(S, F, L, T)
-        self.rho = self.create_rho()
-        self.dri = self.create_dri(S, T)
+        self.dp = self.create_dp(S, F, L, T, scenarios)
+        self.rho = self.create_rho(scenarios)
+        self.dri = self.create_dri(S, T, scenarios)
 
-    def create_dp(self, S, F, L, T) -> list[list[list[list[int]]]]:
+    def create_dp(self, S, F, L, T, scenarios) -> list[list[list[list[int]]]]:
         ''' Family demand for distribution center l on day t under scenario s. '''
 
         # Create a list for the demand of each family
@@ -460,10 +460,17 @@ class Parameters_SecondStage:
             scenario_demand = []
             for f in F:
                 family_demand = []
+                overall_demand = scenarios.get_reduced_scenarios()[s][f]
+                share = overall_demand // len(L)
+                last_share = share + overall_demand % len(L)
                 for l in L:
                     location_demand = []
                     for t in T:
-                        location_demand.append(rng.randint(0,100))
+                        if(l == len(L)-1):
+                            location_demand.append(share)
+                        else: 
+                            location_demand.append(last_share)
+
                     family_demand .append(location_demand)
                 scenario_demand .append(family_demand )
             demand.append(scenario_demand )
@@ -481,23 +488,19 @@ class Parameters_SecondStage:
         #pprint(demand, compact=True, width=200)
         return demand
 
-    def create_rho(self) -> list[float]:
+    def create_rho(self, scenarios) -> list[float]:
         ''' The probability of scenario s.
         '''
 
-        rho_s = [ #  UHT, Powdered Milk, Yogurt, Cheese, Raw Milk
-            [0.4,   0.25,        0.4,   0.3,     0.5],         # scenario 1
-            [0.35,  0.35,        0.3,   0.4,     0.15],        # scenario 2
-            [0.25,  0.4,         0.3,   0.3,     0.35]         # scenario 3
-        ]
+        rho = []
 
-        rho_s = [1/243 for _ in range(243)]     # dummy values
+        for prob in scenarios.get_reduced_scenarios_probabilities():
+            rho.append(prob)
 
-        #return [0,0,1,1]
-        return rho_s
+        return rho
         
 
-    def create_dri(self, S, T) -> list[list[int]]:
+    def create_dri(self, S, T, scenarios) -> list[list[int]]:
         ''' Raw milk daily input on day t under scenario s
         '''
 
@@ -505,7 +508,7 @@ class Parameters_SecondStage:
         for s in S:
             scenario_milk_input = []
             for t in T:
-                scenario_milk_input.append(rng.randint(0,100))
+                scenario_milk_input.append(scenarios.get_reduced_scenarios()[s][-1])
 
             milk_input.append(scenario_milk_input) 
         
