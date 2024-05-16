@@ -42,8 +42,8 @@ class Parameters_FirstStage:
         self.roc = self.create_roc()
         self.el = self.create_el()
         self.tau = self.create_tau()
-        self.i_0 = self.create_i_0(F, L) 
-        self.i0_ft = self.create_i0_ft(F, T)        # not in the paper
+        self.i0 = self.create_i_0(F, L) 
+        self.i0_2 = self.create_i0_ft(F, T)        # not in the paper
         self.tl_min = self.create_tl_min()
         self.tl_max = self.create_tl_max()
         self.r0 = self.create_r0()
@@ -72,8 +72,8 @@ class Parameters_FirstStage:
         self.sco = self.create_sco()
         # additional parameters
         self.names_DC = self.create_names_DC()
-        self.ls_f = self.create_ls_f(F)
-        self.ls_p = self.create_ls_p(MP)
+        self.ls = self.create_ls_f(F)
+        self.ls = self.create_ls_p(MP)
         #self.i0_ft = self.create_i0_ft(F, T)
 
     def create_hl(self, T) -> int:
@@ -537,39 +537,39 @@ class DecisionVariables_FirstStage:
         self.ENB = model.addVar(lb=0, name="ENB")
         self.TCOST = model.addVar(lb=0, name="TCOST")
         self.SN = model.addVar(lb=0, name="SN")
-        self.RMt = model.addVars(T, lb=0, name="RMt")
-        self.IFf_t = model.addVars(F, T, lb=0, name="IFf_t")
-        self.FPf_t = model.addVars(F, T, lb=0, name="FPf_t")
-        self.Vi_l_t = model.addVars(F, L, T, lb=0, name="Vi_l_t")
-        self.DVf_l_t = model.addVars(F, L, T, lb=0, name="DVf_l_t")
-        self.Am_t = model.addVars(MP, T, lb=0, name="Am_t")
-        self.MOm_t = model.addVars(MP, T, lb=0, name="MOm_t")
-        self.IWIPm_t = model.addVars(MP, T, lb=0, name="IWIPm_t")
-        self.Qm_t = model.addVars(MP, T, lb=0, name="Qm_t")
-        self.Z1m_t = model.addVars(MP, T, name="Z1m_t")
-        self.Z2m_t = model.addVars(MP, T, name="Z2m_t")
-        self.Auxm_t = model.addVars(MP, T, lb=0, name="Auxm_t")
+        self.RM = model.addVars(T, lb=0, name="RMt")
+        self.IF = model.addVars(F, T, lb=0, name="IFf_t")
+        self.FP = model.addVars(F, T, lb=0, name="FPf_t")
+        self.V = model.addVars(F, L, T, lb=0, name="Vi_l_t")
+        self.DV = model.addVars(F, L, T, lb=0, name="DVf_l_t")
+        self.A = model.addVars(MP, T, lb=0, name="Am_t")
+        self.MO = model.addVars(MP, T, lb=0, name="MOm_t")
+        self.IWIP = model.addVars(MP, T, lb=0, name="IWIPm_t")
+        self.Q = model.addVars(MP, T, lb=0, name="Qm_t")
+        self.Z1 = model.addVars(MP, T, name="Z1m_t")
+        self.Z2 = model.addVars(MP, T, name="Z2m_t")
+        self.Aux = model.addVars(MP, T, lb=0, name="Auxm_t")
 
         #return model
 
 class DecisionVariables_SecondStage:
 
     def __init__(self, model, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
-        self.SAs_f_l_t = model.addVars(S, F, L, T, lb=0, name="SAs_f_l_t")
-        self.SO_sflt = model.addVars(S, F, L, T, lb=0, name="SOs_f_l_t")
-        self.OSs_f_l_t = model.addVars(S, F, L, T, lb=0, name="OSs_f_l_t")
-        self.RCs = model.addVars(S, lb=0, name="RCs_s")
-        self.RSs_t = model.addVars(S, T, lb=0, name="RSs_t")
-        self.ROs_t = model.addVars(S, T, lb=0, name="ROs_t")
-        self.RIs_t = model.addVars(S, T, lb=0, name="RIs_t")
-        self.IDs_f_l_t = model.addVars(S, F, L, T, lb=0, name="IDs_f_l_t")
+        self.SA = model.addVars(S, F, L, T, lb=0, name="SAs_f_l_t")
+        self.SO = model.addVars(S, F, L, T, lb=0, name="SOs_f_l_t")
+        self.OS = model.addVars(S, F, L, T, lb=0, name="OSs_f_l_t")
+        self.RC = model.addVars(S, lb=0, name="RCs_s")
+        self.RS = model.addVars(S, T, lb=0, name="RSs_t")
+        self.RO = model.addVars(S, T, lb=0, name="ROs_t")
+        self.RI = model.addVars(S, T, lb=0, name="RIs_t")
+        self.ID = model.addVars(S, F, L, T, lb=0, name="IDs_f_l_t")
 
 class BinaryVariables:
 
     def __init__(self, model, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
-        self.R1m_t = model.addVars(MP, T, vtype=GRB.BINARY, name="R1m_t")
-        self.R2m_t = model.addVars(MP, T, vtype=GRB.BINARY, name="R2m_t")
-        self.Ym_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
+        self.R1 = model.addVars(MP, T, vtype=GRB.BINARY, name="R1m_t")
+        self.R2 = model.addVars(MP, T, vtype=GRB.BINARY, name="R2m_t")
+        self.Y = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
 
 
 
@@ -578,16 +578,16 @@ class IntegerVariables:
     def __init__(self, model, parameters_FirstStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
         #print(parameters_FirstStage.zmax)
 
-        self.TRi_l_t = model.addVars(FT, L, T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t")
-        self.Ef_t = model.addVars(F, T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
+        self.TR = model.addVars(FT, L, T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t")
+        self.E = model.addVars(F, T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
         #self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=[parameters_FirstStage.zmax[m] for m in MP], name="Zm_t")
-        self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
+        self.Z = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
         #self.R1m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R1m_t")
         #self.R2m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R2m_t")
         #self.Ym_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
 
         for m in MP:
             for t in T:
-                self.Zm_t[(m, t)].ub = parameters_FirstStage.zmax[m]
+                self.Z[(m, t)].ub = parameters_FirstStage.zmax[m]
         
 
