@@ -12,25 +12,23 @@ import globals      #Globale variablen
 
 def main():
 
+    #Create the set of reduced scenarios
+    Scenarios = Scenario_Analyse()
+
     # Erzeuge Sets für das Gurobi Modell
     T = [i for i in range(globals.T_end)]
     F = [i for i in range(globals.F_end)]
-    S = [i for i in range(globals.S_end)]
+    S = [i for i in range(Scenarios.get_len_reduced_scenarios())]
     FT = globals.FT_values
     MP = [i for i in range(globals.MP_end)]
     CT = globals.CT_values
     L = [i for i in range(globals.L_end)]
 
-
-
-    #Create the set of reduced scenarios
-    Scenarios = Scenario_Analyse()
-
     #print(Scenarios)
 
     # Model
     m = Model()
-    m.Run_Model(T, F, S, FT, MP, CT, L)
+    m.Run_Model(T, F, S, FT, MP, CT, L, Scenarios)
     
 
 if __name__ == "__main__":
