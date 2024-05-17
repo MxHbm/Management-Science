@@ -27,7 +27,8 @@ class Model:
             obtained from buying raw milk from a third party and for the case of overstock are production costs.'''
 
         # TCOST
-        TCOST = (gp.quicksum(integerVariables.TR[i, l, t] 
+        #TCOST = (gp.quicksum(integerVariables.TR[i, l, t] 
+        decisionVariables_FirstStage.TCOST = (gp.quicksum(integerVariables.TR[i, l, t]           # for debugging
                             * parameters_FirstStage.tc[l][i] for i in FT for l in L for t in T) 
                 + gp.quicksum(binaryVariables.Y[m, t] 
                             * parameters_FirstStage.sco for m in MP for t in T) 
@@ -42,14 +43,15 @@ class Model:
         ''' The expected net benefit is obtained from income minus total costs. The incomes include from left to right, the export sales income, sales
             income, and overstock incomes. Overstock incomes are produced from selling at a reduced price by the quantity produced in overstock for
             each of families.'''
-        
+    
         # BENEFIT
-        BENEFIT = ( gp.quicksum( parameters_FirstStage.re[f] 
+        decisionVariables_FirstStage.EXI = ( 
+                    gp.quicksum( parameters_FirstStage.re[f] 
                                 * parameters_FirstStage.ls[f] 
                                 * integerVariables.E[f, t]
                                 for f in F for t in T)
                     + gp.quicksum(  parameters_SecondStage.rho[s]
-                                    * ( gp.quicksum(parameters_FirstStage.r[f] 
+                                    * (gp.quicksum(parameters_FirstStage.r[f] 
                                         * (parameters_SecondStage.dp[s][f][l][t] 
                                             - decisionVariables_SecondStage.SO[s, f, l, t])
                                         for l in L for f in F for t in T)
@@ -58,10 +60,10 @@ class Model:
                                         for l in L for f in F for t in T)
                                         )
                                     for s in S )
-                    ) 
-        
+        ) 
+    
         # EXPECTED NET BENEFIT
-        model.setObjective(BENEFIT - TCOST, GRB.MAXIMIZE)
+        model.setObjective(decisionVariables_FirstStage.EXI - decisionVariables_FirstStage.TCOST, GRB.MAXIMIZE)
 
         return model
 
@@ -69,6 +71,8 @@ class Model:
     def Constraints(self, parameters_FirstStage:Parameters_FirstStage, decisionVariables_FirstStage: DecisionVariables_FirstStage,
                     parameters_SecondStage:Parameters_SecondStage, decisionVariables_SecondStage: DecisionVariables_SecondStage,
                     binaryVariables:BinaryVariables, integerVariables:IntegerVariables, model, T, F, S, FT, MP, CT, L):
+        
+        pass
         ''' constraints: 
         '''
         
@@ -352,7 +356,7 @@ class Model:
                         + gp.quicksum(decisionVariables_FirstStage.DV[f,l,t1] for t1 in T if (t1+parameters_FirstStage.tau[l]) <= t)
                         - gp.quicksum(parameters_SecondStage.dp[s][f][l][t1] for t1 in T if t1 <= t) 
                         + gp.quicksum(decisionVariables_SecondStage.SO[s,f,l,t1] for t1 in T if t1 <= t) 
-                        - gp.quicksum(decisionVariables_SecondStage.OS[s,f,l,t1] for t1 in T if t1 <= t) 
+                        #- gp.quicksum(decisionVariables_SecondStage.OS[s,f,l,t1] for t1 in T if t1 <= t)   # just for debugging
                         for s in S for f in F for l in L for t in T),
                         'Constraint_1.9a')
         
@@ -497,9 +501,9 @@ class Model:
 
         #print('Attr:', model.printAttr('X'))
         print('model.status:', model.status)
-        if model.status == GRB.Status.OPTIMAL:
+        if model.status == 2:
             print('Obj: %g' % model.objVal)
-        elif model.status == GRB.Status.INFEASIBLE:
+        elif model.status == 4:
                 # find infeasibilities
             model.computeIIS()
             model.write("results/infeasible.ilp")

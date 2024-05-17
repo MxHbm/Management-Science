@@ -193,6 +193,7 @@ class Parameters_FirstStage:
         ''' Maximum raw milk inventory. '''
 
         maximum_inventory = rng.randint(1000,2000)
+        #maximum_inventory = 20000000        # for debugging
 
         return maximum_inventory
         
@@ -534,8 +535,10 @@ class DecisionVariables_FirstStage:
         ''' Add description of the function here '''
     """
         self.EXI = model.addVar(vtype=GRB.CONTINUOUS, name="EXI")
-        self.ENB = model.addVar(lb=0, name="ENB")
-        self.TCOST = model.addVar(lb=0, name="TCOST")
+        #self.ENB = model.addVar(lb=0, name="ENB")
+        self.ENB = model.addVar( name="ENB")        # for debugging
+        #self.TCOST = model.addVar(lb=0, name="TCOST")
+        self.TCOST = model.addVar(name="TCOST")     # for debugging
         self.SN = model.addVar(lb=0, name="SN")
         self.RM = model.addVars(T, lb=0, name="RMt")
         self.IF = model.addVars(F, T, lb=0, name="IFf_t")
@@ -576,15 +579,10 @@ class BinaryVariables:
 class IntegerVariables:
 
     def __init__(self, model, parameters_FirstStage, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list):
-        #print(parameters_FirstStage.zmax)
 
         self.TR = model.addVars(FT, L, T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t")
         self.E = model.addVars(F, T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
-        #self.Zm_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, ub=[parameters_FirstStage.zmax[m] for m in MP], name="Zm_t")
         self.Z = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
-        #self.R1m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R1m_t")
-        #self.R2m_t = model.addVars(MP, T, vtype=GRB.INTEGER, lb=0, name="R2m_t")
-        #self.Ym_t = model.addVars(MP, T, vtype=GRB.BINARY, name="Ym_t")
 
         for m in MP:
             for t in T:
