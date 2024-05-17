@@ -85,7 +85,7 @@ class Model:
                         + gp.quicksum(parameters_SecondStage.dri[s][t1] for t1 in T if t1 <= t) 
                         - gp.quicksum(decisionVariables_FirstStage.RM[t1] for t1 in T if t1 <= t) 
                         + gp.quicksum(decisionVariables_SecondStage.RS[s,t1] for t1 in T if t1 <= t)
-                        - gp.quicksum(decisionVariables_SecondStage.RO[s,t1] for t1 in T if t1<= t)
+                        - gp.quicksum(decisionVariables_SecondStage.RO[s,t1] for t1 in T if t1 <= t)
                         for s in S for t in T),
                         'Constraint_1.1a')
 
@@ -95,7 +95,6 @@ class Model:
                         'Constraint_1.1b')
 
         model.addConstrs((decisionVariables_FirstStage.RM[t] 
-                        #== gp.quicksum(decisionVariables_FirstStage.Q[m,t]/parameters_FirstStage.fy(parameters_FirstStage.fpr[m]) for m in MP)
                         == gp.quicksum(decisionVariables_FirstStage.Q[m,t]/parameters_FirstStage.fy[m] for m in MP)         # just for debugging
                         for t in T),
                         'Constraint_1.1c')
@@ -155,7 +154,7 @@ class Model:
                         for m in MP for t in T),
                         'Constraint_1.4d')
         
-        model.addConstrs((binaryVariables.R1[m, 1]  #T = 1
+        model.addConstrs((binaryVariables.R1[m, 0]  #T = 1 -> Here in python it has to be t = 0
                         == 1 
                         for m in MP for t in T),
                         'Constraint_1.4e')
@@ -254,24 +253,24 @@ class Model:
         
         """ Accumulated production at the beginning of the horizon. The following equations (constraints (29) and (30)) model the remaining quantity
         production for the special case of t = 1."""
-        model.addConstrs((decisionVariables_FirstStage.A[m, 1]  # T=1
-                        <= integerVariables.Z[m, 1] 
+        model.addConstrs((decisionVariables_FirstStage.A[m, 0]  ##T = 1 -> Here in python it has to be t = 0
+                        <= integerVariables.Z[m, 0] 
                         for m in MP
                         if parameters_FirstStage.cty[m] == 0),
                         'Constraint_1.5g')
         
-        model.addConstrs((decisionVariables_FirstStage.A[m, 1]  # T=1
+        model.addConstrs((decisionVariables_FirstStage.A[m, 0]  #T = 1 -> Here in python it has to be t = 0
                         <= (parameters_FirstStage.dmax[m]
                             / parameters_FirstStage.cmin[m]) 
                         for m in MP
                         if parameters_FirstStage.cty[m] == 0),
                         'Constraint_1.5h') 
         
-        model.addConstrs((decisionVariables_FirstStage.A[m, 1]  # T=1
-                        >= integerVariables.Z[m, 1] 
+        model.addConstrs((decisionVariables_FirstStage.A[m, 0]  #T = 1 -> Here in python it has to be t = 0
+                        >= integerVariables.Z[m, 0] 
                         - ((parameters_FirstStage.dmax[m]
                             / parameters_FirstStage.cmin[m]) 
-                            * binaryVariables.R2[m, 1]) 
+                            * binaryVariables.R2[m, 0]) 
                         for m in MP 
                         if parameters_FirstStage.cty[m] == 0),
                         'Constraint_1.5i') 
@@ -370,7 +369,7 @@ class Model:
                         for s in S for l in L for i in FT for t in T),
                         'Constraint_1.9b')
         
-        # RUNNING PARAMETER FOR T IS MISSING!!! 
+        # RUNNING PARAMETER FOR T WAS MISSING!!! 
 
         # Constraint 1.10: Shelf life constraints
         """Shelf life constraints at FW. Based on the concept discussed above in subSection 4.2, the following two constraints are introduced into
@@ -378,7 +377,7 @@ class Model:
         centers before the end of its warehouse shelf-life. 
         """
         model.addConstrs((decisionVariables_FirstStage.IF[f,t] 
-                        <= gp.quicksum(decisionVariables_FirstStage.DV[f,l,t1] for t1 in range(t+1,t+parameters_FirstStage.omega_fw[f]) for l in L) 
+                        <= gp.quicksum(decisionVariables_FirstStage.DV[f,l,t1] for t1 in range(t+1,t+parameters_FirstStage.omega_fw[f] + 1) for l in L) 
                         for f in F for t in T 
                         if (parameters_FirstStage.fty[f] == 1) and (t + parameters_FirstStage.omega_fw[f] <= parameters_FirstStage.hl)),
                         'Constraint_1.10a')
@@ -388,7 +387,7 @@ class Model:
                         <= gp.quicksum((decisionVariables_FirstStage.DV[f,l,t1]
                                         / parameters_FirstStage.omega_fw[f])
                                         *(t + parameters_FirstStage.omega_fw[f] - parameters_FirstStage.hl) for t1 in range(t - parameters_FirstStage.omega_fw[f] + 1, t) for l in L) 
-                        +  gp.quicksum(decisionVariables_FirstStage.DV[f,l,t2] for t2 in range(t + 1, t + parameters_FirstStage.omega_fw[f]) for l in L if t2 <= parameters_FirstStage.hl) 
+                        +  gp.quicksum(decisionVariables_FirstStage.DV[f,l,t2] for t2 in range(t + 1, t + parameters_FirstStage.omega_fw[f] + 1) for l in L if t2 <= parameters_FirstStage.hl) 
                         for f in F for t in T 
                         if (parameters_FirstStage.fty[f] == 1) and (t + parameters_FirstStage.omega_fw[f] > parameters_FirstStage.hl)),
                         'Constraint_1.10b')
@@ -403,7 +402,7 @@ class Model:
                         <= gp.quicksum((parameters_SecondStage.dp[s][f][l][t1]
                                         / parameters_FirstStage.omega_dc[f])
                                         * (t + parameters_FirstStage.omega_dc[f] - parameters_FirstStage.hl) for t1 in range(t - parameters_FirstStage.omega_dc[f] + 1, t)) 
-                        + gp.quicksum(parameters_SecondStage.dp[s][f][l][t2] for t2 in range(t + 1, t + parameters_FirstStage.omega_dc[f]) if t2 <= parameters_FirstStage.hl) 
+                        + gp.quicksum(parameters_SecondStage.dp[s][f][l][t2] for t2 in range(t + 1, t + parameters_FirstStage.omega_dc[f]+1) if t2 <= parameters_FirstStage.hl) 
                         for s in S for f in F for l in L for t in T 
                         if (parameters_FirstStage.fty[f] == 1) and (t + parameters_FirstStage.omega_dc[f] > parameters_FirstStage.hl)),
                         'Constraint_1.10d')
