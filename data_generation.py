@@ -15,7 +15,7 @@ from gurobipy import GRB
 import csv
 import csv
 import pandas as pd
-
+import os
 
 
 ### Script for generating data fpr our model
@@ -75,6 +75,62 @@ class Parameters_FirstStage:
         self.ls = self.create_ls_f(F)
         self.ls = self.create_ls_p(MP)
         #self.i0_ft = self.create_i0_ft(F, T)
+
+        # save all data
+        self.SaveData()
+
+    def SaveData(self) :
+    # Create output directory
+        output_directory = "InputData/FirstStage"
+        os.makedirectory(output_directory, exists=True)
+
+        # Save all parameter as a CSV file
+        data_dict = {
+            "hl": self.hl,
+            "fty": self.fty,
+            "cty": self.cty,
+            "fpr": self.fpr,
+            "fy": self.fy,
+            "rsc": self.rsc,
+            "roc": self.roc,
+            "el": self.el,
+            "tau": self.tau,
+            "i0": self.i0,
+            "i0_2": self.i0_2,
+            "tl_min": self.tl_min,
+            "tl_max": self.tl_max,
+            "r0": self.r0,
+            "r_max": self.r_max,
+            "dmax": self.dmax,
+            "cmin": self.cmin,
+            "cmax": self.cmax,
+            "alpha": self.alpha,
+            "ost": self.ost,
+            "wp": self.wp,
+            "el_min": self.el_min,
+            "el_max": self.el.max,
+            "is_": self.is_,
+            "omega_fw": self.omega_fw,
+            "omega_dc": self.omega_dc,
+            "rr": self.rr,
+            "r": self.r,
+            "re": self.re,
+            "imax": self.imax,
+            "zmax": self.zmax,
+            "sc": self.sc,
+            "beta": self.beta,
+            "sigma": self.sigma,
+            "iwip0": self.iwip0,
+            "tc": self.tc,
+            "sco": self.sco,
+        }
+
+        for parameter_name, data in data_dict.items():
+            file_path = os.path.join(output_directory, f"{parameter_name}.csv")
+            df = pd.DataFrame(data)
+            df.to_csv(file_path, index=False)
+
+    pass
 
     def create_hl(self, T) -> int:
         ''' Add description of the function here '''
