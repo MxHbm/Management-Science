@@ -25,10 +25,10 @@ class Parameters_FirstStage:
         ''' Constructor for this class.
         :param T: list of time periods
         :param F: list of families
-        :param S: list of sites
+        :param S: list of scenarios
         :param FT: list of family types
         :param MP: list of manufacturing plants
-        :param CT: list of customer types
+        :param CT: list of production campaign types
         :param L: list of locations (Distribution Centers)
         '''
 
@@ -75,6 +75,7 @@ class Parameters_FirstStage:
         self.ls = self.create_ls_f(F)
         self.ls = self.create_ls_p(MP)
         #self.i0_ft = self.create_i0_ft(F, T)
+        self.mappingFtoM = self.create_mappingfm()
 
     def create_hl(self, T) -> int:
         ''' Add description of the function here '''
@@ -271,7 +272,7 @@ class Parameters_FirstStage:
             100 as a high number for long time span
         '''
 
-        return [100,100,5,10]
+        return [self.hl,self.hl,5,10]
 
 
     def create_omega_dc(self) -> list[int]:
@@ -308,11 +309,11 @@ class Parameters_FirstStage:
 
 
     def create_imax(self) -> list[list[int]]:
-        ''' Maximum storage capacities at location l for fresh and dry product families '''
+        ''' Maximum storage capacities at location l for fresh and dry product families i '''
 
-        # Fresh and Dry                l , i
-        max_storage_product_groups = [[12,10],
-                                      [68, 114],
+        # Fresh and Dry                  i
+        max_storage_product_groups = [[12,10],      # l_1
+                                      [68, 114],    
                                       [16, 35],
                                       [16,40],
                                       [9, 27],
@@ -321,7 +322,7 @@ class Parameters_FirstStage:
                                       [20,58],
                                       [58,195]]
         
-        return list(map(list, zip(*max_storage_product_groups)))        # transpose the matrix because we want to have [i, l]
+        return list(map(list, zip(*max_storage_product_groups)))        # transpose the matrix [l,i] because we want to have [i, l]
 
     def create_zmax(self) -> list[int]:
         ''' For shift-based production, maximum shifts, otherwise 1
@@ -432,6 +433,18 @@ class Parameters_FirstStage:
         initial_inventory = [[rng.randint(0,50) for t in T] for f in F]
 
         return initial_inventory
+    
+    def create_mappingfm(self) -> list:
+        ''' Mapping of family f to plant m '''
+
+        # plant 0 -> family 0 (Powdered Milk)
+        # plant 1 -> family 1 (UHT Milk)
+        # plant 2 -> family 2 (Yogurt)
+        # plant 3 -> family 3 (Cheese)
+
+        mapping = [0, 1, 2, 3]
+
+        return mapping
     
 ### Script for generating data fpr our model
 class Parameters_SecondStage:

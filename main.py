@@ -9,8 +9,20 @@ from model import *      #Gurobi Modell
 import globals      #Globale variablen
 #from gurobipy import * #Gurobi
 
+import logging
 
 def main():
+    #initialize logging
+    logger = logging.getLogger('Model_Log')
+    logger.setLevel(logging.INFO)
+    fh = logging.FileHandler('results/logging.log')
+    fh.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    logger.addHandler(fh)
+    logger.info('========================================= Start logging ========================================= ')
+
+
 
     #Create the set of reduced scenarios
     Scenarios = Scenario_Analyse()
@@ -28,8 +40,14 @@ def main():
 
     # Model
     m = Model()
-    m.Run_Model(T, F, S, FT, MP, CT, L, Scenarios)
-    
+
+    try:
+        m.Run_Model(T, F, S, FT, MP, CT, L, Scenarios, logger)
+    except Exception as e:
+        logger.exception(e)    
+
+    logger.info('========================================= End logging =========================================== \n')
+
 
 if __name__ == "__main__":
     main()
