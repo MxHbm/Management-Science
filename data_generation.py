@@ -82,7 +82,7 @@ class Parameters_FirstStage:
     def SaveData(self) :
     # Create output directory
         output_directory = "InputData/FirstStage"
-        os.makedirectory(output_directory, exists=True)
+        os.makedirs(output_directory, exists_ok=True)
 
         # Save all parameter as a CSV file
         data_dict = {
@@ -108,7 +108,7 @@ class Parameters_FirstStage:
             "ost": self.ost,
             "wp": self.wp,
             "el_min": self.el_min,
-            "el_max": self.el.max,
+            "el_max": self.el_max,
             "is_": self.is_,
             "omega_fw": self.omega_fw,
             "omega_dc": self.omega_dc,
@@ -130,7 +130,6 @@ class Parameters_FirstStage:
             df = pd.DataFrame(data)
             df.to_csv(file_path, index=False)
 
-    pass
 
     def create_hl(self, T) -> int:
         ''' Add description of the function here '''
