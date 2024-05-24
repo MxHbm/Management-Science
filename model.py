@@ -472,6 +472,9 @@ class Model:
         # get the needed parameters
         parameters_FirstStage = Parameters_FirstStage(T,F,S,FT,MP,CT,L)
 
+        logger.info("parameters_FirstStage.i0[0]: %s", sum(parameters_FirstStage.i0[0]))
+        logger.info("parameters_FirstStage.i0[1]: %s", sum(parameters_FirstStage.i0[1]))
+
         # get the needed decision variables
         decisionVariables_FirstStage = DecisionVariables_FirstStage(model, T, F, S, FT, MP, CT, L)
 
@@ -482,7 +485,7 @@ class Model:
         integerVariables = IntegerVariables(model, parameters_FirstStage, T, F, S, FT, MP, CT, L)
 
         # get the needed second stage parameters
-        parameters_SecondStage = Parameters_SecondStage(T, F, S, FT, MP, CT, L, scenarios)
+        parameters_SecondStage = Parameters_SecondStage(T, F, S, FT, MP, CT, L, scenarios, logger)
 
         # get the needed decision variables for the second stage
         decisionVariables_SecondStage = DecisionVariables_SecondStage(model, T, F, S, FT, MP, CT, L)
@@ -499,22 +502,72 @@ class Model:
         # Optimize model
         model.optimize()
 
+        logger.info('rho: %s', parameters_SecondStage.rho)
+
+        logger.info('Dri: %s', parameters_SecondStage.dri)
+
+        logger.info("SO[8,3,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+                    decisionVariables_SecondStage.SO[8,3,0,0].LB,
+                    decisionVariables_SecondStage.SO[8,3,0,0].UB,
+                    decisionVariables_SecondStage.SO[8,3,0,0].Obj,
+                    decisionVariables_SecondStage.SO[8,3,0,0].VType,
+                    decisionVariables_SecondStage.SO[8,3,0,0].VarName)
+
+        logger.info("ID[8,3,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+                    decisionVariables_SecondStage.ID[8,3,0,0].LB,
+                    decisionVariables_SecondStage.ID[8,3,0,0].UB,
+                    decisionVariables_SecondStage.ID[8,3,0,0].Obj,
+                    decisionVariables_SecondStage.ID[8,3,0,0].VType,
+                    decisionVariables_SecondStage.ID[8,3,0,0].VarName)
+        
+        logger.info("ID[8,2,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+                    decisionVariables_SecondStage.ID[8,2,0,0].LB,
+                    decisionVariables_SecondStage.ID[8,2,0,0].UB,
+                    decisionVariables_SecondStage.ID[8,2,0,0].Obj,
+                    decisionVariables_SecondStage.ID[8,2,0,0].VType,
+                    decisionVariables_SecondStage.ID[8,2,0,0].VarName)
+        
+        logger.info("ID[8,1,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+                    decisionVariables_SecondStage.ID[8,1,0,0].LB,
+                    decisionVariables_SecondStage.ID[8,1,0,0].UB,
+                    decisionVariables_SecondStage.ID[8,1,0,0].Obj,
+                    decisionVariables_SecondStage.ID[8,1,0,0].VType,
+                    decisionVariables_SecondStage.ID[8,1,0,0].VarName)
+        
+        logger.info("ID[8,0,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+                    decisionVariables_SecondStage.ID[8,0,0,0].LB,
+                    decisionVariables_SecondStage.ID[8,0,0,0].UB,
+                    decisionVariables_SecondStage.ID[8,0,0,0].Obj,
+                    decisionVariables_SecondStage.ID[8,0,0,0].VType,
+                    decisionVariables_SecondStage.ID[8,0,0,0].VarName)
+        
         #print('Attr:', model.printAttr('X'))
         logger.info(f'model.status: {model.status}')
 
-        if model.status == 4:
-            logger.warning("Model is infeasible")
-        elif model.status == 5:
+        if model.status == 5:
             logger.warning("Model is unbounded")
         elif model.status == 2:
             logger.info("Optimal solution found")
             for v in model.getVars():
                 logger.info(f"{v.varName}: {v.x}")
 
-        if model.status == 2:
             logger.info('Obj: %g' % model.objVal)
+
+            # Save the model
+            if 1 == 0:
+                # Add timestamp to file name
+                timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
+                file_name = f"results/result_FirstStage_LP_{timestamp}.lp"
+                model.write(file_name)
+
+                file_name = f"results/result_FirstStage_MPS_{timestamp}.mps"
+                model.write(file_name)
+
+                file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
+                model.write(file_name)
+
         elif model.status == 4:
-                # find infeasibilities
+            logger.warning("Model is infeasible")
 
             try:
                 model.computeIIS()
@@ -522,19 +575,9 @@ class Model:
 
             except gp.GurobiError as e:
                 logger.error('Error Compute IIS: %s', e)
+        else:
+            logger.error("Optimization ended with status %s", model.status)
         
-
-        # Save the model
-        # Add timestamp to file name
-        timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
-        file_name = f"results/result_FirstStage_LP_{timestamp}.lp"
-        model.write(file_name)
-
-        file_name = f"results/result_FirstStage_MPS_{timestamp}.mps"
-        model.write(file_name)
-
-        file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
-        model.write(file_name)
 
         return logger
 

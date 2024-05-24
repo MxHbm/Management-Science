@@ -25,24 +25,24 @@ def main():
 
 
     #Create the set of reduced scenarios
-    Scenarios = Scenario_Analyse()
+    scenarios = Scenario_Analyse()
 
     # Erzeuge Sets für das Gurobi Modell
     T = [i for i in range(globals.T_end)]
     F = [i for i in range(globals.F_end)]
-    S = [i for i in range(Scenarios.get_len_reduced_scenarios())]
+    S = [i for i in range(scenarios.get_len_reduced_scenarios())]
     FT = globals.FT_values
     MP = [i for i in range(globals.MP_end)]
     CT = globals.CT_values
     L = [i for i in range(globals.L_end)]
 
-    #print(Scenarios)
+    #print(scenarios)
 
     # Model
     m = Model()
 
     try:
-        m.Run_Model(T, F, S, FT, MP, CT, L, Scenarios, logger)
+        m.Run_Model(T, F, S, FT, MP, CT, L, scenarios, logger)
     except Exception as e:
         logger.exception(e)    
 
