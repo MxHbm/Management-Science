@@ -25,10 +25,10 @@ class Parameters_FirstStage:
         ''' Constructor for this class.
         :param T: list of time periods
         :param F: list of families
-        :param S: list of sites
+        :param S: list of scenarios
         :param FT: list of family types
         :param MP: list of manufacturing plants
-        :param CT: list of customer types
+        :param CT: list of production campaign types
         :param L: list of locations (Distribution Centers)
         '''
 
@@ -74,7 +74,7 @@ class Parameters_FirstStage:
         self.names_DC = self.create_names_DC()
         self.ls = self.create_ls_f(F)
         self.ls = self.create_ls_p(MP)
-        #self.i0_ft = self.create_i0_ft(F, T)
+        self.mappingFtoM = self.create_mappingfm()
 
     def create_hl(self, T) -> int:
         ''' Add description of the function here '''
@@ -150,7 +150,8 @@ class Parameters_FirstStage:
         for f in F:
             family_inventory = []
             for l in L:
-                family_inventory.append(rng.randint(0,100))
+                #family_inventory.append(rng.randint(0,10))
+                family_inventory.append(5)
 
             intitial_inventory.append(family_inventory)
 
@@ -164,7 +165,8 @@ class Parameters_FirstStage:
         for f in F:
             family_inventory = []
             for t in T:
-                family_inventory.append(rng.randint(0,100))
+                #family_inventory.append(rng.randint(0,100))
+                family_inventory.append(5)
 
             intitial_inventory.append(family_inventory)
 
@@ -186,6 +188,7 @@ class Parameters_FirstStage:
         ''' Raw milk initial inventory. '''
 
         initial_inventory = rng.randint(50,200)
+        initial_inventory = 2000000        # for debugging
 
         return initial_inventory
 
@@ -193,7 +196,7 @@ class Parameters_FirstStage:
         ''' Maximum raw milk inventory. '''
 
         maximum_inventory = rng.randint(1000,2000)
-        #maximum_inventory = 20000000        # for debugging
+        maximum_inventory = 20000000        # for debugging
 
         return maximum_inventory
         
@@ -204,7 +207,8 @@ class Parameters_FirstStage:
         Only one value given for Length-Based Campaign --> Assumnption that shift based campaign are unlimited!
         '''
         
-        return [30,15,30,30]
+        #return [30,15,30,30]
+        return [40,15,40,40]
 
     def create_cmin(self) -> list[int]:
         ''' Minimum daily production capacity at manufacturing plant m 
@@ -219,7 +223,8 @@ class Parameters_FirstStage:
             Assumption about maximum, but already given! 
         '''
         #rng.randint()
-        return [110,120,150,16.66]
+        #return [110,120,150,16.66]
+        return [110,120,150,16.66]*500
 
     def create_alpha(self) -> list[int]:
         ''' Setup time in periods for production plant m 
@@ -263,7 +268,8 @@ class Parameters_FirstStage:
     def create_is(self, MP) -> list[float]:
         ''' M: maximum portion of total capacity that can be left idle during a production campaign  at manufacturing plant m with [0,1) value'''
         
-        return [rng.uniform(0,0.2) for m in MP]
+        #return [rng.uniform(0,0.2) for m in MP]
+        return [1 for m in MP]
 
     def create_omega_fw(self) -> list[int]:
         ''' factory warehouse shelf-life of products of family f
@@ -271,7 +277,8 @@ class Parameters_FirstStage:
             100 as a high number for long time span
         '''
 
-        return [100,100,5,10]
+        #return [self.hl,self.hl,5,10]
+        return [40, 40 ,5,10]
 
 
     def create_omega_dc(self) -> list[int]:
@@ -308,11 +315,11 @@ class Parameters_FirstStage:
 
 
     def create_imax(self) -> list[list[int]]:
-        ''' Maximum storage capacities at location l for fresh and dry product families '''
+        ''' Maximum storage capacities at location l for fresh and dry product families i '''
 
-        # Fresh and Dry                l , i
-        max_storage_product_groups = [[12,10],
-                                      [68, 114],
+        # Fresh and Dry                  i
+        max_storage_product_groups = [[12,10],      # l_1
+                                      [68, 114],    
                                       [16, 35],
                                       [16,40],
                                       [9, 27],
@@ -321,7 +328,7 @@ class Parameters_FirstStage:
                                       [20,58],
                                       [58,195]]
         
-        return list(map(list, zip(*max_storage_product_groups)))        # transpose the matrix because we want to have [i, l]
+        return list(map(list, zip(*max_storage_product_groups)))        # transpose the matrix [l,i] because we want to have [i, l]
 
     def create_zmax(self) -> list[int]:
         ''' For shift-based production, maximum shifts, otherwise 1
@@ -426,17 +433,23 @@ class Parameters_FirstStage:
 
         return lot_size
     
-    def create_i0_ft(self, F, T) -> list:
-        ''' Initial inventory of family f at time t '''
+    
+    def create_mappingfm(self) -> list:
+        ''' Mapping of family f to plant m '''
 
-        initial_inventory = [[rng.randint(0,50) for t in T] for f in F]
+        # plant 0 -> family 0 (Powdered Milk)
+        # plant 1 -> family 1 (UHT Milk)
+        # plant 2 -> family 2 (Yogurt)
+        # plant 3 -> family 3 (Cheese)
 
-        return initial_inventory
+        mapping = [0, 1, 2, 3]
+
+        return mapping
     
 ### Script for generating data fpr our model
 class Parameters_SecondStage:
 
-    def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list, scenarios):
+    def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list, scenarios, logger):
         ''' Constructor for this class.
         :param T: list of time periods
         :param F: list of families
@@ -448,14 +461,18 @@ class Parameters_SecondStage:
         '''
 
         #First definition of parameters and call for implementing them
-        self.dp = self.create_dp(S, F, L, T, scenarios)
+        self.dp = self.create_dp(S, F, L, T, scenarios, logger)
         self.rho = self.create_rho(scenarios)
         self.dri = self.create_dri(S, T, scenarios)
 
-    def create_dp(self, S, F, L, T, scenarios) -> list[list[list[list[int]]]]:
+    def create_dp(self, S, F, L, T, scenarios, logger) -> list[list[list[list[int]]]]:
         ''' Family demand for distribution center l on day t under scenario s. '''
 
         # Create a list for the demand of each family
+        overall_demand_old = 0
+        share_old = 0
+        last_share_old = 0
+
         demand = []
         for s in S:
             scenario_demand = []
@@ -467,10 +484,19 @@ class Parameters_SecondStage:
                 for l in L:
                     location_demand = []
                     for t in T:
-                        if(l == len(L)-1):
+                        #if(l == len(L)-1):
+                        if(l == L[-1]):
                             location_demand.append(share)
                         else: 
                             location_demand.append(last_share)
+
+                        if overall_demand_old != overall_demand or share_old != share or last_share_old != last_share:
+                            logger.info(f's: {s}, f: {f}, l: {l}, t: {t}\t-> overall_demand: {overall_demand},\tshare: {share},\tlast_share: {last_share}')
+
+                        # Update old values for logging and debugging
+                        overall_demand_old = overall_demand
+                        share_old = share
+                        last_share_old = last_share
 
                     family_demand .append(location_demand)
                 scenario_demand .append(family_demand )

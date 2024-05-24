@@ -6,7 +6,6 @@ from data_generation import *  #Werte für Parameter
 import gurobipy as gp
 import datetime as dt
 
-
 class Model:
     def __init__(self):
         pass
@@ -27,8 +26,9 @@ class Model:
             obtained from buying raw milk from a third party and for the case of overstock are production costs.'''
 
         # TCOST
-        #TCOST = (gp.quicksum(integerVariables.TR[i, l, t] 
-        decisionVariables_FirstStage.TCOST = (gp.quicksum(integerVariables.TR[i, l, t]           # for debugging
+        #TCOST = (
+        decisionVariables_FirstStage.TCOST = (
+                gp.quicksum(integerVariables.TR[i, l, t]           # for debugging
                             * parameters_FirstStage.tc[l][i] for i in FT for l in L for t in T) 
                 + gp.quicksum(binaryVariables.Y[m, t] 
                             * parameters_FirstStage.sco for m in MP for t in T) 
@@ -70,9 +70,9 @@ class Model:
 
     def Constraints(self, parameters_FirstStage:Parameters_FirstStage, decisionVariables_FirstStage: DecisionVariables_FirstStage,
                     parameters_SecondStage:Parameters_SecondStage, decisionVariables_SecondStage: DecisionVariables_SecondStage,
-                    binaryVariables:BinaryVariables, integerVariables:IntegerVariables, model, T, F, S, FT, MP, CT, L):
+                    binaryVariables:BinaryVariables, integerVariables:IntegerVariables, model, T, F, S, FT, MP, CT, L, logger):
         
-        pass
+        #pass
         ''' constraints: 
         '''
         
@@ -102,8 +102,8 @@ class Model:
         # Constraint 2: General production constraints
         """ Family f production of all plants in the complex is equal to the manufacturing output of plants producing f. """
         model.addConstrs((decisionVariables_FirstStage.FP[f,t] 
-                        #== gp.quicksum(decisionVariables_FirstStage.MO[m,t] for m in MP if parameters_FirstStage.fpr[m] == f)
-                        == gp.quicksum(decisionVariables_FirstStage.MO[m,t] for m in MP)    # just for debugging, see Issue #41
+                        == gp.quicksum(decisionVariables_FirstStage.MO[m,t] for m in MP if parameters_FirstStage.mappingFtoM[f] == f)
+                        #== gp.quicksum(decisionVariables_FirstStage.MO[m,t] for m in MP)    # just for debugging, see Issue #41
                         for f in F for t in T),
                         'Constraint_1.2a')
 
@@ -355,7 +355,7 @@ class Model:
                         + gp.quicksum(decisionVariables_FirstStage.DV[f,l,t1] for t1 in T if (t1+parameters_FirstStage.tau[l]) <= t)
                         - gp.quicksum(parameters_SecondStage.dp[s][f][l][t1] for t1 in T if t1 <= t) 
                         + gp.quicksum(decisionVariables_SecondStage.SO[s,f,l,t1] for t1 in T if t1 <= t) 
-                        #- gp.quicksum(decisionVariables_SecondStage.OS[s,f,l,t1] for t1 in T if t1 <= t)   # just for debugging
+                        - gp.quicksum(decisionVariables_SecondStage.OS[s,f,l,t1] for t1 in T if t1 <= t)   # just for debugging
                         for s in S for f in F for l in L for t in T),
                         'Constraint_1.9a')
         
@@ -363,6 +363,11 @@ class Model:
         # INDEX OF TAU WAS WRONG !! i INSTEAD OF l
 
         '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
+        for f in F:
+            logger.info(f'f: {f} -> parameters_FirstStage.i0[f]:\t {parameters_FirstStage.i0[f]}')
+
+        for i in FT:
+            logger.info(f'i: {i} -> parameters_FirstStage.imax[i]:\t {parameters_FirstStage.imax[i]}')
 
         model.addConstrs((gp.quicksum(decisionVariables_SecondStage.ID[s,f,l,t] for f in F if parameters_FirstStage.fty[f] == i) 
                         <= parameters_FirstStage.imax[i][l] 
@@ -460,12 +465,15 @@ class Model:
 
         return model
 
-    def Run_Model(self, T, F, S, FT, MP, CT, L, scenarios):
+    def Run_Model(self, T, F, S, FT, MP, CT, L, scenarios, logger):
         # Create a new model
         model = gp.Model("FirstStage")
 
         # get the needed parameters
         parameters_FirstStage = Parameters_FirstStage(T,F,S,FT,MP,CT,L)
+
+        logger.info("parameters_FirstStage.i0[0]: %s", sum(parameters_FirstStage.i0[0]))
+        logger.info("parameters_FirstStage.i0[1]: %s", sum(parameters_FirstStage.i0[1]))
 
         # get the needed decision variables
         decisionVariables_FirstStage = DecisionVariables_FirstStage(model, T, F, S, FT, MP, CT, L)
@@ -477,7 +485,7 @@ class Model:
         integerVariables = IntegerVariables(model, parameters_FirstStage, T, F, S, FT, MP, CT, L)
 
         # get the needed second stage parameters
-        parameters_SecondStage = Parameters_SecondStage(T, F, S, FT, MP, CT, L, scenarios)
+        parameters_SecondStage = Parameters_SecondStage(T, F, S, FT, MP, CT, L, scenarios, logger)
 
         # get the needed decision variables for the second stage
         decisionVariables_SecondStage = DecisionVariables_SecondStage(model, T, F, S, FT, MP, CT, L)
@@ -489,36 +497,89 @@ class Model:
 
         # Add the constraints
         model = self.Constraints(parameters_FirstStage, decisionVariables_FirstStage, parameters_SecondStage,
-                                 decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L)
+                                 decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L, logger)
 
         # Optimize model
         model.optimize()
 
-        # Print the results
-        #for v in model.getVars():
-        #    print('%s %g' % (v.varName, v.x))
+        logger.info('rho: %s', parameters_SecondStage.rho)
 
+        logger.info('Dri: %s', parameters_SecondStage.dri)
+
+        logger.info("SO[8,3,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+                    decisionVariables_SecondStage.SO[8,3,0,0].LB,
+                    decisionVariables_SecondStage.SO[8,3,0,0].UB,
+                    decisionVariables_SecondStage.SO[8,3,0,0].Obj,
+                    decisionVariables_SecondStage.SO[8,3,0,0].VType,
+                    decisionVariables_SecondStage.SO[8,3,0,0].VarName)
+
+        logger.info("ID[8,3,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+                    decisionVariables_SecondStage.ID[8,3,0,0].LB,
+                    decisionVariables_SecondStage.ID[8,3,0,0].UB,
+                    decisionVariables_SecondStage.ID[8,3,0,0].Obj,
+                    decisionVariables_SecondStage.ID[8,3,0,0].VType,
+                    decisionVariables_SecondStage.ID[8,3,0,0].VarName)
+        
+        logger.info("ID[8,2,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+                    decisionVariables_SecondStage.ID[8,2,0,0].LB,
+                    decisionVariables_SecondStage.ID[8,2,0,0].UB,
+                    decisionVariables_SecondStage.ID[8,2,0,0].Obj,
+                    decisionVariables_SecondStage.ID[8,2,0,0].VType,
+                    decisionVariables_SecondStage.ID[8,2,0,0].VarName)
+        
+        logger.info("ID[8,1,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+                    decisionVariables_SecondStage.ID[8,1,0,0].LB,
+                    decisionVariables_SecondStage.ID[8,1,0,0].UB,
+                    decisionVariables_SecondStage.ID[8,1,0,0].Obj,
+                    decisionVariables_SecondStage.ID[8,1,0,0].VType,
+                    decisionVariables_SecondStage.ID[8,1,0,0].VarName)
+        
+        logger.info("ID[8,0,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+                    decisionVariables_SecondStage.ID[8,0,0,0].LB,
+                    decisionVariables_SecondStage.ID[8,0,0,0].UB,
+                    decisionVariables_SecondStage.ID[8,0,0,0].Obj,
+                    decisionVariables_SecondStage.ID[8,0,0,0].VType,
+                    decisionVariables_SecondStage.ID[8,0,0,0].VarName)
+        
         #print('Attr:', model.printAttr('X'))
-        print('model.status:', model.status)
-        if model.status == 2:
-            print('Obj: %g' % model.objVal)
+        logger.info(f'model.status: {model.status}')
+
+        if model.status == 5:
+            logger.warning("Model is unbounded")
+        elif model.status == 2:
+            logger.info("Optimal solution found")
+            for v in model.getVars():
+                logger.info(f"{v.varName}: {v.x}")
+
+            logger.info('Obj: %g' % model.objVal)
+
+            # Save the model
+            if 1 == 0:
+                # Add timestamp to file name
+                timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
+                file_name = f"results/result_FirstStage_LP_{timestamp}.lp"
+                model.write(file_name)
+
+                file_name = f"results/result_FirstStage_MPS_{timestamp}.mps"
+                model.write(file_name)
+
+                file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
+                model.write(file_name)
+
         elif model.status == 4:
-                # find infeasibilities
-            model.computeIIS()
-            model.write("results/infeasible.ilp")
+            logger.warning("Model is infeasible")
+
+            try:
+                model.computeIIS()
+                model.write("results/infeasible.ilp")
+
+            except gp.GurobiError as e:
+                logger.error('Error Compute IIS: %s', e)
+        else:
+            logger.error("Optimization ended with status %s", model.status)
         
 
-        # Save the model
-        # Add timestamp to file name
-        timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
-        file_name = f"results/result_FirstStage_LP_{timestamp}.lp"
-        model.write(file_name)
-
-        file_name = f"results/result_FirstStage_MPS_{timestamp}.mps"
-        model.write(file_name)
-
-        file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
-        model.write(file_name)
+        return logger
 
 
 
