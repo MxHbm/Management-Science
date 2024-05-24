@@ -81,8 +81,22 @@ class Parameters_FirstStage:
 
     def SaveData(self) :
     # Create output directory
-        output_directory = "InputData/FirstStage"
-        os.makedirs(output_directory, exists_ok=True)
+
+        # Directory
+        directory = "InputData/FirstStage"
+ 
+        # Parent Directory path
+        parent_dir = os.getcwd()
+ 
+        # Path
+        path = os.path.join(parent_dir, directory)
+ 
+        # Create the directory 'InputData/FirstStage'
+        try:
+            os.makedirs(path, exist_ok=True)
+            print("Directory '%s' created successfully" % directory)
+        except OSError as error:
+            print("Directory '%s' can not be created")
 
         # Save all parameter as a CSV file
         data_dict = {
@@ -126,8 +140,12 @@ class Parameters_FirstStage:
         }
 
         for parameter_name, data in data_dict.items():
-            file_path = os.path.join(output_directory, f"{parameter_name}.csv")
-            df = pd.DataFrame(data)
+
+            file_path = os.path.join(directory, f"{parameter_name}.csv")
+            if type(data) == int: 
+                df = pd.DataFrame(data = {parameter_name : data}, index=[0])
+            else: 
+                df = pd.DataFrame(data = {parameter_name : data})
             df.to_csv(file_path, index=False)
 
 
@@ -506,6 +524,44 @@ class Parameters_SecondStage:
         self.dp = self.create_dp(S, F, L, T, scenarios)
         self.rho = self.create_rho(scenarios)
         self.dri = self.create_dri(S, T, scenarios)
+
+        # save all data
+        self.SaveData()
+
+    def SaveData(self) :
+    # Create output directory2
+
+        # Directory2
+        directory2 = "InputData/SecondStage"
+ 
+        # Parent Directory2 path
+        parent_dir2 = os.getcwd()
+ 
+        # Path
+        path2 = os.path.join(parent_dir2, directory2)
+ 
+        # Create the directory 'InputData/FirstStage'
+        try:
+            os.makedirs(path2, exist_ok=True)
+            print("Directory '%s' created successfully" % directory2)
+        except OSError as error:
+            print("Directory '%s' can not be created")
+
+        # # Save all parameter as a CSV file
+        data_dict2 = {
+            "dp": self.dp,
+            "rho": self.rho,
+            "dri": self.dri,
+        }
+
+        for parameter_name, data in data_dict2.items():
+
+            file_path = os.path.join(directory2, f"{parameter_name}.csv")
+            if type(data) == int: 
+                df = pd.DataFrame(data = {parameter_name : data}, index=[0])
+            else: 
+                df = pd.DataFrame(data = {parameter_name : data})
+            df.to_csv(file_path, index=False)
 
     def create_dp(self, S, F, L, T, scenarios) -> list[list[list[list[int]]]]:
         ''' Family demand for distribution center l on day t under scenario s. '''
