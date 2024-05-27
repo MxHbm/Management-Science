@@ -120,15 +120,17 @@ class Parameters_FirstStage:
 
     def create_rsc(self) -> int:
         ''' Raw milk third supplier cost '''
+        # DEBUG INFO: if lower than 4, the model does not work
         
-        return 2
+        #return 2            # in the paper 2 MU 
+        return 6
 
     def create_roc(self) -> int:
         ''' Raw milk over stock cost per volume unit 
             NOTHING MENTIONED - ASSUMPTION, THAT IT IS THREE TIMES THE NORMAL PRICE!
         '''
 
-        return self.rsc * rng.randint(3,3)
+        return self.rsc * rng.randint(3,3) 
 
     def create_el(self) -> list[int]:
         ''' Export lot size in metric tons of family f 
@@ -150,8 +152,7 @@ class Parameters_FirstStage:
         for f in F:
             family_inventory = []
             for l in L:
-                #family_inventory.append(rng.randint(0,10))
-                family_inventory.append(5)
+                family_inventory.append(rng.randint(0,10))
 
             intitial_inventory.append(family_inventory)
 
@@ -165,8 +166,7 @@ class Parameters_FirstStage:
         for f in F:
             family_inventory = []
             for t in T:
-                #family_inventory.append(rng.randint(0,100))
-                family_inventory.append(5)
+                family_inventory.append(rng.randint(0,100))
 
             intitial_inventory.append(family_inventory)
 
@@ -188,7 +188,7 @@ class Parameters_FirstStage:
         ''' Raw milk initial inventory. '''
 
         initial_inventory = rng.randint(50,200)
-        initial_inventory = 2000000        # for debugging
+        #initial_inventory = 200       # for debugging
 
         return initial_inventory
 
@@ -196,7 +196,7 @@ class Parameters_FirstStage:
         ''' Maximum raw milk inventory. '''
 
         maximum_inventory = rng.randint(1000,2000)
-        maximum_inventory = 20000000        # for debugging
+        #maximum_inventory = 20000000        # for debugging
 
         return maximum_inventory
         
@@ -224,7 +224,7 @@ class Parameters_FirstStage:
         '''
         #rng.randint()
         #return [110,120,150,16.66]
-        return [110,120,150,16.66]*500
+        return [110,120,150,16.66]#*500
 
     def create_alpha(self) -> list[int]:
         ''' Setup time in periods for production plant m 
@@ -402,6 +402,16 @@ class Parameters_FirstStage:
                                                 [21.638,18.032],
                                                 [9.021,7.518]]
         
+        # transport_costs_product_group_matrix = [[1, 1],
+        #                                         [1, 1],
+        #                                         [1, 1],
+        #                                         [1, 1],
+        #                                         [1, 1],
+        #                                         [1, 1],
+        #                                         [1, 1],
+        #                                         [1, 1],
+        #                                         [1, 1]]
+        
         return transport_costs_product_group_matrix
 
     def create_sco(self) -> int:
@@ -449,7 +459,7 @@ class Parameters_FirstStage:
 ### Script for generating data fpr our model
 class Parameters_SecondStage:
 
-    def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list, scenarios, logger):
+    def __init__(self, T: list, F: list, S: list, FT: list, MP: list, CT: list, L: list, scenarios):
         ''' Constructor for this class.
         :param T: list of time periods
         :param F: list of families
@@ -461,11 +471,11 @@ class Parameters_SecondStage:
         '''
 
         #First definition of parameters and call for implementing them
-        self.dp = self.create_dp(S, F, L, T, scenarios, logger)
+        self.dp = self.create_dp(S, F, L, T, scenarios)
         self.rho = self.create_rho(scenarios)
         self.dri = self.create_dri(S, T, scenarios)
 
-    def create_dp(self, S, F, L, T, scenarios, logger) -> list[list[list[list[int]]]]:
+    def create_dp(self, S, F, L, T, scenarios) -> list[list[list[list[int]]]]:
         ''' Family demand for distribution center l on day t under scenario s. '''
 
         # Create a list for the demand of each family
@@ -489,14 +499,6 @@ class Parameters_SecondStage:
                             location_demand.append(share)
                         else: 
                             location_demand.append(last_share)
-
-                        if overall_demand_old != overall_demand or share_old != share or last_share_old != last_share:
-                            logger.info(f's: {s}, f: {f}, l: {l}, t: {t}\t-> overall_demand: {overall_demand},\tshare: {share},\tlast_share: {last_share}')
-
-                        # Update old values for logging and debugging
-                        overall_demand_old = overall_demand
-                        share_old = share
-                        last_share_old = last_share
 
                     family_demand .append(location_demand)
                 scenario_demand .append(family_demand )

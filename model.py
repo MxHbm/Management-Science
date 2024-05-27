@@ -70,7 +70,7 @@ class Model:
 
     def Constraints(self, parameters_FirstStage:Parameters_FirstStage, decisionVariables_FirstStage: DecisionVariables_FirstStage,
                     parameters_SecondStage:Parameters_SecondStage, decisionVariables_SecondStage: DecisionVariables_SecondStage,
-                    binaryVariables:BinaryVariables, integerVariables:IntegerVariables, model, T, F, S, FT, MP, CT, L, logger):
+                    binaryVariables:BinaryVariables, integerVariables:IntegerVariables, model, T, F, S, FT, MP, CT, L):
         
         #pass
         ''' constraints: 
@@ -102,8 +102,7 @@ class Model:
         # Constraint 2: General production constraints
         """ Family f production of all plants in the complex is equal to the manufacturing output of plants producing f. """
         model.addConstrs((decisionVariables_FirstStage.FP[f,t] 
-                        == gp.quicksum(decisionVariables_FirstStage.MO[m,t] for m in MP if parameters_FirstStage.mappingFtoM[f] == f)
-                        #== gp.quicksum(decisionVariables_FirstStage.MO[m,t] for m in MP)    # just for debugging, see Issue #41
+                        == gp.quicksum(decisionVariables_FirstStage.MO[m,t] for m in MP if parameters_FirstStage.mappingFtoM[f] == f)   # [maybe solved] see issue #41
                         for f in F for t in T),
                         'Constraint_1.2a')
 
@@ -363,11 +362,6 @@ class Model:
         # INDEX OF TAU WAS WRONG !! i INSTEAD OF l
 
         '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
-        for f in F:
-            logger.info(f'f: {f} -> parameters_FirstStage.i0[f]:\t {parameters_FirstStage.i0[f]}')
-
-        for i in FT:
-            logger.info(f'i: {i} -> parameters_FirstStage.imax[i]:\t {parameters_FirstStage.imax[i]}')
 
         model.addConstrs((gp.quicksum(decisionVariables_SecondStage.ID[s,f,l,t] for f in F if parameters_FirstStage.fty[f] == i) 
                         <= parameters_FirstStage.imax[i][l] 
@@ -472,9 +466,6 @@ class Model:
         # get the needed parameters
         parameters_FirstStage = Parameters_FirstStage(T,F,S,FT,MP,CT,L)
 
-        logger.info("parameters_FirstStage.i0[0]: %s", sum(parameters_FirstStage.i0[0]))
-        logger.info("parameters_FirstStage.i0[1]: %s", sum(parameters_FirstStage.i0[1]))
-
         # get the needed decision variables
         decisionVariables_FirstStage = DecisionVariables_FirstStage(model, T, F, S, FT, MP, CT, L)
 
@@ -485,7 +476,7 @@ class Model:
         integerVariables = IntegerVariables(model, parameters_FirstStage, T, F, S, FT, MP, CT, L)
 
         # get the needed second stage parameters
-        parameters_SecondStage = Parameters_SecondStage(T, F, S, FT, MP, CT, L, scenarios, logger)
+        parameters_SecondStage = Parameters_SecondStage(T, F, S, FT, MP, CT, L, scenarios)
 
         # get the needed decision variables for the second stage
         decisionVariables_SecondStage = DecisionVariables_SecondStage(model, T, F, S, FT, MP, CT, L)
@@ -497,59 +488,52 @@ class Model:
 
         # Add the constraints
         model = self.Constraints(parameters_FirstStage, decisionVariables_FirstStage, parameters_SecondStage,
-                                 decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L, logger)
+                                 decisionVariables_SecondStage, binaryVariables, integerVariables, model, T, F, S, FT, MP, CT, L)
 
         # Optimize model
+        model.setParam('MIPGap', 1)
         model.optimize()
 
-        logger.info('rho: %s', parameters_SecondStage.rho)
+        # für jede Variable einzeln die Werte mit .X abfragen
+        # unbeschränkte Variablen erkennenn
+        # Upper Bounds ändenr
+        # welche variablen haben einen positiven Zielkoeffizienten
+        # Marge beim Verkauf von Milch muss Penalty sein., um Arbitrage zu vermeiden 
 
-        logger.info('Dri: %s', parameters_SecondStage.dri)
+        #logger.info(model.printAttr('X'))
 
-        logger.info("SO[8,3,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
-                    decisionVariables_SecondStage.SO[8,3,0,0].LB,
-                    decisionVariables_SecondStage.SO[8,3,0,0].UB,
-                    decisionVariables_SecondStage.SO[8,3,0,0].Obj,
-                    decisionVariables_SecondStage.SO[8,3,0,0].VType,
-                    decisionVariables_SecondStage.SO[8,3,0,0].VarName)
+        # logger.info('rho: %s', parameters_SecondStage.rho)
 
-        logger.info("ID[8,3,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
-                    decisionVariables_SecondStage.ID[8,3,0,0].LB,
-                    decisionVariables_SecondStage.ID[8,3,0,0].UB,
-                    decisionVariables_SecondStage.ID[8,3,0,0].Obj,
-                    decisionVariables_SecondStage.ID[8,3,0,0].VType,
-                    decisionVariables_SecondStage.ID[8,3,0,0].VarName)
+        # logger.info("SO[8,3,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
+        #             decisionVariables_SecondStage.SO[8,3,0,0].LB,
+        #             decisionVariables_SecondStage.SO[8,3,0,0].UB,
+        #             decisionVariables_SecondStage.SO[8,3,0,0].Obj,
+        #             decisionVariables_SecondStage.SO[8,3,0,0].VType,
+        #             decisionVariables_SecondStage.SO[8,3,0,0].VarName)
+
         
-        logger.info("ID[8,2,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
-                    decisionVariables_SecondStage.ID[8,2,0,0].LB,
-                    decisionVariables_SecondStage.ID[8,2,0,0].UB,
-                    decisionVariables_SecondStage.ID[8,2,0,0].Obj,
-                    decisionVariables_SecondStage.ID[8,2,0,0].VType,
-                    decisionVariables_SecondStage.ID[8,2,0,0].VarName)
+        # for k in decisionVariables_SecondStage.RS:
+        #     logger.info('RS: %s', decisionVariables_SecondStage.RS[k].Obj)
         
-        logger.info("ID[8,1,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
-                    decisionVariables_SecondStage.ID[8,1,0,0].LB,
-                    decisionVariables_SecondStage.ID[8,1,0,0].UB,
-                    decisionVariables_SecondStage.ID[8,1,0,0].Obj,
-                    decisionVariables_SecondStage.ID[8,1,0,0].VType,
-                    decisionVariables_SecondStage.ID[8,1,0,0].VarName)
-        
-        logger.info("ID[8,0,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
-                    decisionVariables_SecondStage.ID[8,0,0,0].LB,
-                    decisionVariables_SecondStage.ID[8,0,0,0].UB,
-                    decisionVariables_SecondStage.ID[8,0,0,0].Obj,
-                    decisionVariables_SecondStage.ID[8,0,0,0].VType,
-                    decisionVariables_SecondStage.ID[8,0,0,0].VarName)
-        
-        #print('Attr:', model.printAttr('X'))
+        # for k in integerVariables.TR:
+        #     logger.info('TR: %s', integerVariables.TR[k].Obj)
+
+        # for k in decisionVariables_SecondStage.RO:
+        #     logger.info('RO: %s', decisionVariables_SecondStage.RO[k].Obj)
+
+
         logger.info(f'model.status: {model.status}')
+        logger.info('rsc: %g', parameters_FirstStage.rsc)
+
 
         if model.status == 5:
             logger.warning("Model is unbounded")
         elif model.status == 2:
             logger.info("Optimal solution found")
-            for v in model.getVars():
-                logger.info(f"{v.varName}: {v.x}")
+            #for v in model.getVars():
+            # for v in model.printAttr('X'):
+            #     logger.info(f"{v.varName}: {v.x}")
+
 
             logger.info('Obj: %g' % model.objVal)
 
