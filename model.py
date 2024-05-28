@@ -500,6 +500,8 @@ class Model:
         # welche variablen haben einen positiven Zielkoeffizienten
         # Marge beim Verkauf von Milch muss Penalty sein., um Arbitrage zu vermeiden 
 
+        #model.printAttr('X')
+
         #logger.info(model.printAttr('X'))
 
         # logger.info('rho: %s', parameters_SecondStage.rho)
@@ -563,7 +565,7 @@ class Model:
             logger.error("Optimization ended with status %s", model.status)
         
 
-        return logger
+        return model, logger
 
 
 
