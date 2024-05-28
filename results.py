@@ -45,6 +45,35 @@ class Results:
         df = pd.DataFrame(data)
         return df
 
+
+    def paper_values_table8(self):
+        data = {
+            'Metric': ['Production [t]', 'Production [t]', 'Production [t]', 'Production [t]', 
+                       'N° of PM Export Lots', 'Processed Raw Milk [t]', 
+                       'Required trucks', 'Required trucks',  'Required trucks', 
+                       'DCs Expected Stockout days', 'DCs Expected Stockout days', 'DCs Expected Stockout days', 'DCs Expected Stockout days', 
+                       'DCs Expected Overstock days', 'DCs Expected Overstock days', 'DCs Expected Overstock days', 
+                       'Expected number of days with raw milk Overstock', 
+                       'Expected number of days with raw milk bought at premium price', 
+                       'Expected Sales (MU)', 'Expected Raw Milk Costs (MU)', 'Expected Net Benefits (MU)'] ,
+            'Sub-Metric': ['UHT', 'Milk', 'Yogurt', 'Cheese', 
+                           'N° of PM Export Lots', 'Processed Raw Milk [t]', 
+                           'Fresh', 'Dry', 'UHT', 
+                           'Powdered Milk', 'Yogurt', 'Cheese', 'UHT', 
+                           'Powdered Milk', 'Yogurt', 'Cheese', 
+                           'Raw Milk', 'Raw Milk', 
+                           'Sales', 'Raw Milk', 'Net Benefits'] ,
+            'SP':   [9881.6, 1938, 4465.3, 276.4, 39,   33759, 598, 1348,  9.7,  5.5, 10,    6.7, 3.5, 3.8,  6.4, 2.3, 10.5, 2.2, 62241, 25107, 34670.1],
+            'EMVP': [6600,   3360, 4499.8, None,  100, 397769, 554,  910, 20.2, 16.1, 13.1, 29.7, 7.9, 4.8, 18.1, 1.2, 12.1, 9,   53541, 29277, 28636.8]
+        }
+        
+        df = pd.DataFrame(data)
+        df.set_index(['Metric', 'Sub-Metric'], inplace=True, drop=True)
+
+        return df
+        #df = pd.DataFrame(data)
+        #return df
+
     def create_sales_t(self):
         # Compute the value for 'Sales [t]'
 
@@ -165,15 +194,19 @@ class Results:
             return 'N/A'
         return f'+{round((value - comparison) / comparison * 100, 1)}%'
 
-    def PrintResults(self, comparedResults):
+    def PrintResults(self, table6, table8):
         print('=========================================')
         print('Results:')
         print('Objective value: %g' % self.model.objVal)
-        print(comparedResults)
+        print('table 6:')
+        print(table6)
+
+        print('table 8:')
+        print(table8)
 
     
 
-    def ComputeResults(self):
+    def ComputeResultsOfTable6(self):
 
         data = {'SP':  [self.sales_t, 
                         self.lost_sales_t,
@@ -225,11 +258,40 @@ class Results:
         df = pd.DataFrame(data)
         return df
 
-    #results = ComputeResults(self)
-    
+    def ComputeResultsOfTable8(self):    
+        data = {'SP':  [self.sales_t, 
+                        self.lost_sales_t,
+                        self.distressed_sales_t,
+                        self.raw_material_losses_t,
+                        self.raw_material_purchase_t,
+                        self.exports_t,
+                        self.production_t,
+                        self.product_shipped_t,
+                        self.sales_income_mu,
+                        self.distressed_sales_mu,
+                        self.raw_material_losses_cost_mu,
+                        self.raw_material_purchase_cost_mu,
+                        self.exports_income_mu,
+                        self.cost_shipped_dc_mu,
+                        self.setups_cost_mu,
+                        self.expected_net_benefits_mu]}
+                        
+        listOfResults = pd.DataFrame()
+        listOfResults['SP'] = data['SP']
+
+        data = {
+            'SP-paper': self.paper_values_table8()['SP'],
+            'EMVP-paper': self.paper_values_table8()['EMVP'],
+        }
+
+        df = pd.DataFrame(data, index = self.paper_values_table8().index)
+        return df
+
+
     def Evaluate_results(self):
-        computedResults = self.ComputeResults()
-        self.PrintResults(computedResults)
+        table6 = self.ComputeResultsOfTable6()
+        table8 = self.ComputeResultsOfTable8()
+        self.PrintResults(table6, table8)
         pass
 
     
