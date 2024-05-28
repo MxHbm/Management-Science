@@ -79,12 +79,13 @@ class Results:
 
         sales_t = 0
 
+
         for s in self.S:
             for f in self.F:
                 for l in self.L:
                     for t in self.T:
                         if self.model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]') is not None:
-                            sales_t += self.model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').x
+                            sales_t += self.model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').Obj
 
 
         return sales_t
@@ -94,12 +95,13 @@ class Results:
 
         lost_sales_t = 0
 
+
         for s in self.S:
             for f in self.F:
                 for l in self.L:
                     for t in self.T:
-                        if self.model.getVarByName(f'LSs_f_l_t[{s},{f},{l},{t}]') is not None:
-                            lost_sales_t += self.model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]')
+                        if self.model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]') is not None:
+                            lost_sales_t += self.model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').Obj
 
         print(lost_sales_t)
 
@@ -107,14 +109,27 @@ class Results:
 
     def create_distressed_sales_t(self):
         # Compute the value for 'Distressed Sales of Products [t]'
-        # Replace the following line with your computation
-        distressed_sales_t = 1
+
+        distressed_sales_t = 0
+
+        for s in self.S:
+            for f in self.F:
+                for l in self.L:
+                    for t in self.T:
+                        if self.model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]') is not None:
+                            distressed_sales_t += self.model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').Obj
+
         return distressed_sales_t
 
     def create_raw_material_losses_t(self):
         # Compute the value for 'Raw Material Losses [t]'
-        # Replace the following line with your computation
-        raw_material_losses_t = 1
+
+        raw_material_losses_t = 0
+
+        for s in self.S:
+            for t in self.T:
+                if self.model.getVarByName(f'ROs_t[{s},{t}]') is not None:
+                    raw_material_losses_t += self.model.getVarByName(f'ROs_t[{s},{t}]').Obj
         return raw_material_losses_t
 
     def create_raw_material_purchase_t(self):
