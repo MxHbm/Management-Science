@@ -8,6 +8,7 @@ from scenario_reduction import *
 from model import *      #Gurobi Modell
 import globals      #Globale variablen
 #from gurobipy import * #Gurobi
+from results import *  #Ergebnisse
 
 import logging
 
@@ -42,9 +43,15 @@ def main():
     m = Model()
 
     try:
-        m.Run_Model(T, F, S, FT, MP, CT, L, scenarios, logger)
+        m, logger = m.Run_Model(T, F, S, FT, MP, CT, L, scenarios, logger)
+            
+        results = Results(m, T, F, S, FT, MP, CT, L)
+
+        results.Evaluate_results()
     except Exception as e:
         logger.exception(e)    
+
+    
 
     logger.info('========================================= End logging =========================================== \n')
 
