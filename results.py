@@ -134,38 +134,67 @@ class Results:
 
     def create_raw_material_purchase_t(self):
         # Compute the value for 'Raw Material Purchase [t]'
-        # Replace the following line with your computation
-        raw_material_purchase_t = 1
+
+        raw_material_purchase_t = 0
+
+        for s in self.S:
+            for t in self.T:
+                if self.model.getVarByName(f'RSs_t[{s},{t}]') is not None:
+                    raw_material_purchase_t += self.model.getVarByName(f'RSs_t[{s},{t}]').Obj
+
         return raw_material_purchase_t
 
     def create_exports_t(self):
         # Compute the value for 'Exports [t]'
-        # Replace the following line with your computation
-        exports_t = 1
+
+        exports_t = 0
+
+        for f in self.F:
+            for t in self.T:
+                if self.model.getVarByName(f'Ef_t[{f},{t}]') is not None:
+                    exports_t += self.model.getVarByName(f'Ef_t[{f},{t}]').Obj
+
         return exports_t
 
     def create_production_t(self):
         # Compute the value for 'Production [t]'
-        # Replace the following line with your computation
-        production_t = 1
+
+        production_t = 0
+
+        for f in self.F:
+            for t in self.T:
+                if self.model.getVarByName(f'FPf_t[{f},{t}]') is not None:
+                    production_t += self.model.getVarByName(f'FPf_t[{f},{t}]').Obj
+
         return production_t
 
     def create_product_shipped_t(self):
         # Compute the value for 'Product shipped to DC [t]'
-        # Replace the following line with your computation
-        product_shipped_t = 1
+
+        product_shipped_t = 0
+
+        for f in self.F:
+            for l in self.L:
+                for t in self.T:
+                    if self.model.getVarByName(f'DVf_l_t[{f},{l},{t}]') is not None:
+                        product_shipped_t += self.model.getVarByName(f'DVf_l_t[{f},{l},{t}]').Obj
+
         return product_shipped_t
 
     def create_sales_income_mu(self):
         # Compute the value for 'Sales Income [MU]'
-        # Replace the following line with your computation
-        sales_income_mu = 1
+
+        sales_income_mu = 0
+
+        sales_income_mu = self.model.getVarByName('EXI').Obj
+
         return sales_income_mu
 
     def create_distressed_sales_mu(self):
         # Compute the value for 'Distressed Sales of Products [MU]'
-        # Replace the following line with your computation
-        distressed_sales_mu = 1
+
+        distressed_sales_mu = 0
+
         return distressed_sales_mu
 
     def create_raw_material_losses_cost_mu(self):
@@ -205,7 +234,8 @@ class Results:
         return expected_net_benefits_mu
     
     def calculate_deviation(self, value, comparison):
-        if comparison == 0:
+        print(comparison)
+        if (comparison == int(0)) or comparison == float(0):
             return 'N/A'
         return f'+{round((value - comparison) / comparison * 100, 1)}%'
 
