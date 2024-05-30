@@ -3,10 +3,10 @@
 #### Load necessary packages 
 
 #### Import python scrips
-from data_generation import *  #Werte für Parameter
+from variables import *  #Werte für Parameter
 from scenario_reduction import * 
 from model import *      #Gurobi Modell
-import globals      #Globale variablen
+from parameters import *   # All parameters
 #from gurobipy import * #Gurobi
 from results import *  #Ergebnisse
 
@@ -24,30 +24,16 @@ def main():
     logger.info('========================================= Start logging ========================================= ')
 
 
-
-    #Create the set of reduced scenarios
-    scenarios = Scenario_Analyse()
-
-    # Erzeuge Sets für das Gurobi Modell
-    T = [i for i in range(globals.T_end)]
-    F = [i for i in range(globals.F_end)]
-    S = [i for i in range(scenarios.get_len_reduced_scenarios())]
-    FT = globals.FT_values
-    MP = [i for i in range(globals.MP_end)]
-    CT = globals.CT_values
-    L = [i for i in range(globals.L_end)]
-
-    #print(scenarios)
-
     # Model
     m = Model()
+    data = Parameters("data/base_data.json")
 
     try:
-        m, logger = m.Run_Model(T, F, S, FT, MP, CT, L, scenarios, logger)
+        m, logger = m.Run_Model(data, logger)
             
-        results = Results(m, T, F, S, FT, MP, CT, L)
-
+        results = Results(m, data)
         results.Evaluate_results()
+
     except Exception as e:
         logger.exception(e)    
 
