@@ -15,6 +15,7 @@ class Parameters:
         self.__loadData()
         self.__createSets()
         self.__createScenarioReduction()
+        self._mappingFtoM = self.__create_mappingFtoM()
 
 
     def __loadData(self) -> None:
@@ -140,6 +141,17 @@ class Parameters:
         self._dp = self.__create_dp()
         self._rho =  self.SRA.get_reduced_scenarios_probabilities()
         self._dri = self.__create_dri()
+
+    def __create_mappingFtoM(self) -> list[int]: 
+        ''' Mapping of family f to plant m
+        '''
+
+        # plant 0 -> family 0 (Powdered Milk)
+        # plant 1 -> family 1 (UHT Milk)
+        # plant 2 -> family 2 (Yogurt)
+        # plant 3 -> family 3 (Cheese)
+
+        return [m for m in self._MP]
         
     
     ###### MANY PROPERTIES TO NOT CHANGE THE VALUES OF THE VARIABLES ######
@@ -535,3 +547,10 @@ class Parameters:
         '''
 
         return self._S
+    
+    @property
+    def mappingFtoM(self):
+        ''' Mapping of family to manufacturing plant
+        '''
+
+        return self._mappingFtoM

@@ -32,8 +32,8 @@ def main():
         m, logger = m.Run_Model(data, logger)
             
         results = Results(m, data)
-
         results.Evaluate_results()
+
     except Exception as e:
         logger.exception(e)    
 

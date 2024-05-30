@@ -48,7 +48,7 @@ class Model:
         # BENEFIT
         decisionVariables_FirstStage.EXI = ( 
                     gp.quicksum( data.re[f] 
-                                * data.ls[f] 
+                                * data.ls_p[f] 
                                 * integerVariables.E[f, t]
                                 for f in data.F for t in data.T)
                     + gp.quicksum(  data.rho[s]
@@ -337,7 +337,7 @@ class Model:
         inventory."""
 
         model.addConstrs((decisionVariables_FirstStage.IF[f,t] 
-                        == data.i0_2[f][t] 
+                        == data.i_0_ft[f][t] 
                         + gp.quicksum(decisionVariables_FirstStage.FP[f,t1] for t1 in data.T if t1 <= t) 
                         - gp.quicksum(decisionVariables_FirstStage.DV[f,l,t1] for l in data.L for t1 in data.T if t1 <= t) 
                         - gp.quicksum(integerVariables.E[f,t1] * data.el[f] for t1 in data.T if t1 <= t) 
@@ -351,7 +351,7 @@ class Model:
         due to understock and overstock quantities are represented by scenario variables SOs, f, l, t,OSs, f, l, t, respectively.
         """
         model.addConstrs((decisionVariables_SecondStage.ID[s,f,l,t] 
-                        ==  data.i0[f][l] 
+                        ==  data.i_0[f][l] 
                         + gp.quicksum(decisionVariables_FirstStage.DV[f,l,t1] for t1 in data.T if (t1+data.tau[l]) <= t)
                         - gp.quicksum(data.dp[s][f][l][t1] for t1 in data.T if t1 <= t) 
                         + gp.quicksum(decisionVariables_SecondStage.SO[s,f,l,t1] for t1 in data.T if t1 <= t) 
@@ -365,7 +365,7 @@ class Model:
         '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
 
         model.addConstrs((gp.quicksum(decisionVariables_SecondStage.ID[s,f,l,t] for f in data.F if data.fty[f] == i) 
-                        <= data.imax[i][l] 
+                        <= data.imax[l][i] 
                         for s in data.S for l in data.L for i in data.FT for t in data.T),
                         'Constraint_1.9b')
         

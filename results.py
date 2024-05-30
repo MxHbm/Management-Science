@@ -1,18 +1,19 @@
 import pandas as pd
+from parameters import Parameters
 
 ''' results.py '''
 
 class Results:
-    def __init__(self, model, T, F, S, FT, MP, CT, L):
+    def __init__(self, model, data:Parameters):
         self.model = model
 
-        self.T = T
-        self.F = F
-        self.S = S
-        self.FT = FT
-        self.MP = MP
-        self.CT = CT
-        self.L = L
+        self.T = data.T
+        self.F = data.F
+        self.S = data.S
+        self.FT = data.FT
+        self.MP = data.MP
+        self.CT = data.CT
+        self.L = data.L
 
         self.sales_t = self.create_sales_t()
         self.lost_sales_t = self.create_lost_sales_t()
