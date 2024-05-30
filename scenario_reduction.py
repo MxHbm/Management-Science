@@ -172,54 +172,54 @@ class Scenario_Analyse:
 
         # PROPERTY FUNCTIONS TO GET VALUES
         
-        @property
-        def len_W(self) -> int: 
-            return len(self.W)
-        
-        @property
-        def len_base_scenarios(self) -> int: 
-            return len(self._base_scenarios)
-        
-        @property
-        def K(self) -> int:
-            return self._K
+    @property
+    def len_W(self) -> int: 
+        return len(self.W)
+    
+    @property
+    def len_base_scenarios(self) -> int: 
+        return len(self._base_scenarios)
+    
+    @property
+    def K(self) -> int:
+        return self._K
 
-        @property
-        def epsilon(self) -> float:
-            return self._epsilon
+    @property
+    def epsilon(self) -> float:
+        return self._epsilon
 
-        @property
-        def N(self):
-            return self._N
+    @property
+    def N(self):
+        return self._N
 
-        @property
-        def demand_supply(self) -> list[list[int]]:
-            return self._demand_supply
+    @property
+    def demand_supply(self) -> list[list[int]]:
+        return self._demand_supply
 
-        @property
-        def probabilities(self) -> list[list[float]]:
-            return self._p
+    @property
+    def probabilities(self) -> list[list[float]]:
+        return self._p
 
-        @property
-        def base_scenarios(self) -> list[list[int]]:
-            return self._base_scenarios
+    @property
+    def base_scenarios(self) -> list[list[int]]:
+        return self._base_scenarios
 
-        @property
-        def base_scenario_probabilities(self) -> list[list[float]]:
-            return self._p_base_scenarios
+    @property
+    def base_scenario_probabilities(self) -> list[list[float]]:
+        return self._p_base_scenarios
 
-        @property
-        def reduced_scenarios(self) -> list[list[int]]:
-            return self._reduced_scenarios
+    @property
+    def reduced_scenarios(self) -> list[list[int]]:
+        return self._reduced_scenarios
 
-        @property
-        def sizes_reduced_scenarios(self) -> list[int]:
-            return self._sizes_reduced_scenarios
+    @property
+    def sizes_reduced_scenarios(self) -> list[int]:
+        return self._sizes_reduced_scenarios
 
-        @property
-        def reduced_scenarios_probabilities(self) -> list[float]:
-            return self._p_reduced_scenarios
-        
-        @property
-        def len_reduced_scenarios(self) -> int:
-            return len(self._reduced_scenarios)
+    @property
+    def reduced_scenarios_probabilities(self) -> list[float]:
+        return self._p_reduced_scenarios
+    
+    @property
+    def len_reduced_scenarios(self) -> int:
+        return len(self._reduced_scenarios)
