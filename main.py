@@ -1,16 +1,10 @@
 ''' main.py '''
 
-#### Load necessary packages 
-
 #### Import python scrips
-from variables import *  #Werte für Parameter
-from scenario_reduction import * 
 from model import *      #Gurobi Modell
-from parameters import *   # All parameters
-#from gurobipy import * #Gurobi
 from results import *  #Ergebnisse
-
 import logging
+
 
 def main():
     #initialize logging
