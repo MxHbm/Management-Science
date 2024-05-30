@@ -3,7 +3,7 @@
 #### Load necessary packages 
 
 #### Import python scrips
-from data_generation import *  #Werte für Parameter
+from variables import *  #Werte für Parameter
 from scenario_reduction import * 
 from model import *      #Gurobi Modell
 import globals      #Globale variablen

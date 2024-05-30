@@ -1,7 +1,7 @@
 #### Load necessary packages 
 
 #### Import python scrips
-from data_generation import *  #Werte für Parameter
+from variables import *  #Werte für Parameter
 #from gurobipy import * #Gurobi
 import gurobipy as gp
 import datetime as dt
@@ -19,6 +19,7 @@ class Model:
         TCOST ... total costs
         ENB ... expected net benefit
         '''
+        
         # Objective function
         ''' The following variables aid the definition of the objectives for the aggregated planning stochastic model.
             Total costs are composed of the sum of transport costs, setups costs and raw milk costs per scenario multiplied by their respective

@@ -2,13 +2,12 @@
 import numpy as np
 from sklearn.cluster import KMeans
 import pprint
-import matplotlib.pyplot as plt
 
 
 class Scenario_Analyse:
     """ Creates a object containing the base scenarios and some logic to compute a Cluster analysis to get a set of reduced sceanrios """
 
-    def __init__(self, K:int = 9, epsilon:float = 0.0001, N:int = 10000) -> None:
+    def __init__(self,demand_supply: list[list[int]], probabilities: list[list[float]], K:int = 9, epsilon:float = 0.0001, N:int = 10000) -> None:
         
         # Initialize with default parameters for scenario analysis
         ''' Target number Of Scenarios (K>1)'''
@@ -19,24 +18,11 @@ class Scenario_Analyse:
         self._N = N
 
         # Define scenarios and their probabilities
-        self._demand_supply = np.array([
-            [6400, 8000, 12000],
-            [600, 1000, 1200],
-            [2800, 4000, 8000],
-            [300, 500, 600],
-            [862.5, 1725, 3450]
-        ])
-        self._p = np.array([
-            [0.4, 0.35, 0.25],
-            [0.25, 0.35, 0.4],
-            [0.4, 0.3, 0.3],
-            [0.3, 0.4, 0.3],
-            [0.5, 0.15, 0.35]
-        ])
+        self._demand_supply = np.array(demand_supply)
+        self._p = np.array(probabilities)
 
         #Create lists for scenarios and their probabilities 
         self.create_base_scenarios_and_p()
-
 
         #Create dataset W 
         self.create_vector_W()
@@ -227,9 +213,3 @@ class Scenario_Analyse:
     def get_len_reduced_scenarios(self) -> int:
         return len(self._reduced_scenarios)
     
-
-#### TEST ####
-#S = Scenario_Analyse()
-
-#print(S.get_reduced_scenarios())
-#print(S.get_reduced_scenarios_probabilities())
