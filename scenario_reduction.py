@@ -1,4 +1,3 @@
-
 import numpy as np
 from sklearn.cluster import KMeans
 import pprint
@@ -22,13 +21,13 @@ class Scenario_Analyse:
         self._p = np.array(probabilities)
 
         #Create lists for scenarios and their probabilities 
-        self.create_base_scenarios_and_p()
+        self.__create_base_scenarios_and_p()
 
         #Create dataset W 
-        self.create_vector_W()
+        self.__create_vector_W()
 
         #Compute K-means Clustering and create the set of reduced scenarios
-        self.apply_K_means_Clustering()
+        self.__apply_K_means_Clustering()
 
     def __str__(self):
         ''' Print the base scenarios, their probabilities and the reduced scenarios with their probabilities '''
@@ -45,9 +44,7 @@ class Scenario_Analyse:
 
 
 
-
-
-    def create_base_scenarios_and_p(self) -> None: 
+    def __create_base_scenarios_and_p(self) -> None: 
         ''' Create all possible scenarios dependent from the demand and supply and the probabilities '''
 
         #Create empty lists for scenarios and the belonging probability
@@ -70,7 +67,7 @@ class Scenario_Analyse:
                             self._p_base_scenarios.append(prob_scenario)
 
 
-    def create_vector_W(self) -> None:
+    def __create_vector_W(self) -> None:
         ''' Creates dataset W which is poulated by scenarios from original _base_scenarios vector, each sceanrio can be 
             present multiple timnes dependent on the probability!
         '''
@@ -101,7 +98,7 @@ class Scenario_Analyse:
         # Convert the dataset W to a NumPy array.
         self.W = np.array(self.W)
 
-    def normalize_dataset(self, data:np.array) -> np.array:
+    def __normalize_dataset(self, data:np.array) -> np.array:
         """
             Normalize the dataset and return it as a NumPy array.
         """
@@ -119,7 +116,7 @@ class Scenario_Analyse:
         return normalized_data
     
 
-    def denormalize_dataset(self, data:np.array) -> np.array:
+    def __denormalize_dataset(self, data:np.array) -> np.array:
         """
         Denormalizes the data by applying the inverse of the earlier normalization process.
         
@@ -140,7 +137,7 @@ class Scenario_Analyse:
         return denormalized_data
     
 
-    def apply_K_means_Clustering(self) -> None:
+    def __apply_K_means_Clustering(self) -> None:
         """
         Applies K-means clustering to the scenario dataset to identify clusters that summarize the scenarios.
 
@@ -156,7 +153,7 @@ class Scenario_Analyse:
         """
 
         # Normalize the dataset W to prepare for clustering.
-        data = self.normalize_dataset(self.W)
+        data = self.__normalize_dataset(self.W)
 
         # Create a K-means clustering model with specified number of clusters and a fixed random state for reproducibility.
         kmeans = KMeans(n_clusters=self._K, random_state=0, n_init='auto')
@@ -165,7 +162,7 @@ class Scenario_Analyse:
         kmeans.fit(data)
 
         # Round the denormalized cluster centers to form the reduced scenarios.
-        self._reduced_scenarios = np.round(self.denormalize_dataset(np.array(kmeans.cluster_centers_)))
+        self._reduced_scenarios = np.round(self.__denormalize_dataset(np.array(kmeans.cluster_centers_)))
 
         # Calculate the size of each cluster to understand the distribution of scenarios across clusters.
         self._sizes_reduced_scenarios = np.bincount(kmeans.labels_)
@@ -173,43 +170,56 @@ class Scenario_Analyse:
         # Compute probabilities of each cluster by normalizing the cluster sizes.
         self._p_reduced_scenarios = [round(cluster_size / len(self.W), 4) for cluster_size in self._sizes_reduced_scenarios]
 
-    # Getter methods for private variables
-    def get_len_W(self) -> int: 
+        # PROPERTY FUNCTIONS TO GET VALUES
+        
+    @property
+    def len_W(self) -> int: 
         return len(self.W)
     
-    def get_len_base_scenarios(self) -> int: 
+    @property
+    def len_base_scenarios(self) -> int: 
         return len(self._base_scenarios)
     
-    def get_K(self) -> int:
+    @property
+    def K(self) -> int:
         return self._K
 
-    def get_epsilon(self) -> float:
+    @property
+    def epsilon(self) -> float:
         return self._epsilon
 
-    def get_N(self):
+    @property
+    def N(self):
         return self._N
 
-    def get_demand_supply(self) -> list[list[int]]:
+    @property
+    def demand_supply(self) -> list[list[int]]:
         return self._demand_supply
 
-    def get_probabilities(self) -> list[list[float]]:
+    @property
+    def probabilities(self) -> list[list[float]]:
         return self._p
 
-    def get_base_scenarios(self) -> list[list[int]]:
+    @property
+    def base_scenarios(self) -> list[list[int]]:
         return self._base_scenarios
 
-    def get_base_scenario_probabilities(self) -> list[list[float]]:
+    @property
+    def base_scenario_probabilities(self) -> list[list[float]]:
         return self._p_base_scenarios
 
-    def get_reduced_scenarios(self) -> list[list[int]]:
+    @property
+    def reduced_scenarios(self) -> list[list[int]]:
         return self._reduced_scenarios
 
-    def get_sizes_reduced_scenarios(self) -> list[int]:
+    @property
+    def sizes_reduced_scenarios(self) -> list[int]:
         return self._sizes_reduced_scenarios
 
-    def get_reduced_scenarios_probabilities(self) -> list[float]:
+    @property
+    def reduced_scenarios_probabilities(self) -> list[float]:
         return self._p_reduced_scenarios
     
-    def get_len_reduced_scenarios(self) -> int:
+    @property
+    def len_reduced_scenarios(self) -> int:
         return len(self._reduced_scenarios)
-    

@@ -101,7 +101,7 @@ class Parameters:
             scenario_demand = []
             for f in self._F:
                 family_demand = []
-                overall_demand = self._SRA.get_reduced_scenarios()[s][f]
+                overall_demand = self._SRA.reduced_scenarios[s][f]
                 share = overall_demand // len(self._L)
                 last_share = share + overall_demand % len(self._L)
                 for l in self._L:
@@ -127,7 +127,7 @@ class Parameters:
         for s in self._S:
             scenario_milk_input = []
             for t in self._T:
-                scenario_milk_input.append(self._SRA.get_reduced_scenarios()[s][-1])
+                scenario_milk_input.append(self._SRA.reduced_scenarios[s][-1])
 
             milk_input.append(scenario_milk_input) 
         
@@ -139,7 +139,7 @@ class Parameters:
         self._SRA = Scenario_Analyse(self._demand_supply, self._probabilies, self._K, self._epsilon, self._N)
         
         self._dp = self.__create_dp()
-        self._rho =  self.SRA.get_reduced_scenarios_probabilities()
+        self._rho =  self._SRA.reduced_scenarios_probabilities
         self._dri = self.__create_dri()
 
     def __create_mappingFtoM(self) -> list[int]: 
