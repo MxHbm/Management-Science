@@ -18,14 +18,17 @@ def main():
     logger.info('========================================= Start logging ========================================= ')
 
 
-    # Model
+    # Model Class Object! 
     m = Model()
     data = Parameters("data/base_data.json")
 
     try:
-        m, logger = m.Run_Model(data, logger)
+        gp_model, logger = m.Run_Model(data, logger)
+
+        # Run detailed model without logger so far!! 
+        gp_model_detailed = m.Run_Detailed_Model(data,gp_model)
             
-        results = Results(m, data)
+        results = Results(gp_model, data)
         results.Evaluate_results()
 
     except Exception as e:

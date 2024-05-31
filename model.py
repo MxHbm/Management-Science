@@ -333,7 +333,7 @@ class Model:
         inventory."""
 
         model.addConstrs((vars.first_stage.IF[f,t] 
-                        == data.i_0_ft[f][t] 
+                        == data.i_0_f[f]
                         + gp.quicksum(vars.first_stage.FP[f,t1] for t1 in data.T if t1 <= t) 
                         - gp.quicksum(vars.first_stage.DV[f,l,t1] for l in data.L for t1 in data.T if t1 <= t) 
                         - gp.quicksum(vars.integer.E[f,t1] * data.el[f] for t1 in data.T if t1 <= t) 
@@ -464,7 +464,6 @@ class Model:
         vars = DecisionVariables(model, data)
 
         # Add the objective function
-
         model = self.Objective_Function(data, vars, model)
 
         # Add the constraints
@@ -546,6 +545,197 @@ class Model:
         
 
         return model, logger
+    
+    def Detailed_Constraints(self, data:Parameters, vars:DecisionVariables, model: gp.Model, FP: list[list[float]], E: list[list[int]]):
+        
+        
+        # Constraint 53: Translating familiys to products
+        """ In the following constraints, for every product p, flyp accounts for product p family. Manufacturing of products from any family f is
+            constrained to the production level previously set in the Family Aggregated Model"""
+        
+        ## NEED TO BE REVISED, MAYBE CHANGE THE SET PRODUCT TO 15 PRODUCTS BELONGING TO DIFFERERNT PRODUCT FAMILIES
+        model.addConstrs((FP[f][t] == vars.first_stage.PD[p,t]
+                        for f in data.F for t in data.T for p in data.P if f == p),
+                        'Constraint_53')
+        
 
+        # Constraint 54: export level of products
+        '''Export levels for familyf products (Ef, t) defined in the Family Aggregated model define the export levels for every product in the Detailed
+           Planning model.
+        '''
+        model.addConstrs((data.el[f] * E[f][t] == vars.first_stage.ED[p,t] * data.ls[p] for f in data.FT for t in data.T for p in data.P if f == p),
+                        'Constraint_54')
+        
+        # Constraint 55: Inventory Balance 
+        '''
+        Inventory balances in distribution centers. These restrictions are homologous to eq. (40) of the family aggregated model.
+        '''
+
+        model.addConstrs(
+            (vars.second_stage.IDD[s, p, l, t]
+                == data.id0[p][l]
+                + gp.quicksum(vars.first_stage.PS[p,l,t1] for t1 in data.T if t1 + data.tau[l] <= t)
+                - gp.quicksum(data.dpd[s][p][l][t1] for t1 in data.T if t1 <= t)
+                + gp.quicksum(vars.second_stage.SOD[s,p,l,t1] for t1 in data.T if t1 <= t)
+                - gp.quicksum(vars.second_stage.OSD[s,p,l,t1] for t1 in data.T if t1 <= t)
+                for s in data.S for l in data.L for t in data.T for p in data.P),
+                'Constraint_55')
+
+        """ 
+        Finished products inventory at the factory is determined by the fluctuations caused by product manufacturing, shipments, and exports.
+        """
+
+        model.addConstrs(
+            (vars.first_stage.IFD[p,t] == 
+                        data.i_0_f[p]
+                        + gp.quicksum(vars.first_stage.PD[p,t1] for t1 in data.T if t1 <= t)
+                        - gp.quicksum(vars.first_stage.PS[p,l,t1] for l in data.L for t1 in data.T if t1 <= t)
+                        - gp.quicksum(vars.first_stage.ED[p,t1] * data.ls[p] for t1 in data.T if t1 <= t)
+                        for p in data.P for t in data.T),
+                        'Constraint_56')
+        
+        # Constraint 57: Shelf Life Balances
+        ''' 
+            Shelf-life considerations are included in the Detailed Planning model as well.
+        '''
+       
+        model.addConstrs((vars.first_stage.IFD[p,t] 
+                        <= gp.quicksum(vars.first_stage.PS[p,l,t1] for t1 in range(t+1,t+data.omega_fw[f] + 1) for l in data.L) 
+                        for f in data.F for t in data.T for p in data.P
+                        if (p == f) and (data.fty[f] == 1) and (t + data.omega_fw[f] <= data.hl)),
+                        'Constraint_57')
+
+
+        model.addConstrs((vars.first_stage.IFD[p,t] 
+                        <= gp.quicksum((vars.first_stage.PS[p,l,t1]
+                                        / data.omega_fw[f])
+                                        *(t + data.omega_fw[f] - data.hl) for t1 in range(t - data.omega_fw[f] + 1, t) for l in data.L) 
+                        +  gp.quicksum(vars.first_stage.DV[f,l,t2] for t2 in range(t + 1, t + data.omega_fw[f] + 1) for l in data.L if t2 <= data.hl) 
+                        for f in data.F for t in data.T for p in data.P
+                        if (p == f) and (data.fty[f] == 1) and (t + data.omega_fw[f] > data.hl)),
+                        'Constraint_58')
+        
+        #Constraint 59
+        """Distribution Centers shelf-life:"""
+        
+        model.addConstrs((vars.second_stage.IDD[s,p,l,t] 
+                        <= gp.quicksum(data.dpd[s][p][l][t1] for t1 in range(t+1,t+data.omega_dc[f] + 1)) 
+                        for s in data.S for f in data.F for l in data.L for t in data.T for p in data.P
+                        if (f == p) and (data.fty[f] == 1) and (t + data.omega_dc[f] <= data.hl)),
+                        'Constraint_59')
+
+        model.addConstrs((vars.second_stage.IDD[s,p,l,t] 
+                        <= gp.quicksum((data.dpd[s][p][l][t1]
+                                        / data.omega_dc[f])
+                                        * (t + data.omega_dc[f] - data.hl) for t1 in range(t - data.omega_dc[f] + 1, t)) 
+                        + gp.quicksum(data.dpd[s][p][l][t2] for t2 in range(t + 1, t + data.omega_dc[f]+1) if t2 <= data.hl) 
+                        for s in data.S for f in data.F for l in data.L for t in data.T for p in data.P
+                        if (p == f) and (data.fty[f] == 1) and (t + data.omega_dc[f] > data.hl)),
+                        'Constraint_60')
+
+        # Constraint 61... : Shipment to DCs
+        """ 
+            Family type (Fresh or Dry) i shipments to distribution center l on day t from factory to Distribution Centers are consolidated into fresh
+            and dry shipments according to their refrigerated transportation requirements.
+        """
+
+        model.addConstrs((vars.first_stage.VD[i,l,t] 
+                        == gp.quicksum(vars.first_stage.PS[p,l,t] for p in data.P for f in data.F if (data.fty[f] == i) and (f == p))
+                        for i in data.FT for l in data.L for t in data.T),
+                        'Constraint_61')
+
+        model.addConstrs((vars.first_stage.VD[i, l, t] 
+                            <= vars.integer.TRD[i, l, t] 
+                            * data.tl_max 
+                        for i in data.FT for l in data.L for t in data.T),
+                        'Constraint_62')
+        
+        model.addConstrs((vars.first_stage.VD[i, l, t] 
+                            >= (vars.integer.TRD[i, l, t] - 1)  
+                            * data.tl_max 
+                            + data.tl_min 
+                        for i in data.FT for l in data.L for t in data.T),
+                        'Constraint_63')
+
+        return model
+    
+    def Detailed_Objective_Function(self, data:Parameters, vars:DecisionVariables, model: gp.Model):
+
+        ''' The detailed planning model maximizes the expected net benefit (DENB), and is obtained as follows.
+        '''
+
+        # Costs
+        vars.second_stage.COST = (
+                    gp.quicksum(vars.integer.TR[i, l, t] * data.tc[l][i] 
+                                for i in data.FT for l in data.L for t in data.T
+                                )
+                            )
+
+
+        # Return
+        vars.second_stage.RETURN = ( 
+                    gp.quicksum( data.re[f] 
+                                * data.ls_p[f] 
+                                * vars.integer.E[f, t]
+                                for f in data.F for t in data.T)
+                    + gp.quicksum(data.rho[s]
+                                    * (gp.quicksum(data.r[f] 
+                                        * (data.dp[s][f][l][t] 
+                                            - vars.second_stage.SO[s, f, l, t])
+                                        for l in data.L for f in data.F for t in data.T)
+                                        + gp.quicksum(vars.second_stage.OS[s, f, l, t] 
+                                                        * data.rr[f]
+                                        for l in data.L for f in data.F for t in data.T)
+                                        )
+                                    for s in data.S )
+        ) 
+
+        # EXPECTED NET BENEFIT
+        model.setObjective(vars.second_stage.RETURN - vars.second_stage.COST, GRB.MAXIMIZE)
+
+        return model
+    
+    def get_fixed_values(self, gp_model : gp.Model, data:Parameters):
+        ''' Retrieves the values from the previously solved gurobi model for variable E and FP'''
+
+        # Get the fixed values from the model
+        param_FP = []
+        param_E = []
+        for f in data.F:
+            sub_params_FP = []
+            sub_params_E = []
+            for t in data.T:
+                var_name_FP = "FPf_t[" + str(f) + "," + str(t) + "]"
+                var_name_E = "Ef_t[" + str(f) + "," + str(t) + "]"
+                sub_params_FP.append(gp_model.getVarByName(var_name_FP).X)
+                sub_params_E.append(int(gp_model.getVarByName(var_name_E).X))
+            
+            param_FP.append(sub_params_FP)
+            param_E.append(sub_params_E)
+
+        return param_FP, param_E
+
+    def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model):
+        # Create a new model
+        model = gp.Model("second_stage")
+
+        # get the needed decision variables
+        vars = DecisionVariables(model, data)
+
+        # Get the needed fixed variable values from model 1
+        param_FP, param_E = self.get_fixed_values(model_first_stage, data)
+
+        # Add the objective function
+        model = self.Detailed_Objective_Function(data, vars, model)
+
+        # Add the constraints
+        model = self.Detailed_Constraints(data, vars, model, param_FP, param_E)
+
+        # Optimize model
+        model.setParam('MIPGap', 1)
+        model.optimize()
+
+
+        return model
 
 
