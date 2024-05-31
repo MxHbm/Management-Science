@@ -28,6 +28,7 @@ class Parameters:
             # Zuweisen der Werte zu Klassenvariablen
             self._T_No = data['T_No']
             self._F_No = data['F_No']
+            self._P_No = data['F_No']
             self._FT_No = data['FT_No']
             self._MP_No = data['MP_No']
             self._CT_No = data['CT_No']
@@ -42,7 +43,7 @@ class Parameters:
             self._el = data['el']
             self._tau = data['tau']
             self._i_0 = data['i_0']
-            self._i_0_ft = data['i_0_ft']
+            self._i_0_f = data['i_0_f']
             self._tl_min = data['tl_min']
             self._tl_max = data['tl_max']
             self._r0 = data['r0']
@@ -88,6 +89,7 @@ class Parameters:
         self._CT = range(self._CT_No)
         self._L = range(self._L_No)
         self._S = range(self._K)
+        self._P = range(self._P_No)
 
 
     def __create_dp(self) -> list[list[list[list[int]]]]:
@@ -236,11 +238,11 @@ class Parameters:
         return self._i_0
 
     @property
-    def i_0_ft(self):
-        ''' Family f Initial inventory at time t.e
+    def i_0_f(self):
+        ''' Family f Initial inventory at FW
         '''
 
-        return self._i_0_ft
+        return self._i_0_f
 
     @property
     def tl_min(self):
@@ -548,9 +550,38 @@ class Parameters:
 
         return self._S
     
+    
     @property
     def mappingFtoM(self):
         ''' Mapping of family to manufacturing plant
         '''
 
         return self._mappingFtoM
+    
+    ###### TRICKS FOR RETURNING PRODUCT DATA INSTEAD OF FAMILY TYPES ###### 
+
+    @property
+    def P(self):
+        ''' Range for products
+        '''
+
+        return self._F
+
+    @property
+    def ls(self):
+        ''' Product p export lot size, expressed in metric tons.
+        '''
+        return self._el
+
+    @property
+    def id0(self):
+        ''' Product p initial inventory at any location l ∈ L∪ < {FW}.
+        '''
+        return self._i_0
+
+    @property
+    def dpd (self):
+        ''' Product p demand for distribution center l on day t under scenario s.
+        '''
+        return self._dp
+    
