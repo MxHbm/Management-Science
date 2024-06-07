@@ -459,19 +459,6 @@ class Parameters:
 
         return self._sco
 
-    @property
-    def ls_f(self):
-        ''' Lot size for family f
-        '''
-
-        return self._ls_f
-
-    @property
-    def ls_p(self):
-        ''' Lot size for plant m
-        '''
-
-        return self._ls_p
     
     @property
     def SRA(self):

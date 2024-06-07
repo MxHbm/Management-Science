@@ -46,7 +46,7 @@ class Model:
         # BENEFIT
         vars.first_stage.EXI = ( 
                     gp.quicksum( data.re[f] 
-                                * data.ls_p[f] 
+                                * data.ls[f] 
                                 * vars.integer.E[f, t]
                                 for f in data.F for t in data.T)
                     + gp.quicksum(  data.rho[s]
@@ -444,7 +444,7 @@ class Model:
         """ Bounds for the number of lots to be exported for each family f on the horizon
         """
 
-        model.addConstrs( (data.el_min[f] 
+        model.addConstrs( (data.el_min[f]
                         <= gp.quicksum(vars.integer.E[f, t] for t in data.T) 
                         for f in data.F),
                         'Constraint_1.13a')
@@ -675,7 +675,7 @@ class Model:
         # Return
         vars.second_stage.RETURN = ( 
                     gp.quicksum( data.re[f] 
-                                * data.ls_p[f] 
+                                * data.ls[f] 
                                 * vars.integer.E[f, t]
                                 for f in data.F for t in data.T)
                     + gp.quicksum(data.rho[s]
@@ -712,6 +712,21 @@ class Model:
             
             param_FP.append(sub_params_FP)
             param_E.append(sub_params_E)
+
+        print("param_E")
+        for f in  data.F:
+            for t in data.T:
+                print(param_E[f][t], "\t")
+            
+            print("\n")
+        
+        print("param_FP")
+        for f in  data.F:
+            for t in data.T:
+                print(param_FP[f][t], "\t")
+            
+            print("\n")
+
 
         return param_FP, param_E
 
