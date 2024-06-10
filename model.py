@@ -852,6 +852,7 @@ class Model:
             plt.ylabel('RHS Value')
             plt.title(f'Constraint RHS Value: {constraint}')
             plt.xticks(rotation=90)
+            plt.tight_layout()
             #plt.show()
             plt.savefig(f"results/{constraint}.png")
 
