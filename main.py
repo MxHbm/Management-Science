@@ -26,7 +26,7 @@ def main():
         gp_model, logger = m.Run_Model(data, logger)
 
         # Run detailed model without logger so far!! 
-        gp_model_detailed = m.Run_Detailed_Model(data,gp_model)
+        gp_model_detailed, logger = m.Run_Detailed_Model(data,gp_model, logger)
             
         #results = Results(gp_model, data)
         #results.Evaluate_results()

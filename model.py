@@ -471,6 +471,7 @@ class Model:
 
         # Optimize model
         model.setParam('MIPGap', 1)
+        print('============================ Optimize Model ============================')
         model.optimize()
 
         # für jede Variable einzeln die Werte mit .X abfragen
@@ -700,37 +701,53 @@ class Model:
 
         # Get the fixed values from the model
         param_FP = []
+        param_FP_UB = []
+        param_FP_LB = []
         param_E = []
+        param_E_UB = []
+        param_E_LB = []
         for f in data.F:
             sub_params_FP = []
+            sub_params_FP_UB = []
+            sub_params_FP_LB = []
             sub_params_E = []
+            sub_params_E_UB = []
+            sub_params_E_LB = []
             for t in data.T:
                 var_name_FP = "FPf_t[" + str(f) + "," + str(t) + "]"
                 var_name_E = "Ef_t[" + str(f) + "," + str(t) + "]"
                 sub_params_FP.append(gp_model.getVarByName(var_name_FP).X)
+                sub_params_FP_UB.append(gp_model.getVarByName(var_name_FP).UB)
+                sub_params_FP_LB.append(gp_model.getVarByName(var_name_FP).LB)
                 sub_params_E.append(int(gp_model.getVarByName(var_name_E).X))
+                sub_params_E_UB.append(gp_model.getVarByName(var_name_E).UB)
+                sub_params_E_LB.append(gp_model.getVarByName(var_name_E).LB)
             
             param_FP.append(sub_params_FP)
+            param_FP_UB.append(sub_params_FP_UB)
+            param_FP_LB.append(sub_params_FP_LB)
             param_E.append(sub_params_E)
+            param_E_UB.append(sub_params_E_UB)
+            param_E_LB.append(sub_params_E_LB)
 
         print("param_E")
         for f in  data.F:
             for t in data.T:
-                print(param_E[f][t], "\t")
+                print(f, t, '\t', param_E[f][t], "\tbounds:", param_E_LB[f][t], '...', param_E_UB[f][t])
             
             print("\n")
         
         print("param_FP")
         for f in  data.F:
             for t in data.T:
-                print(param_FP[f][t], "\t")
+                print(f, t, '\t', param_FP[f][t], "\tbounds:", param_FP_LB[f][t], '...', param_FP_UB[f][t])
             
             print("\n")
 
 
         return param_FP, param_E
 
-    def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model):
+    def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model, logger):
         # Create a new model
         model = gp.Model("second_stage")
 
@@ -748,9 +765,94 @@ class Model:
 
         # Optimize model
         model.setParam('MIPGap', 1)
+        print('============================ Optimize Detailed Model ============================')
         model.optimize()
 
+        logger.info(f'=========== Detailed Model =================')
+        logger.info(f'model.status: {model.status}')
 
-        return model
+        if model.status == 5:
+            logger.warning("Model is unbounded")
+        elif model.status == 2:
+            logger.info("Optimal solution found")
+            #for v in model.getVars():
+            # for v in model.printAttr('X'):
+            #     logger.info(f"{v.varName}: {v.x}")
+
+
+            logger.info('Obj: %g' % model.objVal)
+
+            # Save the model
+            if 1 == 0:
+                # Add timestamp to file name
+                timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%data.S")
+                file_name = f"results/result_FirstStage_LP_{timestamp}.lp"
+                model.write(file_name)
+
+                file_name = f"results/result_FirstStage_MPS_{timestamp}.mps"
+                model.write(file_name)
+
+                file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
+                model.write(file_name)
+
+        elif model.status == 4:
+            logger.warning("Model is infeasible")
+
+            try:
+                model.computeIIS()
+                model.write("results/infeasible-detailled.ilp")
+
+
+            except gp.GurobiError as e:
+                logger.error('Error Compute IIS: %s', e)
+
+
+            # for v in model.getVars():
+            #     if v.Obj != 0:
+            #         logger.info(f"{v.varName}: {v.Obj}")
+
+            self.display_constraints(logger, model)
+
+            #logger.info()
+        else:
+            logger.error("Optimization ended with status %s", model.status)
+
+
+        return model, logger
+
+    def display_constraints(self, logger, model):
+        import matplotlib.pyplot as plt
+
+        constraint_names = []
+        constraint_names_split = []
+        rhs_values = []
+
+        for c in model.getConstrs():
+            constraint_name = c.constrName
+            constraint_names.append(constraint_name)
+            constraint_name_split = constraint_name.split('[')[0]  # Remove brackets from constraint name
+            constraint_names_split.append(constraint_name_split)
+            rhs_values.append(c.RHS)
+
+        print(set(constraint_names_split))
+
+        for constraint in set(constraint_names_split):
+            plt.figure(figsize=(20, 6))
+
+            names = []
+            rhs_v = []
+            for name, rhs in zip(constraint_names, rhs_values):
+                if constraint in name:
+                    names.append(name)
+                    rhs_v.append(rhs)
+                
+            plt.bar(names, rhs_v)
+
+            plt.xlabel('Constraint Name')
+            plt.ylabel('RHS Value')
+            plt.title(f'Constraint RHS Value: {constraint}')
+            plt.xticks(rotation=90)
+            #plt.show()
+            plt.savefig(f"results/{constraint}.png")
 
 
