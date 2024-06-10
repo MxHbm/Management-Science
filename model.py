@@ -7,6 +7,8 @@ import gurobipy as gp
 import datetime as dt
 from parameters import *   # All parameters
 
+import matplotlib.pyplot as plt
+
 class Model:
     def __init__(self):
         pass
@@ -564,7 +566,12 @@ class Model:
         '''Export levels for familyf products (Ef, t) defined in the Family Aggregated model define the export levels for every product in the Detailed
            Planning model.
         '''
-        model.addConstrs((data.el[f] * E[f][t] == vars.first_stage.ED[p,t] * data.ls[p] for f in data.FT for t in data.T for p in data.P if f == p),
+        model.addConstrs((data.el[f] 
+                          * E[f][t] 
+                          == vars.first_stage.ED[p,t] 
+                          * data.ls[p] 
+                        for f in data.FT for t in data.T for p in data.P 
+                        if f == p),
                         'Constraint_54')
         
         # Constraint 55: Inventory Balance 
@@ -575,12 +582,13 @@ class Model:
         model.addConstrs(
             (vars.second_stage.IDD[s, p, l, t]
                 == data.id0[p][l]
-                + gp.quicksum(vars.first_stage.PS[p,l,t1] for t1 in data.T if t1 + data.tau[l] <= t)
+                + gp.quicksum(vars.first_stage.PS[p,l,t1] for t1 in data.T if (t1 + data.tau[l]) <= t)
                 - gp.quicksum(data.dpd[s][p][l][t1] for t1 in data.T if t1 <= t)
                 + gp.quicksum(vars.second_stage.SOD[s,p,l,t1] for t1 in data.T if t1 <= t)
                 - gp.quicksum(vars.second_stage.OSD[s,p,l,t1] for t1 in data.T if t1 <= t)
                 for s in data.S for l in data.L for t in data.T for p in data.P),
                 'Constraint_55')
+                
 
         """ 
         Finished products inventory at the factory is determined by the fluctuations caused by product manufacturing, shipments, and exports.
@@ -771,6 +779,23 @@ class Model:
         logger.info(f'=========== Detailed Model =================')
         logger.info(f'model.status: {model.status}')
 
+        # Print the values of all variables
+        for v in model.getVars():
+            if v.Obj != 0:
+                logger.info(f"{v.VarName} = {v.Obj}")
+
+        # for p in data.P:
+        #     for l in data.L:
+        #         for t in data.T:
+        #             for t1 in data.T :
+        #                 if t1 + data.tau[l] <= t:
+        #                     print(f'PS[{p},{l},{t1}]: {vars.first_stage.PS[p,l,t1]}' )
+        #                     if vars.first_stage.PS[p,l,t1].X != 0:
+        #                         try:
+        #                             logger.info(f'PS[{p},{l},{t1}]: {vars.first_stage.PS[p,l,t1].X}' )
+        #                         except:
+        #                             logger.error(f'Error: PS[{p},{l},{t1}]')
+
         if model.status == 5:
             logger.warning("Model is unbounded")
         elif model.status == 2:
@@ -796,9 +821,14 @@ class Model:
                 model.write(file_name)
 
         elif model.status == 4:
-            logger.warning("Model is infeasible")
+            logger.warning("Model is infeasible or unbounded.")
 
             try:
+                print('============================ Compute IIS ============================')
+                # model.setParam('DualReductions', 0)
+                # model.reset()
+                # model.optimize()
+                # logger.info(f'model.status: {model.status}')
                 model.computeIIS()
                 model.write("results/infeasible-detailled.ilp")
 
@@ -811,17 +841,61 @@ class Model:
             #     if v.Obj != 0:
             #         logger.info(f"{v.varName}: {v.Obj}")
 
-            self.display_constraints(logger, model)
+            #self.display_constraints(logger, model)
 
             #logger.info()
         else:
             logger.error("Optimization ended with status %s", model.status)
 
+        # plot constraints and variables (bar chart, takes a lot of time)
+        self.display_constraints(logger, model)
+        self.display_vars(logger, model)
+
 
         return model, logger
+    
+    def display_vars(self, logger, model):
+
+        v_names = []
+        v_names_split = []
+        obj_values = []
+
+        for v in model.getVars():
+            v_name = v.varName
+            v_names.append(v_name)
+            v_name_split = v_name.split('[')[0]  # Remove brackets from v name
+            v_names_split.append(v_name_split)
+            obj_values.append(v.Obj)
+
+            #logger.info(f"{v.varName}: {v.Obj}")
+            v_name = v.varName.split('[')[0]
+        
+        
+        for i, var in enumerate(set(v_names_split)):
+
+            plt.figure(figsize=(20, 6))
+
+            names = []
+            values = []
+            for name, val in zip(v_names, obj_values):
+                if var in name:
+                    names.append(name)
+                    values.append(val)
+                
+            plt.bar(names, values)
+
+            # Plotting the variable values
+            plt.bar(names, values)
+            plt.xlabel('Variable')
+            plt.ylabel('Value')
+            plt.title(f'Variable Values {var}')
+            # plt.show()
+            plt.savefig(f"results/{var}.png")
+            plt.clf()
+            print(f"saved plot to results/{var}.png (plot {i+1}/{len(set(v_names_split))})")
+
 
     def display_constraints(self, logger, model):
-        import matplotlib.pyplot as plt
 
         constraint_names = []
         constraint_names_split = []
@@ -836,7 +910,7 @@ class Model:
 
         print(set(constraint_names_split))
 
-        for constraint in set(constraint_names_split):
+        for i, constraint in enumerate(set(constraint_names_split)):
             plt.figure(figsize=(20, 6))
 
             names = []
@@ -855,5 +929,8 @@ class Model:
             plt.tight_layout()
             #plt.show()
             plt.savefig(f"results/{constraint}.png")
+            plt.clf()
+            print(f"saved plot to results/{constraint}.png (plot {i+1}/{len(set(constraint_names_split))})")
+
 
 
