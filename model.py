@@ -916,7 +916,7 @@ class Model:
             plt.bar(names, values)
             plt.xlabel('Variable')
             plt.ylabel('Value')
-            plt.title(f'Variable Values {var}')
+            plt.title(f'Variable Values {var} ({model_type})')
             plt.xticks(rotation=90)
             plt.tight_layout()
             # plt.show()
@@ -967,7 +967,7 @@ class Model:
 
             plt.xlabel('Constraint Name')
             plt.ylabel('RHS Value')
-            plt.title(f'Constraint RHS Value: {constraint}')
+            plt.title(f'Constraint RHS Value: {constraint} ({model_type})')
             plt.xticks(rotation=90)
             plt.tight_layout()
             #plt.show()
