@@ -5,6 +5,7 @@ from variables import *  #Werte für Parameter
 #from gurobipy import * #Gurobi
 import gurobipy as gp
 import datetime as dt
+import time
 from parameters import *   # All parameters
 
 import matplotlib.pyplot as plt
@@ -546,19 +547,22 @@ class Model:
         else:
             logger.error("Optimization ended with status %s", model.status)
         
-
+        self.plot_constraints_and_vars(logger, model, 'family_aggregated_model')
         return model, logger
     
     def Detailed_Constraints(self, data:Parameters, vars:DecisionVariables, model: gp.Model, FP: list[list[float]], E: list[list[int]]):
         
+        # WAS SOLLEN DIESE CONSTRAINTS MACHEN??
+        # WELCHE VARIABLEN BRAUCHEN WIR DAFÜR?
         
         # Constraint 53: Translating familiys to products
         """ In the following constraints, for every product p, flyp accounts for product p family. Manufacturing of products from any family f is
             constrained to the production level previously set in the Family Aggregated Model"""
         
-        ## NEED TO BE REVISED, MAYBE CHANGE THE SET PRODUCT TO 15 PRODUCTS BELONGING TO DIFFERERNT PRODUCT FAMILIES
-        model.addConstrs((FP[f][t] == vars.first_stage.PD[p,t]
-                        for f in data.F for t in data.T for p in data.P if f == p),
+        # NEED TO BE REVISED, MAYBE CHANGE THE SET PRODUCT TO 15 PRODUCTS BELONGING TO DIFFERERNT PRODUCT FAMILIES
+        model.addConstrs((FP[f][t] 
+                          == gp.quicksum(vars.first_stage.PD[p,t] for p in data.P if f == p)
+                        for f in data.F for t in data.T ),
                         'Constraint_53')
         
 
@@ -568,10 +572,9 @@ class Model:
         '''
         model.addConstrs((data.el[f] 
                           * E[f][t] 
-                          == vars.first_stage.ED[p,t] 
-                          * data.ls[p] 
-                        for f in data.FT for t in data.T for p in data.P 
-                        if f == p),
+                          == gp.quicksum(vars.first_stage.ED[p,t] 
+                                        * data.ls[p] for p in data.P if f == p)
+                        for f in data.FT for t in data.T ),
                         'Constraint_54')
         
         # Constraint 55: Inventory Balance 
@@ -738,20 +741,28 @@ class Model:
             param_E_UB.append(sub_params_E_UB)
             param_E_LB.append(sub_params_E_LB)
 
-        print("param_E")
-        for f in  data.F:
-            for t in data.T:
-                print(f, t, '\t', param_E[f][t], "\tbounds:", param_E_LB[f][t], '...', param_E_UB[f][t])
-            
-            print("\n")
+        if 1 == 1:
+            print("param_E")
+            for f in  data.F:
+                for t in data.T:
+                    print(f, t, '\t', param_E[f][t], "\tbounds:", param_E_LB[f][t], '...', param_E_UB[f][t])
+                
+                print("\n")
         
-        print("param_FP")
-        for f in  data.F:
-            for t in data.T:
-                print(f, t, '\t', param_FP[f][t], "\tbounds:", param_FP_LB[f][t], '...', param_FP_UB[f][t])
-            
-            print("\n")
+        if 1 == 0:
+            print("param_FP")
+            for f in  data.F:
+                for t in data.T:
+                    print(f, t, '\t', param_FP[f][t], "\tbounds:", param_FP_LB[f][t], '...', param_FP_UB[f][t])
+                
+                print("\n")
+        if 1 == 0:
 
+            print('data.P')
+            print(data.P)
+
+            print('data.F')
+            print(data.F)
 
         return param_FP, param_E
 
@@ -761,6 +772,7 @@ class Model:
 
         # get the needed decision variables
         vars = DecisionVariables(model, data)
+
 
         # Get the needed fixed variable values from model 1
         param_FP, param_E = self.get_fixed_values(model_first_stage, data)
@@ -774,6 +786,13 @@ class Model:
         # Optimize model
         model.setParam('MIPGap', 1)
         print('============================ Optimize Detailed Model ============================')
+
+        # for debugging: set variable values
+        for f in data.F:
+            for t in data.T:
+                #vars.first_stage.FP[f, t].setAttr('Obj', 5000)
+                pass
+
         model.optimize()
 
         logger.info(f'=========== Detailed Model =================')
@@ -783,6 +802,7 @@ class Model:
         for v in model.getVars():
             if v.Obj != 0:
                 logger.info(f"{v.VarName} = {v.Obj}")
+                pass
 
         # for p in data.P:
         #     for l in data.L:
@@ -808,7 +828,7 @@ class Model:
             logger.info('Obj: %g' % model.objVal)
 
             # Save the model
-            if 1 == 0:
+            if 1 == 1:
                 # Add timestamp to file name
                 timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%data.S")
                 file_name = f"results/result_FirstStage_LP_{timestamp}.lp"
@@ -841,26 +861,32 @@ class Model:
             #     if v.Obj != 0:
             #         logger.info(f"{v.varName}: {v.Obj}")
 
-            #self.display_constraints(logger, model)
-
             #logger.info()
         else:
             logger.error("Optimization ended with status %s", model.status)
 
         # plot constraints and variables (bar chart, takes a lot of time)
-        self.display_constraints(logger, model)
-        self.display_vars(logger, model)
+        self.plot_constraints_and_vars(logger, model, 'detailed_model')
 
+        logger.info('Detailed Model finished')
 
         return model, logger
+
+    def plot_constraints_and_vars(self, logger, model, model_type='family_aggregated_model'):
+        plot_time_start = time.process_time_ns()
+        self.display_constraints(logger, model, model_type)
+        self.display_vars(logger, model, model_type)
+        plot_time_end = time.process_time_ns()
+        logger.info(f'All plots saved in {plot_time_end - plot_time_start} seconds')
     
-    def display_vars(self, logger, model):
+    def display_vars(self, logger, model, model_type):
 
         v_names = []
         v_names_split = []
         obj_values = []
 
         for v in model.getVars():
+            #if ('FPf_t' in v.varName) or ('PDp_t' in v.varName) or ('EDp_t' in v.varName) or ('Ef_t' in v.varName):
             v_name = v.varName
             v_names.append(v_name)
             v_name_split = v_name.split('[')[0]  # Remove brackets from v name
@@ -872,30 +898,43 @@ class Model:
         
         
         for i, var in enumerate(set(v_names_split)):
-
-            plt.figure(figsize=(20, 6))
-
+            # Start time
+            start_time = time.process_time_ns()
+                
             names = []
             values = []
             for name, val in zip(v_names, obj_values):
                 if var in name:
                     names.append(name)
                     values.append(val)
-                
-            plt.bar(names, values)
+
+            
+            # figure size
+            plt.figure(figsize=(20, 10))
 
             # Plotting the variable values
             plt.bar(names, values)
             plt.xlabel('Variable')
             plt.ylabel('Value')
             plt.title(f'Variable Values {var}')
+            plt.xticks(rotation=90)
+            plt.tight_layout()
             # plt.show()
-            plt.savefig(f"results/{var}.png")
+            file_name = f"results/{var}-{model_type}.png"
+            plt.savefig(file_name)
             plt.clf()
-            print(f"saved plot to results/{var}.png (plot {i+1}/{len(set(v_names_split))})")
+            plt.close()
+
+            # End time
+            end_time = time.process_time_ns()
+
+            # Calculate elapsed time
+            elapsed_time = (end_time - start_time) / (10**9)  # convert to seconds (1 ns = 10^-9 s)
+
+            print(f"saved plot to {file_name} (plot {i+1}/{len(set(v_names_split))}) [{round(elapsed_time, 2)} seconds]")
 
 
-    def display_constraints(self, logger, model):
+    def display_constraints(self, logger, model, model_type):
 
         constraint_names = []
         constraint_names_split = []
@@ -911,7 +950,11 @@ class Model:
         print(set(constraint_names_split))
 
         for i, constraint in enumerate(set(constraint_names_split)):
-            plt.figure(figsize=(20, 6))
+            # Start time
+            start_time = time.process_time_ns()
+
+            # figure size
+            plt.figure(figsize=(20, 10))
 
             names = []
             rhs_v = []
@@ -928,9 +971,18 @@ class Model:
             plt.xticks(rotation=90)
             plt.tight_layout()
             #plt.show()
-            plt.savefig(f"results/{constraint}.png")
+            file_name = f"results/{constraint}-{model_type}.png"
+            plt.savefig(file_name)
             plt.clf()
-            print(f"saved plot to results/{constraint}.png (plot {i+1}/{len(set(constraint_names_split))})")
+            plt.close()
+
+            # End time
+            end_time = time.process_time_ns()
+
+            # Calculate elapsed time
+            elapsed_time = (end_time - start_time) / (10**9)  # convert to seconds (1 ns = 10^-9 s)
+
+            print(f"saved plot to {file_name} (plot {i+1}/{len(set(constraint_names_split))}) [{round(elapsed_time, 2)} seconds]")
 
 
 
