@@ -5,7 +5,10 @@ from variables import *  #Werte für Parameter
 #from gurobipy import * #Gurobi
 import gurobipy as gp
 import datetime as dt
+import time
 from parameters import *   # All parameters
+
+import matplotlib.pyplot as plt
 
 class Model:
     def __init__(self):
@@ -471,6 +474,7 @@ class Model:
 
         # Optimize model
         model.setParam('MIPGap', 1)
+        print('============================ Optimize Model ============================')
         model.optimize()
 
         # für jede Variable einzeln die Werte mit .X abfragen
@@ -543,19 +547,22 @@ class Model:
         else:
             logger.error("Optimization ended with status %s", model.status)
         
-
+        self.plot_constraints_and_vars(logger, model, 'family_aggregated_model')
         return model, logger
     
     def Detailed_Constraints(self, data:Parameters, vars:DecisionVariables, model: gp.Model, FP: list[list[float]], E: list[list[int]]):
         
+        # WAS SOLLEN DIESE CONSTRAINTS MACHEN??
+        # WELCHE VARIABLEN BRAUCHEN WIR DAFÜR?
         
         # Constraint 53: Translating familiys to products
         """ In the following constraints, for every product p, flyp accounts for product p family. Manufacturing of products from any family f is
             constrained to the production level previously set in the Family Aggregated Model"""
         
-        ## NEED TO BE REVISED, MAYBE CHANGE THE SET PRODUCT TO 15 PRODUCTS BELONGING TO DIFFERERNT PRODUCT FAMILIES
-        model.addConstrs((FP[f][t] == vars.first_stage.PD[p,t]
-                        for f in data.F for t in data.T for p in data.P if f == p),
+        # NEED TO BE REVISED, MAYBE CHANGE THE SET PRODUCT TO 15 PRODUCTS BELONGING TO DIFFERERNT PRODUCT FAMILIES
+        model.addConstrs((FP[f][t] 
+                          == gp.quicksum(vars.first_stage.PD[p,t] for p in data.P if f == p)
+                        for f in data.F for t in data.T ),
                         'Constraint_53')
         
 
@@ -563,7 +570,11 @@ class Model:
         '''Export levels for familyf products (Ef, t) defined in the Family Aggregated model define the export levels for every product in the Detailed
            Planning model.
         '''
-        model.addConstrs((data.el[f] * E[f][t] == vars.first_stage.ED[p,t] * data.ls[p] for f in data.FT for t in data.T for p in data.P if f == p),
+        model.addConstrs((data.el[f] 
+                          * E[f][t] 
+                          == gp.quicksum(vars.first_stage.ED[p,t] 
+                                        * data.ls[p] for p in data.P if f == p)
+                        for f in data.FT for t in data.T ),
                         'Constraint_54')
         
         # Constraint 55: Inventory Balance 
@@ -574,12 +585,13 @@ class Model:
         model.addConstrs(
             (vars.second_stage.IDD[s, p, l, t]
                 == data.id0[p][l]
-                + gp.quicksum(vars.first_stage.PS[p,l,t1] for t1 in data.T if t1 + data.tau[l] <= t)
+                + gp.quicksum(vars.first_stage.PS[p,l,t1] for t1 in data.T if (t1 + data.tau[l]) <= t)
                 - gp.quicksum(data.dpd[s][p][l][t1] for t1 in data.T if t1 <= t)
                 + gp.quicksum(vars.second_stage.SOD[s,p,l,t1] for t1 in data.T if t1 <= t)
                 - gp.quicksum(vars.second_stage.OSD[s,p,l,t1] for t1 in data.T if t1 <= t)
                 for s in data.S for l in data.L for t in data.T for p in data.P),
                 'Constraint_55')
+                
 
         """ 
         Finished products inventory at the factory is determined by the fluctuations caused by product manufacturing, shipments, and exports.
@@ -700,42 +712,67 @@ class Model:
 
         # Get the fixed values from the model
         param_FP = []
+        param_FP_UB = []
+        param_FP_LB = []
         param_E = []
+        param_E_UB = []
+        param_E_LB = []
         for f in data.F:
             sub_params_FP = []
+            sub_params_FP_UB = []
+            sub_params_FP_LB = []
             sub_params_E = []
+            sub_params_E_UB = []
+            sub_params_E_LB = []
             for t in data.T:
                 var_name_FP = "FPf_t[" + str(f) + "," + str(t) + "]"
                 var_name_E = "Ef_t[" + str(f) + "," + str(t) + "]"
                 sub_params_FP.append(gp_model.getVarByName(var_name_FP).X)
+                sub_params_FP_UB.append(gp_model.getVarByName(var_name_FP).UB)
+                sub_params_FP_LB.append(gp_model.getVarByName(var_name_FP).LB)
                 sub_params_E.append(int(gp_model.getVarByName(var_name_E).X))
+                sub_params_E_UB.append(gp_model.getVarByName(var_name_E).UB)
+                sub_params_E_LB.append(gp_model.getVarByName(var_name_E).LB)
             
             param_FP.append(sub_params_FP)
+            param_FP_UB.append(sub_params_FP_UB)
+            param_FP_LB.append(sub_params_FP_LB)
             param_E.append(sub_params_E)
+            param_E_UB.append(sub_params_E_UB)
+            param_E_LB.append(sub_params_E_LB)
 
-        print("param_E")
-        for f in  data.F:
-            for t in data.T:
-                print(param_E[f][t], "\t")
-            
-            print("\n")
+        if 1 == 1:
+            print("param_E")
+            for f in  data.F:
+                for t in data.T:
+                    print(f, t, '\t', param_E[f][t], "\tbounds:", param_E_LB[f][t], '...', param_E_UB[f][t])
+                
+                print("\n")
         
-        print("param_FP")
-        for f in  data.F:
-            for t in data.T:
-                print(param_FP[f][t], "\t")
-            
-            print("\n")
+        if 1 == 0:
+            print("param_FP")
+            for f in  data.F:
+                for t in data.T:
+                    print(f, t, '\t', param_FP[f][t], "\tbounds:", param_FP_LB[f][t], '...', param_FP_UB[f][t])
+                
+                print("\n")
+        if 1 == 0:
 
+            print('data.P')
+            print(data.P)
+
+            print('data.F')
+            print(data.F)
 
         return param_FP, param_E
 
-    def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model):
+    def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model, logger):
         # Create a new model
         model = gp.Model("second_stage")
 
         # get the needed decision variables
         vars = DecisionVariables(model, data)
+
 
         # Get the needed fixed variable values from model 1
         param_FP, param_E = self.get_fixed_values(model_first_stage, data)
@@ -748,9 +785,204 @@ class Model:
 
         # Optimize model
         model.setParam('MIPGap', 1)
+        print('============================ Optimize Detailed Model ============================')
+
+        # for debugging: set variable values
+        for f in data.F:
+            for t in data.T:
+                #vars.first_stage.FP[f, t].setAttr('Obj', 5000)
+                pass
+
         model.optimize()
 
+        logger.info(f'=========== Detailed Model =================')
+        logger.info(f'model.status: {model.status}')
 
-        return model
+        # Print the values of all variables
+        for v in model.getVars():
+            if v.Obj != 0:
+                logger.info(f"{v.VarName} = {v.Obj}")
+                pass
+
+        # for p in data.P:
+        #     for l in data.L:
+        #         for t in data.T:
+        #             for t1 in data.T :
+        #                 if t1 + data.tau[l] <= t:
+        #                     print(f'PS[{p},{l},{t1}]: {vars.first_stage.PS[p,l,t1]}' )
+        #                     if vars.first_stage.PS[p,l,t1].X != 0:
+        #                         try:
+        #                             logger.info(f'PS[{p},{l},{t1}]: {vars.first_stage.PS[p,l,t1].X}' )
+        #                         except:
+        #                             logger.error(f'Error: PS[{p},{l},{t1}]')
+
+        if model.status == 5:
+            logger.warning("Model is unbounded")
+        elif model.status == 2:
+            logger.info("Optimal solution found")
+            #for v in model.getVars():
+            # for v in model.printAttr('X'):
+            #     logger.info(f"{v.varName}: {v.x}")
+
+
+            logger.info('Obj: %g' % model.objVal)
+
+            # Save the model
+            if 1 == 1:
+                # Add timestamp to file name
+                timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%data.S")
+                file_name = f"results/result_FirstStage_LP_{timestamp}.lp"
+                model.write(file_name)
+
+                file_name = f"results/result_FirstStage_MPS_{timestamp}.mps"
+                model.write(file_name)
+
+                file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
+                model.write(file_name)
+
+        elif model.status == 4:
+            logger.warning("Model is infeasible or unbounded.")
+
+            try:
+                print('============================ Compute IIS ============================')
+                # model.setParam('DualReductions', 0)
+                # model.reset()
+                # model.optimize()
+                # logger.info(f'model.status: {model.status}')
+                model.computeIIS()
+                model.write("results/infeasible-detailled.ilp")
+
+
+            except gp.GurobiError as e:
+                logger.error('Error Compute IIS: %s', e)
+
+
+            # for v in model.getVars():
+            #     if v.Obj != 0:
+            #         logger.info(f"{v.varName}: {v.Obj}")
+
+            #logger.info()
+        else:
+            logger.error("Optimization ended with status %s", model.status)
+
+        # plot constraints and variables (bar chart, takes a lot of time)
+        self.plot_constraints_and_vars(logger, model, 'detailed_model')
+
+        logger.info('Detailed Model finished')
+
+        return model, logger
+
+    def plot_constraints_and_vars(self, logger, model, model_type='family_aggregated_model'):
+        plot_time_start = time.process_time_ns()
+        self.display_constraints(logger, model, model_type)
+        self.display_vars(logger, model, model_type)
+        plot_time_end = time.process_time_ns()
+        logger.info(f'All plots saved in {plot_time_end - plot_time_start} seconds')
+    
+    def display_vars(self, logger, model, model_type):
+
+        v_names = []
+        v_names_split = []
+        obj_values = []
+
+        for v in model.getVars():
+            #if ('FPf_t' in v.varName) or ('PDp_t' in v.varName) or ('EDp_t' in v.varName) or ('Ef_t' in v.varName):
+            v_name = v.varName
+            v_names.append(v_name)
+            v_name_split = v_name.split('[')[0]  # Remove brackets from v name
+            v_names_split.append(v_name_split)
+            obj_values.append(v.Obj)
+
+            #logger.info(f"{v.varName}: {v.Obj}")
+            v_name = v.varName.split('[')[0]
+        
+        
+        for i, var in enumerate(set(v_names_split)):
+            # Start time
+            start_time = time.process_time_ns()
+                
+            names = []
+            values = []
+            for name, val in zip(v_names, obj_values):
+                if var in name:
+                    names.append(name)
+                    values.append(val)
+
+            
+            # figure size
+            plt.figure(figsize=(20, 10))
+
+            # Plotting the variable values
+            plt.bar(names, values)
+            plt.xlabel('Variable')
+            plt.ylabel('Value')
+            plt.title(f'Variable Values {var} ({model_type})')
+            plt.xticks(rotation=90)
+            plt.tight_layout()
+            # plt.show()
+            file_name = f"results/{var}-{model_type}.png"
+            plt.savefig(file_name)
+            plt.clf()
+            plt.close()
+
+            # End time
+            end_time = time.process_time_ns()
+
+            # Calculate elapsed time
+            elapsed_time = (end_time - start_time) / (10**9)  # convert to seconds (1 ns = 10^-9 s)
+
+            print(f"saved plot to {file_name} (plot {i+1}/{len(set(v_names_split))}) [{round(elapsed_time, 2)} seconds]")
+
+
+    def display_constraints(self, logger, model, model_type):
+
+        constraint_names = []
+        constraint_names_split = []
+        rhs_values = []
+
+        for c in model.getConstrs():
+            constraint_name = c.constrName
+            constraint_names.append(constraint_name)
+            constraint_name_split = constraint_name.split('[')[0]  # Remove brackets from constraint name
+            constraint_names_split.append(constraint_name_split)
+            rhs_values.append(c.RHS)
+
+        print(set(constraint_names_split))
+
+        for i, constraint in enumerate(set(constraint_names_split)):
+            # Start time
+            start_time = time.process_time_ns()
+
+            # figure size
+            plt.figure(figsize=(20, 10))
+
+            names = []
+            rhs_v = []
+            for name, rhs in zip(constraint_names, rhs_values):
+                if constraint in name:
+                    names.append(name)
+                    rhs_v.append(rhs)
+                
+            plt.bar(names, rhs_v)
+
+            plt.xlabel('Constraint Name')
+            plt.ylabel('RHS Value')
+            plt.title(f'Constraint RHS Value: {constraint} ({model_type})')
+            plt.xticks(rotation=90)
+            plt.tight_layout()
+            #plt.show()
+            file_name = f"results/{constraint}-{model_type}.png"
+            plt.savefig(file_name)
+            plt.clf()
+            plt.close()
+
+            # End time
+            end_time = time.process_time_ns()
+
+            # Calculate elapsed time
+            elapsed_time = (end_time - start_time) / (10**9)  # convert to seconds (1 ns = 10^-9 s)
+
+            print(f"saved plot to {file_name} (plot {i+1}/{len(set(constraint_names_split))}) [{round(elapsed_time, 2)} seconds]")
+
 
 
