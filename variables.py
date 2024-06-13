@@ -71,7 +71,7 @@ class DecisionVariables:
         ''' Integer decision variables of the model '''
         
         def __init__(self, model: gp.Model, data: Parameters):
-            self.TR = model.addVars(data.FT, data.L, data.T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t")
+            self.TR = model.addVars(data.FT, data.L, data.T, vtype=GRB.INTEGER, lb=0,ub=30, name="TRi_l_t") ### New IMPLEMENTED UPPER BOUND !!! 
             self.E = model.addVars(data.F, data.T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
             self.Z = model.addVars(data.MP, data.T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
             ### Variabels needed for the detailed planning model

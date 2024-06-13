@@ -212,6 +212,12 @@ class Model:
                         if data.cty[m] == 0),
                         'Constraint_1.5b')
         
+        ### NEW CONSTRAINTS FOR SHIFT BASED TO RESTRICT VALUES !!! 
+        model.addConstrs((vars.first_stage.Q[m, t] <=  data.cmax[m]
+                        for m in data.MP for t in data.T 
+                        if data.cty[m] == 1),
+                        'Constraint_1.5_new')
+        
         """ In this type of campaigns, a variable Am, t accounts for accumulated production days at manufacturing plant m on day t. This accumula-
             tion (constraints (25) and (26)) continues until the current campaign ends. Parameter dmax
             m represents maximal value of Am, t . If a campaign        ends on day t, then the mandatory accumulation of production on day t + 1 (i.e. Am,t+1 ) is relaxed (constraint (26)). This allows to set the
@@ -456,6 +462,11 @@ class Model:
                         <= data.el_max[f] 
                         for f in data.F),
                         'Constraint_1.13b')
+        
+
+        ## NEw Model Maximum INventtory
+
+        #model.addConstrs(vars.first_stage.IF[f,t] <= 5000 for f in data.F for t in data.T)
 
         return model
 
@@ -547,7 +558,7 @@ class Model:
         else:
             logger.error("Optimization ended with status %s", model.status)
         
-        self.plot_constraints_and_vars(logger, model, 'family_aggregated_model')
+        #self.plot_constraints_and_vars(logger, model, 'family_aggregated_model')
         return model, logger
     
     def Detailed_Constraints(self, data:Parameters, vars:DecisionVariables, model: gp.Model, FP: list[list[float]], E: list[list[int]]):
@@ -740,7 +751,8 @@ class Model:
             param_E.append(sub_params_E)
             param_E_UB.append(sub_params_E_UB)
             param_E_LB.append(sub_params_E_LB)
-
+        
+        ''' Debugging: Print the values of the fixed variables
         if 1 == 1:
             print("param_E")
             for f in  data.F:
@@ -763,7 +775,7 @@ class Model:
 
             print('data.F')
             print(data.F)
-
+        '''
         return param_FP, param_E
 
     def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model, logger):
@@ -866,7 +878,7 @@ class Model:
             logger.error("Optimization ended with status %s", model.status)
 
         # plot constraints and variables (bar chart, takes a lot of time)
-        self.plot_constraints_and_vars(logger, model, 'detailed_model')
+        #self.plot_constraints_and_vars(logger, model, 'detailed_model')
 
         logger.info('Detailed Model finished')
 

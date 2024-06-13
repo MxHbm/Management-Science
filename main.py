@@ -30,6 +30,7 @@ def main():
             
         #results = Results(gp_model, data)
         #results.Evaluate_results()
+        gp_model.printAttr('X')
 
     except Exception as e:
         logger.exception(e)    
