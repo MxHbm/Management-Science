@@ -14,7 +14,7 @@ class Model:
     def __init__(self):
         pass
 
-    def Objective_Function(self, data:Parameters, vars:DecisionVariables, model: gp.Model):
+    def Objective_Function(self, data:Parameters, vars:DecisionVariablesModel1, model: gp.Model):
 
         ''' objective function:
         TCOST ... total costs
@@ -70,7 +70,7 @@ class Model:
         return model
 
 
-    def Constraints(self, data:Parameters, vars:DecisionVariables, model: gp.Model):
+    def Constraints(self, data:Parameters, vars:DecisionVariablesModel1, model: gp.Model):
         
         #pass
         ''' constraints: 
@@ -476,7 +476,8 @@ class Model:
         model = gp.Model("first_stage")
 
         # get the needed decision variables
-        vars = DecisionVariables(model, data)
+        #vars = DecisionVariables(model, data)
+        vars = DecisionVariablesModel1(model, data)
 
         # Add the objective function
         model = self.Objective_Function(data, vars, model)
@@ -564,7 +565,7 @@ class Model:
         #self.plot_constraints_and_vars(logger, model, 'family_aggregated_model')
         return model, logger
     
-    def Detailed_Constraints(self, data:Parameters, vars:DecisionVariables, model: gp.Model, FP: list[list[float]], E: list[list[int]]):
+    def Detailed_Constraints(self, data:Parameters, vars:DecisionVariablesModel2, model: gp.Model, FP: list[list[float]], E: list[list[int]]):
         
         # WAS SOLLEN DIESE CONSTRAINTS MACHEN??
         # WELCHE VARIABLEN BRAUCHEN WIR DAFÜR?
@@ -711,7 +712,7 @@ class Model:
 
         return model
     
-    def Detailed_Objective_Function(self, data:Parameters, vars:DecisionVariables, model: gp.Model):
+    def Detailed_Objective_Function(self, data:Parameters, vars:DecisionVariablesModel2, model: gp.Model):
 
         ''' The detailed planning model maximizes the expected net benefit (DENB), and is obtained as follows.
         '''
@@ -824,7 +825,7 @@ class Model:
         model = gp.Model("second_stage")
 
         # get the needed decision variables
-        vars = DecisionVariables(model, data)
+        vars = DecisionVariablesModel2(model, data)
 
         # Add the objective function
         model = self.Detailed_Objective_Function(data, vars, model)
@@ -927,7 +928,7 @@ class Model:
         self.display_constraints(logger, model, model_type)
         self.display_vars(logger, model, model_type)
         plot_time_end = time.process_time_ns()
-        logger.info(f'All plots saved in {plot_time_end - plot_time_start} seconds')
+        logger.info(f'All plots saved in {(plot_time_end - plot_time_start) / (10**9)} seconds')
     
     def display_vars(self, logger, model, model_type):
 
