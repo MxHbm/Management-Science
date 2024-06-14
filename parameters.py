@@ -70,8 +70,6 @@ class Parameters:
             self._iwip0 = data['iwip0']
             self._tc = data['tc']
             self._sco = data['sco']
-            self._ls_f = data['ls_f']
-            self._ls_p = data['ls_p']
             self._K = data['K']
             self._epsilon = data['epsilon']
             self._N = data['N']
@@ -104,8 +102,10 @@ class Parameters:
             for f in self._F:
                 family_demand = []
                 overall_demand = self._SRA.reduced_scenarios[s][f]
-                share = round((overall_demand // len(self._L)) / self._T_No)
-                last_share = round((share + overall_demand % len(self._L))/ self._T_No)
+                share = (overall_demand // len(self._L))
+                last_share = (share + overall_demand % len(self._L))
+                #share = round((overall_demand // len(self._L)) / self._T_No)
+                #last_share = round((share + overall_demand % len(self._L))/ self._T_No)
                 for l in self._L:
                     location_demand = []
                     for t in self._T:
@@ -130,9 +130,9 @@ class Parameters:
         for s in self._S:
             scenario_milk_input = []
             milk = self._SRA.reduced_scenarios[s][-1]
-            milk_share = round(milk / self._T_No)
+            #milk_share = round(milk / self._T_No)
             for t in self._T:
-                scenario_milk_input.append(milk_share)
+                scenario_milk_input.append(milk)
 
             milk_input.append(scenario_milk_input) 
         

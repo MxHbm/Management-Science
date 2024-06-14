@@ -164,13 +164,15 @@ class Model:
                         if t > 0 ),
                         'Constraint_1.4f') # t - 1
         
+        '''
         model.addConstrs((vars.first_stage.Z1[m, t]
                         >= vars.binary.R1[m, t] 
                         * vars.integer.Z[m, t-1] 
                         for m in data.MP for t in data.T 
                         if t > 0),
                         'Constraint_1.4g') 
-        
+        '''
+
         model.addConstrs((vars.first_stage.Aux[m, t]
                         <= vars.integer.Z[m, t-1] 
                         for m in data.MP for t in data.T 

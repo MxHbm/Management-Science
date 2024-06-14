@@ -22,7 +22,7 @@ class DecisionVariables:
             self.TCOST = model.addVar(name="TCOST")     # for debugging
             self.SN = model.addVar(lb=0, name="SN")
             self.RM = model.addVars(data.T, lb=0, name="RMt")
-            self.IF = model.addVars(data.F, data.T, lb=0, name="IFf_t")
+            self.IF = model.addVars(data.F, data.T, lb=0, ub = 500, name="IFf_t")
             self.FP = model.addVars(data.F, data.T, lb=0, name="FPf_t")
             self.V = model.addVars(data.F, data.L, data.T, lb=0, name="Vi_l_t")
             self.DV = model.addVars(data.F, data.L, data.T, lb=0, name="DVf_l_t")
