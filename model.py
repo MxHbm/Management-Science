@@ -164,12 +164,13 @@ class Model:
                         if t > 0 ),
                         'Constraint_1.4f') # t - 1
         
-        model.addConstrs((vars.first_stage.Z1[m, t]
-                        >= vars.binary.R1[m, t] 
-                        * vars.integer.Z[m, t-1] 
-                        for m in data.MP for t in data.T 
-                        if t > 0),
-                        'Constraint_1.4g') 
+        # leads to quadratic model --> workaround is used below !! (not use this constraint!!)
+        # model.addConstrs((vars.first_stage.Z1[m, t]
+        #                 >= vars.binary.R1[m, t] 
+        #                 * vars.integer.Z[m, t-1] 
+        #                 for m in data.MP for t in data.T 
+        #                 if t > 0),
+        #                 'Constraint_1.4g') 
         
         model.addConstrs((vars.first_stage.Aux[m, t]
                         <= vars.integer.Z[m, t-1] 
@@ -213,10 +214,10 @@ class Model:
                         'Constraint_1.5b')
         
         ### NEW CONSTRAINTS FOR SHIFT BASED TO RESTRICT VALUES !!! 
-        model.addConstrs((vars.first_stage.Q[m, t] <=  data.cmax[m]
-                        for m in data.MP for t in data.T 
-                        if data.cty[m] == 1),
-                        'Constraint_1.5_new')
+        # model.addConstrs((vars.first_stage.Q[m, t] <=  data.cmax[m]
+        #                 for m in data.MP for t in data.T 
+        #                 if data.cty[m] == 1),
+        #                 'Constraint_1.5_new')
         
         """ In this type of campaigns, a variable Am, t accounts for accumulated production days at manufacturing plant m on day t. This accumula-
             tion (constraints (25) and (26)) continues until the current campaign ends. Parameter dmax
@@ -520,6 +521,8 @@ class Model:
 
         logger.info(f'model.status: {model.status}')
         logger.info('rsc: %g', data.rsc)
+        print(f'model.status: {model.status}')
+
 
 
         if model.status == 5:
@@ -607,7 +610,6 @@ class Model:
         """ 
         Finished products inventory at the factory is determined by the fluctuations caused by product manufacturing, shipments, and exports.
         """
-
         model.addConstrs(
             (vars.first_stage.IFD[p,t] == 
                         data.i_0_f[p]
@@ -622,37 +624,49 @@ class Model:
             Shelf-life considerations are included in the Detailed Planning model as well.
         '''
        
-        model.addConstrs((vars.first_stage.IFD[p,t] 
+        for f in data.F:
+            model.addConstrs((vars.first_stage.IFD[p,t] 
                         <= gp.quicksum(vars.first_stage.PS[p,l,t1] for t1 in range(t+1,t+data.omega_fw[f] + 1) for l in data.L) 
-                        for f in data.F for t in data.T for p in data.P
+                        for t in data.T for p in data.P
                         if (p == f) and (data.fty[f] == 1) and (t + data.omega_fw[f] <= data.hl)),
                         'Constraint_57')
 
-
-        model.addConstrs((vars.first_stage.IFD[p,t] 
+        for f in data.F:
+            model.addConstrs((vars.first_stage.IFD[p,t] 
                         <= gp.quicksum((vars.first_stage.PS[p,l,t1]
                                         / data.omega_fw[f])
                                         *(t + data.omega_fw[f] - data.hl) for t1 in range(t - data.omega_fw[f] + 1, t) for l in data.L) 
-                        +  gp.quicksum(vars.first_stage.DV[f,l,t2] for t2 in range(t + 1, t + data.omega_fw[f] + 1) for l in data.L if t2 <= data.hl) 
-                        for f in data.F for t in data.T for p in data.P
+                        #+  gp.quicksum(vars.first_stage.DV[f,l,t2] for t2 in range(t + 1, t + data.omega_fw[f] + 1) for l in data.L if t2 <= data.hl) 
+                        +  gp.quicksum(vars.first_stage.PS[f,l,t2] for t2 in range(t + 1, t + data.omega_fw[f] + 1) for l in data.L if t2 <= data.hl) 
+                        for t in data.T for p in data.P
                         if (p == f) and (data.fty[f] == 1) and (t + data.omega_fw[f] > data.hl)),
                         'Constraint_58')
         
         #Constraint 59
         """Distribution Centers shelf-life:"""
         
-        model.addConstrs((vars.second_stage.IDD[s,p,l,t] 
+        for f in data.F:
+            model.addConstrs((vars.second_stage.IDD[s,p,l,t] 
                         <= gp.quicksum(data.dpd[s][p][l][t1] for t1 in range(t+1,t+data.omega_dc[f] + 1)) 
-                        for s in data.S for f in data.F for l in data.L for t in data.T for p in data.P
+                        for s in data.S for l in data.L for t in data.T for p in data.P
                         if (f == p) and (data.fty[f] == 1) and (t + data.omega_dc[f] <= data.hl)),
                         'Constraint_59')
+        
+        # original constraint
+        # model.addConstrs((vars.second_stage.IDD[s,p,l,t] 
+        #                 <= gp.quicksum(data.dpd[s][p][l][t1] for t1 in range(t+1,t+data.omega_dc[f] + 1)) 
+        #                 for s in data.S for f in data.F for l in data.L for t in data.T for p in data.P
+        #                 if (f == p) and (data.fty[f] == 1) and (t + data.omega_dc[f] <= data.hl)),
+        #                 'Constraint_59')
 
-        model.addConstrs((vars.second_stage.IDD[s,p,l,t] 
+        for f in data.F:
+            model.addConstrs((vars.second_stage.IDD[s,p,l,t] 
                         <= gp.quicksum((data.dpd[s][p][l][t1]
                                         / data.omega_dc[f])
                                         * (t + data.omega_dc[f] - data.hl) for t1 in range(t - data.omega_dc[f] + 1, t)) 
                         + gp.quicksum(data.dpd[s][p][l][t2] for t2 in range(t + 1, t + data.omega_dc[f]+1) if t2 <= data.hl) 
-                        for s in data.S for f in data.F for l in data.L for t in data.T for p in data.P
+                        #for s in data.S for f in data.F for l in data.L for t in data.T for p in data.P
+                        for s in data.S for l in data.L for t in data.T for p in data.P
                         if (p == f) and (data.fty[f] == 1) and (t + data.omega_dc[f] > data.hl)),
                         'Constraint_60')
 
@@ -662,10 +676,18 @@ class Model:
             and dry shipments according to their refrigerated transportation requirements.
         """
 
+        # original constraint
         model.addConstrs((vars.first_stage.VD[i,l,t] 
-                        == gp.quicksum(vars.first_stage.PS[p,l,t] for p in data.P for f in data.F if (data.fty[f] == i) and (f == p))
-                        for i in data.FT for l in data.L for t in data.T),
+                        == gp.quicksum(vars.first_stage.PS[p,l,t] for p in data.P if (data.fty[f] == i) and (f == p))
+                        for f in data.F for i in data.FT for l in data.L for t in data.T),
                         'Constraint_61')
+    
+        # test constraint 
+        # for f in data.F:
+        #     model.addConstrs((vars.first_stage.VD[i,l,t] 
+        #                 == gp.quicksum(vars.first_stage.PS[p,l,t] for p in data.P if (data.fty[f] == i) and (f == p))
+        #                 for i in data.FT for l in data.L for t in data.T),
+        #                 'Constraint_61')
 
         model.addConstrs((vars.first_stage.VD[i, l, t] 
                             <= vars.integer.TRD[i, l, t] 
@@ -679,6 +701,13 @@ class Model:
                             + data.tl_min 
                         for i in data.FT for l in data.L for t in data.T),
                         'Constraint_63')
+        
+        # new constraint - similar to constraint 49 - DO WE NEED THIS ??
+        # model.addConstrs((vars.first_stage.VD[i, l, t] 
+        #                 == 0 
+        #                 for i in data.FT for l in data.L for t in (range(data.hl - data.tau[l] + 1, data.hl))
+        #                 if data.tau[l] > 0),
+        #                 'Constraint_64_new')
 
         return model
     
@@ -689,7 +718,8 @@ class Model:
 
         # Costs
         vars.second_stage.COST = (
-                    gp.quicksum(vars.integer.TR[i, l, t] * data.tc[l][i] 
+                    #gp.quicksum(vars.integer.TR[i, l, t] * data.tc[l][i] 
+                    gp.quicksum(vars.integer.TRD[i, l, t] * data.tc[l][i] 
                                 for i in data.FT for l in data.L for t in data.T
                                 )
                             )
@@ -699,14 +729,18 @@ class Model:
         vars.second_stage.RETURN = ( 
                     gp.quicksum( data.re[f] 
                                 * data.ls[f] 
-                                * vars.integer.E[f, t]
+                                #* vars.integer.E[f, t]
+                                * vars.first_stage.ED[f, t]
                                 for f in data.F for t in data.T)
                     + gp.quicksum(data.rho[s]
                                     * (gp.quicksum(data.r[f] 
-                                        * (data.dp[s][f][l][t] 
-                                            - vars.second_stage.SO[s, f, l, t])
+                                        #* (data.dp[s][f][l][t] 
+                                        * (data.dpd[s][f][l][t] 
+                                            #- vars.second_stage.SO[s, f, l, t])
+                                            - vars.second_stage.SOD[s, f, l, t])
                                         for l in data.L for f in data.F for t in data.T)
-                                        + gp.quicksum(vars.second_stage.OS[s, f, l, t] 
+                                        #+ gp.quicksum(vars.second_stage.OS[s, f, l, t] 
+                                        + gp.quicksum(vars.second_stage.OSD[s, f, l, t] 
                                                         * data.rr[f]
                                         for l in data.L for f in data.F for t in data.T)
                                         )
@@ -779,15 +813,18 @@ class Model:
         return param_FP, param_E
 
     def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model, logger):
+
+
+        # Get the needed fixed variable values from model 1
+        param_FP, param_E = self.get_fixed_values(model_first_stage, data)
+
+        model_first_stage.reset()
+
         # Create a new model
         model = gp.Model("second_stage")
 
         # get the needed decision variables
         vars = DecisionVariables(model, data)
-
-
-        # Get the needed fixed variable values from model 1
-        param_FP, param_E = self.get_fixed_values(model_first_stage, data)
 
         # Add the objective function
         model = self.Detailed_Objective_Function(data, vars, model)
@@ -809,6 +846,7 @@ class Model:
 
         logger.info(f'=========== Detailed Model =================')
         logger.info(f'model.status: {model.status}')
+        print(f'model.status: {model.status}')
 
         # Print the values of all variables
         for v in model.getVars():
@@ -877,7 +915,7 @@ class Model:
         else:
             logger.error("Optimization ended with status %s", model.status)
 
-        # plot constraints and variables (bar chart, takes a lot of time)
+        #plot constraints and variables (bar chart, takes a lot of time)
         #self.plot_constraints_and_vars(logger, model, 'detailed_model')
 
         logger.info('Detailed Model finished')
