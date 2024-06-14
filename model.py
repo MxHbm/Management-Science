@@ -5,10 +5,11 @@ from variables import *  #Werte für Parameter
 #from gurobipy import * #Gurobi
 import gurobipy as gp
 import datetime as dt
-import time
+import time as time
 from parameters import *   # All parameters
 
 import matplotlib.pyplot as plt
+
 
 class Model:
     def __init__(self):
