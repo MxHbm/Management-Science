@@ -22,7 +22,7 @@ class DecisionVariables:
             self.TCOST = model.addVar(name="TCOST")     # for debugging
             self.SN = model.addVar(lb=0, name="SN")
             self.RM = model.addVars(data.T, lb=0, name="RMt")
-            self.IF = model.addVars(data.F, data.T, lb=0, name="IFf_t")
+            self.IF = model.addVars(data.F, data.T, lb=0, ub = 500, name="IFf_t")
             self.FP = model.addVars(data.F, data.T, lb=0, name="FPf_t")
             self.V = model.addVars(data.F, data.L, data.T, lb=0, name="Vi_l_t")
             self.DV = model.addVars(data.F, data.L, data.T, lb=0, name="DVf_l_t")
@@ -71,7 +71,7 @@ class DecisionVariables:
         ''' Integer decision variables of the model '''
         
         def __init__(self, model: gp.Model, data: Parameters):
-            self.TR = model.addVars(data.FT, data.L, data.T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t")
+            self.TR = model.addVars(data.FT, data.L, data.T, vtype=GRB.INTEGER, lb=0,ub=30, name="TRi_l_t") ### New IMPLEMENTED UPPER BOUND !!! 
             self.E = model.addVars(data.F, data.T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
             self.Z = model.addVars(data.MP, data.T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
             ### Variabels needed for the detailed planning model
