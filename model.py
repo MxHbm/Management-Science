@@ -215,10 +215,10 @@ class Model:
                         'Constraint_1.5b')
         
         ### NEW CONSTRAINTS FOR SHIFT BASED TO RESTRICT VALUES !!! 
-        # model.addConstrs((vars.first_stage.Q[m, t] <=  data.cmax[m]
-        #                 for m in data.MP for t in data.T 
-        #                 if data.cty[m] == 1),
-        #                 'Constraint_1.5_new')
+        model.addConstrs((vars.first_stage.Q[m, t] <=  data.cmax[m]
+                        for m in data.MP for t in data.T 
+                         if data.cty[m] == 1),
+                         'Constraint_1.5_new')
         
         """ In this type of campaigns, a variable Am, t accounts for accumulated production days at manufacturing plant m on day t. This accumula-
             tion (constraints (25) and (26)) continues until the current campaign ends. Parameter dmax
@@ -593,6 +593,16 @@ class Model:
                         for f in data.FT for t in data.T ),
                         'Constraint_54')
         
+        ## INFEASIBLE WITH THIS CONSTRAINT !!! 
+        '''
+        model.addConstrs((gp.quicksum(E[p][t] for t in data.T)
+                    == (gp.quicksum(vars.first_stage.ED[p,t] for t in data.T))
+                for p in data.P),
+                'Constraint_54')
+
+
+        '''
+        
         # Constraint 55: Inventory Balance 
         '''
         Inventory balances in distribution centers. These restrictions are homologous to eq. (40) of the family aggregated model.
@@ -711,6 +721,13 @@ class Model:
         #                 if data.tau[l] > 0),
         #                 'Constraint_64_new')
 
+        '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
+
+        model.addConstrs((gp.quicksum(vars.second_stage.IDD[s,p,l,t] for p in data.P if data.fty[p] == i) 
+                        <= data.imax[l][i] 
+                        for s in data.S for l in data.L for i in data.FT for t in data.T),
+                        'Constraint_1.9b')
+
         return model
     
     def Detailed_Objective_Function(self, data:Parameters, vars:DecisionVariablesModel2, model: gp.Model):
@@ -788,15 +805,15 @@ class Model:
             param_E_UB.append(sub_params_E_UB)
             param_E_LB.append(sub_params_E_LB)
         
-        ''' Debugging: Print the values of the fixed variables
+        #Debugging: Print the values of the fixed variables
         if 1 == 1:
             print("param_E")
             for f in  data.F:
                 for t in data.T:
-                    print(f, t, '\t', param_E[f][t], "\tbounds:", param_E_LB[f][t], '...', param_E_UB[f][t])
+                    print(f, t, '\t', param_E[f][t])
                 
                 print("\n")
-        
+        '''
         if 1 == 0:
             print("param_FP")
             for f in  data.F:
@@ -811,7 +828,7 @@ class Model:
 
             print('data.F')
             print(data.F)
-        '''
+         '''
         return param_FP, param_E
 
     def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model, logger):
