@@ -116,7 +116,7 @@ class Model:
 
         model.addConstrs((vars.first_stage.MO[m,t] 
                         == (1 - data.beta[m]) 
-                        * vars.first_stage.Q[m,t-data.sigma[m]] 
+                        * vars.first_stage.Q[m,t - data.sigma[m]] 
                         for m in data.MP for t in data.T if t >= data.sigma[m]),
                         'Constraint_1.2b')
         
@@ -129,6 +129,9 @@ class Model:
         # Constraint 3: Work-in-progress (WIP) inventory constraints
         """ Manufacturing products with σ m > 0 generate WIP inventory which is depleted by the volume of finished products in period t represented by the variable MOm, t. Parameter iwip0
             m represents inventory from the previous planning horizon at manufacturing plant m. """
+        
+        ### SHOULD ONLY TAKE VALUES AT THE BEGININNG OF THE PLANNING HORIZON !!!
+        
         model.addConstrs((vars.first_stage.IWIP[m,t] 
                         == data.iwip0[m]
                         + gp.quicksum(vars.first_stage.Q[m,t1] for t1 in data.T if t1 <= t)
@@ -138,16 +141,9 @@ class Model:
                         'Constraint_1.3a')
         
         # Constraint 4
-
-        ### NEW CONSTRAINT
-        model.addConstrs((vars.integer.Z[m, t]
-                        <= data.zmax[m] 
-                        for m in data.MP for t in data.T),
-                        'Constraint_1.4new')
-        
         model.addConstrs((vars.integer.Z[m, t]
                         == vars.first_stage.Z1[m, t] 
-                        +vars.first_stage.Z2[m, t] 
+                        + vars.first_stage.Z2[m, t] 
                         for m in data.MP for t in data.T),
                         'Constraint_1.4a')
         
@@ -182,7 +178,7 @@ class Model:
         model.addConstrs((vars.first_stage.Aux[m, t]
                         <= vars.integer.Z[m, t-1] 
                         for m in data.MP for t in data.T 
-                        if t > 0),
+                        if  (t > 0)),
                         'Constraint_1.4h') 
         
         model.addConstrs((vars.first_stage.Aux[m, t]
@@ -190,7 +186,7 @@ class Model:
                         - data.zmax[m] 
                             * (1 - vars.binary.R1[m, t]) 
                         for m in data.MP for t in data.T 
-                        if t > 0),
+                        if (t > 0)),
                         'Constraint_1.4i')
         
         model.addConstrs((vars.first_stage.Aux[m, t]
@@ -234,16 +230,17 @@ class Model:
         """
 
         ### WHY DMAX / CMIN ??? --> MAXIMUM NUMBER WOULD BE CMAX / CMIN !!! 
+        ## AND HOW TO SET UP THE CAMPAIGN LENGTH ??? --> WHEN DMAX IS REACHED, then NEW CAMPAIGN WITH SETUP IS NEEDED! 
 
         model.addConstrs((vars.first_stage.A[m, t]  
-                        <=vars.first_stage.A[m, t-1] 
-                        + vars.integer.Z[m, t] 
+                        <= vars.first_stage.A[m, t-1] 
+                        + vars.integer.Z[m,t] 
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)),
                         'Constraint_1.5c')
 
         model.addConstrs((vars.first_stage.A[m, t]  
-                        >=vars.first_stage.A[m, t-1]
+                        >= vars.first_stage.A[m, t-1]
                         + vars.integer.Z[m, t] 
                         - ((data.dmax[m]
                             / data.cmin[m])
@@ -264,6 +261,14 @@ class Model:
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)),
                         'Constraint_1.5f')
+        
+        ### MAKES THIS SENSE ??!??
+        '''
+                model.addConstrs((vars.first_stage.A[m, t] 
+                <= (1 - vars.binary.Y[m, t]) * data.dmax[m]
+                for m in data.MP for t in data.T if (data.cty[m] == 1) and (t > 0)), 
+                "Constraint_1.7new")
+        '''
 
 
         """ Accumulated production at the beginning of the horizon. The following equations (constraints (29) and (30)) model the remaining quantity
@@ -305,16 +310,14 @@ class Model:
                         'Constraint_1.6a')
         
         ## DAMIT FUNKTIONIERT ES NICHT !!
-        '''
-                model.addConstrs(((vars.first_stage.Q[m, t] 
-                        / ((data.sc[m]) 
-                            * (1 - data.is_[m])))
-                        >= vars.integer.Z[m, t] 
-                        for m in data.MP for t in data.T 
-                        if data.cty[m] == 1),
-                        'Constraint_1.6b')
+
+        model.addConstrs(((vars.first_stage.Q[m, t] / data.sc[m]) * (1/(1 - data.is_[m]))
+                >= vars.integer.Z[m, t] 
+                for m in data.MP for t in data.T 
+                if data.cty[m] == 1),
+                'Constraint_1.6b')
                         
-        '''
+
         ### NEW CONSTRAINTS FOR SHIFT BASED TO RESTRICT VALUES !!! 
         # model.addConstrs((vars.first_stage.Q[m, t] <=  data.cmax[m]
         #                for m in data.MP for t in data.T 
@@ -335,28 +338,31 @@ class Model:
                         <= data.zmax[m] 
                         * (1 - vars.binary.Y[m, t]) 
                         for m in data.MP for t in data.T 
-                        if t > 0), "Constraint_1.7a")
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a")
+        
         
         model.addConstrs((vars.binary.R2[m,t] 
                         >= vars.binary.Y[m,t] 
-                        for m in data.MP for t in data.T), "Constraint_1.7b")
+                        for m in data.MP for t in data.T if (data.cty[m] == 0)), "Constraint_1.7b")
+        
+        ### WHAT ARE YOU DOING??? #### -> Start a new campaign if the previous campaign is finished !!!
         
         model.addConstrs((vars.binary.R2[m,t] 
                         - vars.integer.Z[m, t-1] 
                         <= vars.binary.Y[m,t] 
                         for m in data.MP for t in data.T 
-                        if t > 0), "Constraint_1.7c")
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7c")
         
         model.addConstrs((vars.integer.Z[m,t - t1] 
                         <= data.zmax[m] 
                         * (1 - vars.binary.Y[m,t]) 
                         for m in data.MP for t in data.T for t1 in range(data.alpha[m]) 
-                        if (data.alpha[m] > 0)  and (t - t1 >= 0)), "Constraint_1.7d")
+                        if (data.alpha[m] > 0)  and (t - t1 >= 0) and (data.cty[m] == 0)), "Constraint_1.7d")
         
         model.addConstrs((vars.integer.Z[m,t] 
                         <= 0 
                         for m in data.MP for t in data.T 
-                        if t < data.ost[m]), "Constraint_1.7e")
+                        if (t < data.ost[m]) and (data.cty[m] == 0)), "Constraint_1.7e")
         
         ### t < data.ost[m] INSTEAD OF t <= data.ost[m] !!! 
 
