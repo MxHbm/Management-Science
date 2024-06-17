@@ -147,6 +147,47 @@ class Model:
                         for m in data.MP for t in data.T),
                         'Constraint_1.4a')
         
+        ##### NEW CONSTRAINT ######
+
+        model.addConstrs((vars.first_stage.Z1[m, t] 
+                >= vars.binary.R1[m, t]  
+                for m in data.MP for t in data.T),
+                'Constraint_1.4a')
+        
+        '''
+        Am_t[0,0]            1 
+        Am_t[0,1]            2 
+        Am_t[0,2]            3 
+        Am_t[0,3]            4 
+        Am_t[0,4]            5 
+        Am_t[0,5]            6 
+        Am_t[0,6]            7 
+        Am_t[0,7]            8 
+        Am_t[0,8]            9 
+        Am_t[0,9]           10 
+        Am_t[0,10]           11 
+        Am_t[0,11]           12 
+        Am_t[0,12]           13 
+        Am_t[0,13]           14 
+        Am_t[0,14]           15 
+        Am_t[0,15]            7 
+        Am_t[0,16]            7 
+        Am_t[0,17]            7 
+        Am_t[0,18]            7 
+        Am_t[0,19]            7 
+        Am_t[0,20]            7 
+        Am_t[0,21]            7 
+        Am_t[0,22]            7 
+        Am_t[0,23]            7 
+        Am_t[0,24]            7 
+        Am_t[0,25]            7 
+        Am_t[0,26]            7 
+        Am_t[0,27]            1 
+        Am_t[0,28]            1 
+        Am_t[0,29]            1 
+
+        '''
+        
         model.addConstrs((vars.first_stage.Z1[m, t]
                         <= data.zmax[m] * vars.binary.R1[m, t] 
                         for m in data.MP for t in data.T),
@@ -340,7 +381,7 @@ class Model:
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a")
         
-        
+
         model.addConstrs((vars.binary.R2[m,t] 
                         >= vars.binary.Y[m,t] 
                         for m in data.MP for t in data.T if (data.cty[m] == 0)), "Constraint_1.7b")
