@@ -471,8 +471,45 @@ class Model:
         #model.addConstrs(vars.first_stage.IF[f,t] <= 5000 for f in data.F for t in data.T)
 
         return model
+        
+    def Calculate_emvp(self, data:S_star,  logger):
+        print('============================ Calculate EMVP ============================')
+        logger.info('============================ Calculate EMVP ============================')
 
+        # Step 1: Calculate s*
+        # this is done in class S_star
+        # S_star calculates the mean value of the second stage parameters
+
+
+        #data.s_star = s_star.s_star
+        #logger.info(f's_star: {data.s_star}')
+
+        #scenarios, probabilities = data.S, data.rho
+
+        # Step 2: Solve the planning model using s*
+        mvp_solution, logger = self.Run_Model(data, logger)
+        mvp_solution_obj = mvp_solution.ObjVal
+
+        # Step 3: Calculate optimal second stage reactions for each scenario
+        emvp_solution, logger = self.Run_Detailed_Model(data, mvp_solution, logger)
+        emvp_solution_obj = emvp_solution.ObjVal
+
+        # Extract objective values from Gurobi models
+        #optimal_objective_values = [emvp_solution.ObjVal]
+
+        # Step 4: Calculate EMVP
+        #emvp = sum(obj_val * prob for obj_val, prob in zip(optimal_objective_values, probabilities))
+
+        logger.info(f'mvp: {mvp_solution_obj}')
+        logger.info(f'emvp: {emvp_solution_obj}')
+
+        return emvp_solution_obj, logger
+    
+
+    
     def Run_Model(self, data:Parameters, logger):
+
+        logger.info('============================ Run Model ============================')
         # Create a new model
         model = gp.Model("first_stage")
 
@@ -524,6 +561,7 @@ class Model:
         logger.info(f'model.status: {model.status}')
         logger.info('rsc: %g', data.rsc)
         print(f'model.status: {model.status}')
+        print(f'model.getObjective().getValue(): {model.getObjective().getValue()}')
 
 
 
@@ -853,7 +891,7 @@ class Model:
         # Print the values of all variables
         for v in model.getVars():
             if v.Obj != 0:
-                logger.info(f"{v.VarName} = {v.Obj}")
+                #logger.info(f"{v.VarName} = {v.Obj}")
                 pass
 
         # for p in data.P:
@@ -880,7 +918,7 @@ class Model:
             logger.info('Obj: %g' % model.objVal)
 
             # Save the model
-            if 1 == 1:
+            if 1 == 0:
                 # Add timestamp to file name
                 timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%data.S")
                 file_name = f"results/result_FirstStage_LP_{timestamp}.lp"

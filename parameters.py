@@ -475,6 +475,7 @@ class Parameters:
     def dp(self):
         ''' Family demand for distribution center l on day t under scenario s.
         '''
+        pass
 
         return self._dp
 
@@ -576,3 +577,81 @@ class Parameters:
         '''
         return self._dp
     
+
+# class s_star that inherits from class Parameters and it is used to calculate the s_star value (mean values of the demand)
+class S_star(Parameters):
+    ''' Class to calculate the s_star value (mean values of the demand)'''
+
+    def __init__(self, json_file_path = "data/base_data.json"):
+        ''' Constructor for this class.
+        :param file_path: path to the file with the datafile (txt file)
+        '''
+
+        super().__init__(json_file_path)
+        self.__calculate_s_star()
+        self._s_star = 0
+
+    def __calculate_s_star(self):
+        ''' Calculate the mean values of the demand
+        '''
+
+        self._dp = self.recreate_dp()           # demand
+        self._dri = self.recreate_dri()         # raw milk input
+        #self.dpd = self.recreate_dpd()
+        self._S = range(0, 1)                   # only one scenario
+        self._rho = self.calculate_expected_value()    # expected value of all scenarios
+
+
+    def recreate_dp(self):
+        dp = [[
+            [
+                [
+                    #sum(self._dp[s][f][l][t] * self._rho[s] for s in self._S)  # / len(self._S) 
+                    self._dp[s][f][l][t] * self._rho[s] for s in self._S  # / len(self._S) 
+                    for t in self._T
+                ]
+                for l in self._L
+            ]
+            for f in self._F
+        ]]
+
+        return dp
+    
+    # def recreate_dpd(self):
+    #     dpd = [
+    #         [
+    #             [
+    #                 sum(self._dpd[s][f][l][t] for f in self._F) / len(self._F) * self._rho[s]
+    #                 for t in self._T
+    #             ]
+    #             for l in self._L
+    #         ]
+    #         for s in self._S
+    #     ]
+
+    #     return dpd
+    
+    def recreate_dri(self):
+        dri = [
+            [
+                # sum(self._dri[s][t] * self._rho[s] for s in self._S) #/ len(self._S) 
+                self._dri[s][t] * self._rho[s] for s in self._S  #/ len(self._S) 
+                for t in self._T
+            ]
+        ]
+
+        return dri
+    
+    def calculate_expected_value(self):
+        rho =[ sum(self._rho )]
+
+        # rho = [0]
+
+        return rho  
+
+    @property
+    def s_star(self):
+        ''' Mean values of the demand
+        '''
+
+        return self._s_star
