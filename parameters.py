@@ -557,7 +557,7 @@ class Parameters:
         ''' Range for products
         '''
 
-        return self._F
+        return self._P
 
     @property
     def ls(self):
