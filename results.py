@@ -4,8 +4,9 @@ from parameters import Parameters
 ''' results.py '''
 
 class Results:
-    def __init__(self, model, data:Parameters):
-        self.model = model
+    def __init__(self, model1, model2, data:Parameters):
+        self.family_model = model1
+        self.detailed_model = model2
 
         self.T = data.T
         self.F = data.F
@@ -85,8 +86,8 @@ class Results:
             for f in self.F:
                 for l in self.L:
                     for t in self.T:
-                        if self.model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]') is not None:
-                            sales_t += self.model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').Obj
+                        if self.family_model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]') is not None:
+                            sales_t += self.family_model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').Obj
 
 
         return sales_t
@@ -94,19 +95,21 @@ class Results:
     def create_lost_sales_t(self):
         # Compute the value for 'Lost Sales [t]'
 
-        lost_sales_t = 0
+        lost_sales_t_detailed = 0
+        lost_sales_t_family = 0
 
 
         for s in self.S:
             for f in self.F:
                 for l in self.L:
                     for t in self.T:
-                        if self.model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]') is not None:
-                            lost_sales_t += self.model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').Obj
+                        if self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]') is not None:
+                            lost_sales_t_family += self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').Obj
+                        if self.family_model.getVarByName(f'SODs_f_l_t[{s},{f},{l},{t}]') is not None:
+                            lost_sales_t_detailed += self.detailed_model.getVarByName(f'SODs_f_l_t[{s},{f},{l},{t}]').Obj
 
-        print(lost_sales_t)
 
-        return lost_sales_t
+        return [lost_sales_t_family, lost_sales_t_detailed]
 
     def create_distressed_sales_t(self):
         # Compute the value for 'Distressed Sales of Products [t]'
@@ -117,8 +120,8 @@ class Results:
             for f in self.F:
                 for l in self.L:
                     for t in self.T:
-                        if self.model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]') is not None:
-                            distressed_sales_t += self.model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').Obj
+                        if self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]') is not None:
+                            distressed_sales_t += self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').Obj
 
         return distressed_sales_t
 
@@ -129,8 +132,8 @@ class Results:
 
         for s in self.S:
             for t in self.T:
-                if self.model.getVarByName(f'ROs_t[{s},{t}]') is not None:
-                    raw_material_losses_t += self.model.getVarByName(f'ROs_t[{s},{t}]').Obj
+                if self.family_model.getVarByName(f'ROs_t[{s},{t}]') is not None:
+                    raw_material_losses_t += self.family_model.getVarByName(f'ROs_t[{s},{t}]').Obj
         return raw_material_losses_t
 
     def create_raw_material_purchase_t(self):
@@ -140,8 +143,8 @@ class Results:
 
         for s in self.S:
             for t in self.T:
-                if self.model.getVarByName(f'RSs_t[{s},{t}]') is not None:
-                    raw_material_purchase_t += self.model.getVarByName(f'RSs_t[{s},{t}]').Obj
+                if self.family_model.getVarByName(f'RSs_t[{s},{t}]') is not None:
+                    raw_material_purchase_t += self.family_model.getVarByName(f'RSs_t[{s},{t}]').Obj
 
         return raw_material_purchase_t
 
@@ -152,8 +155,8 @@ class Results:
 
         for f in self.F:
             for t in self.T:
-                if self.model.getVarByName(f'Ef_t[{f},{t}]') is not None:
-                    exports_t += self.model.getVarByName(f'Ef_t[{f},{t}]').Obj
+                if self.family_model.getVarByName(f'Ef_t[{f},{t}]') is not None:
+                    exports_t += self.family_model.getVarByName(f'Ef_t[{f},{t}]').Obj
 
         return exports_t
 
@@ -164,8 +167,8 @@ class Results:
 
         for f in self.F:
             for t in self.T:
-                if self.model.getVarByName(f'FPf_t[{f},{t}]') is not None:
-                    production_t += self.model.getVarByName(f'FPf_t[{f},{t}]').Obj
+                if self.family_model.getVarByName(f'FPf_t[{f},{t}]') is not None:
+                    production_t += self.family_model.getVarByName(f'FPf_t[{f},{t}]').Obj
 
         return production_t
 
@@ -177,8 +180,8 @@ class Results:
         for f in self.F:
             for l in self.L:
                 for t in self.T:
-                    if self.model.getVarByName(f'DVf_l_t[{f},{l},{t}]') is not None:
-                        product_shipped_t += self.model.getVarByName(f'DVf_l_t[{f},{l},{t}]').Obj
+                    if self.family_model.getVarByName(f'DVf_l_t[{f},{l},{t}]') is not None:
+                        product_shipped_t += self.family_model.getVarByName(f'DVf_l_t[{f},{l},{t}]').Obj
 
         return product_shipped_t
 
@@ -187,7 +190,7 @@ class Results:
 
         sales_income_mu = 0
 
-        sales_income_mu = self.model.getVarByName('EXI').Obj
+        sales_income_mu = self.family_model.getVarByName('EXI').Obj
 
         return sales_income_mu
 
@@ -243,7 +246,8 @@ class Results:
     def PrintResults(self, table6, table8):
         print('=========================================')
         print('Results:')
-        print('Objective value: %g' % self.model.objVal)
+        print('Objective value FAM: %g' % self.family_model.objVal)
+        print('Objective value DPM: %g' % self.detailed_model.objVal)
         print('table 6:')
         print(table6)
 
@@ -255,7 +259,7 @@ class Results:
     def ComputeResultsOfTable6(self):
 
         data = {'SP':  [self.sales_t, 
-                        self.lost_sales_t,
+                        self.lost_sales_t[0],
                         self.distressed_sales_t,
                         self.raw_material_losses_t,
                         self.raw_material_purchase_t,
@@ -340,4 +344,23 @@ class Results:
         self.PrintResults(table6, table8)
         pass
 
+    def Calculate_ss(self, data:Parameters, gp_model_detailed, logger):
+        ''' Calculate the value of the objective function of the detailed planning model
+            --> stochastic solution'''
+
+        ss = gp_model_detailed.ObjVal
+
+        logger.info(f'SS: {ss}')
+
+        return ss, logger
+
+    def Calculate_vss(self, ss, emvp, logger):
+        ''' Calculate the value of stochastic solution
+            --> VSS = SS - EMVP'''
+
+        vss = ss - emvp
+
+        logger.info(f'vss: {vss}')
+
+        return vss, logger
     
