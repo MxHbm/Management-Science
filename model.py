@@ -337,7 +337,17 @@ class Model:
                         for m in data.MP 
                         if data.cty[m] == 0),
                         'Constraint_1.5i') 
+        
+        #### NEW CONSTRAINT
 
+        '''
+        model.addConstrs((vars.first_stage.A[m,t] 
+                          - (data.dmax[m]
+                            / data.cmin[m]) >= vars.binary.Y[m,t] - 1
+                for m in data.MP for t in data.T
+                if data.cty[m] == 0),
+                'Constraint_1.5_new') '''
+        
         #Constraint 6
         """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
         according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
@@ -382,6 +392,8 @@ class Model:
                         * (1 - vars.binary.Y[m, t]) 
                         for m in data.MP for t in data.T 
                         if (t > 0)), "Constraint_1.7a")
+        
+        #model.addConstr(vars.binary.Y[0, 15] == 1, "TEst_constraint_1.7a")
         
 
         model.addConstrs((vars.binary.R2[m,t] 
