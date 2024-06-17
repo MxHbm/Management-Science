@@ -88,24 +88,24 @@ class Model:
                         + gp.quicksum(vars.second_stage.RS[s,t1] for t1 in data.T if t1 <= t)
                         - gp.quicksum(vars.second_stage.RO[s,t1] for t1 in data.T if t1 <= t)
                         for s in data.S for t in data.T),
-                        'Constraint_1.1a')
+                        'Constraint_1.1a-5')
 
         model.addConstrs((vars.second_stage.RI[s,t] 
                         <= data.r_max 
                         for s in data.S for t in data.T),
-                        'Constraint_1.1b')
+                        'Constraint_1.1b-6')
 
         model.addConstrs((vars.first_stage.RM[t] 
                         == gp.quicksum(vars.first_stage.Q[m,t]/data.fy[m] for m in data.MP)         
                         for t in data.T),
-                        'Constraint_1.1c')
+                        'Constraint_1.1c-7')
         
         # Constraint 2: General production constraints
         """ Family f production of all plants in the complex is equal to the manufacturing output of plants producing f. """
         model.addConstrs((vars.first_stage.FP[f,t] 
                         == vars.first_stage.MO[f,t]   # Product family is produced by plant m
                         for f in data.F for t in data.T),
-                        'Constraint_1.2a')
+                        'Constraint_1.2a-8')
         
         '''
             model.addConstrs((vars.first_stage.FP[f,t] 
@@ -118,13 +118,13 @@ class Model:
                         == (1 - data.beta[m]) 
                         * vars.first_stage.Q[m,t - data.sigma[m]] 
                         for m in data.MP for t in data.T if t >= data.sigma[m]),
-                        'Constraint_1.2b')
+                        'Constraint_1.2b-9')
         
         model.addConstrs((vars.first_stage.MO[m,t] 
                         == (1 - data.beta[m]) 
                         * data.wp[m][t] 
                         for m in data.MP for t in data.T if t < data.sigma[m]),
-                        'Constraint_1.2c')
+                        'Constraint_1.2c-10')
 
         # Constraint 3: Work-in-progress (WIP) inventory constraints
         """ Manufacturing products with σ m > 0 generate WIP inventory which is depleted by the volume of finished products in period t represented by the variable MOm, t. Parameter iwip0
@@ -138,21 +138,21 @@ class Model:
                         - gp.quicksum(vars.first_stage.MO[m,t1] for t1 in data.T if t1 <= t)
                         for m in data.MP for t in data.T 
                         if data.sigma[m] > 0),
-                        'Constraint_1.3a')
+                        'Constraint_1.3a-11')
         
         # Constraint 4
         model.addConstrs((vars.integer.Z[m, t]
                         == vars.first_stage.Z1[m, t] 
                         + vars.first_stage.Z2[m, t] 
                         for m in data.MP for t in data.T),
-                        'Constraint_1.4a')
+                        'Constraint_1.4a-12')
         
         ##### NEW CONSTRAINT ######
 
         model.addConstrs((vars.first_stage.Z1[m, t] 
                 >= vars.binary.R1[m, t]  
                 for m in data.MP for t in data.T),
-                'Constraint_1.4a')
+                'Constraint_1.4a-NEW')
         
         '''
         Am_t[0,0]            1 
@@ -191,36 +191,38 @@ class Model:
         model.addConstrs((vars.first_stage.Z1[m, t]
                         <= data.zmax[m] * vars.binary.R1[m, t] 
                         for m in data.MP for t in data.T),
-                        'Constraint_1.4b')
+                        'Constraint_1.4b-13')
         
         model.addConstrs((vars.first_stage.Z2[m, t]
                         <= data.zmax[m] 
                         * vars.binary.R2[m, t] 
                         for m in data.MP for t in data.T),
-                        'Constraint_1.4c')
+                        'Constraint_1.4c-14')
         
         model.addConstrs((vars.binary.R1[m, t]
                         + vars.binary.R2[m, t] 
                         == 1 
                         for m in data.MP for t in data.T),
-                        'Constraint_1.4d')
+                        'Constraint_1.4d-15')
         
         model.addConstrs((vars.binary.R1[m, 0] 
                         == 1 
                         for m in data.MP),
-                        'Constraint_1.4e')
+                        'Constraint_1.4e-16')
         
         model.addConstrs((vars.first_stage.Z1[m, t]
                         <= vars.integer.Z[m, t-1] 
                         for m in data.MP for t in data.T 
                         if t > 0 ),
-                        'Constraint_1.4f') 
+                        'Constraint_1.4f-17') 
+        
+        # constraint 18 not implemented
         
         model.addConstrs((vars.first_stage.Aux[m, t]
                         <= vars.integer.Z[m, t-1] 
                         for m in data.MP for t in data.T 
                         if  (t > 0)),
-                        'Constraint_1.4h') 
+                        'Constraint_1.4h-19') 
         
         model.addConstrs((vars.first_stage.Aux[m, t]
                         >= vars.integer.Z[m, t-1] 
@@ -228,18 +230,18 @@ class Model:
                             * (1 - vars.binary.R1[m, t]) 
                         for m in data.MP for t in data.T 
                         if (t > 0)),
-                        'Constraint_1.4i')
+                        'Constraint_1.4i-20')
         
         model.addConstrs((vars.first_stage.Aux[m, t]
                         <= vars.first_stage.Z1[m, t] 
                         for m in data.MP for t in data.T),
-                        'Constraint_1.4j' )
+                        'Constraint_1.4j-21' )
         
         model.addConstrs((vars.first_stage.Aux[m, t]
                         <= vars.binary.R1[m, t] 
                         * data.zmax[m] 
                         for m in data.MP for t in data.T),
-                        'Constraint_1.4k') 
+                        'Constraint_1.4k-22') 
         
         #Constraint 5: Length-based campaign
         """ The level of production capacity during a production campaign of a length-based plant is set """
@@ -251,14 +253,14 @@ class Model:
                         >= vars.integer.Z[m, t] 
                         for m in data.MP for t in data.T
                         if data.cty[m] == 0),
-                        'Constraint_1.5a')
+                        'Constraint_1.5a-23')
         
         model.addConstrs(((vars.first_stage.Q[m, t] 
                         / data.cmax[m]) 
                         <= vars.integer.Z[m, t] 
                         for m in data.MP for t in data.T
                         if data.cty[m] == 0),
-                        'Constraint_1.5b')
+                        'Constraint_1.5b-24')
         
 
         """ In this type of campaigns, a variable Am, t accounts for accumulated production days at manufacturing plant m on day t. This accumula-
@@ -278,7 +280,7 @@ class Model:
                         + vars.integer.Z[m,t] 
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)),
-                        'Constraint_1.5c')
+                        'Constraint_1.5c-25')
     
     ### CHANGED TO == INSTEAD OF >= !!!
     
@@ -290,20 +292,20 @@ class Model:
                             * vars.binary.R2[m, t]) 
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)),
-                        'Constraint_1.5d')
+                        'Constraint_1.5d-26')
         
         model.addConstrs((vars.first_stage.A[m, t]  
                         >= vars.integer.Z[m, t] 
                         for m in data.MP for t in data.T 
                         if data.cty[m] == 0),
-                        'Constraint_1.5e')
+                        'Constraint_1.5e-27')
         
         model.addConstrs((vars.first_stage.A[m, t]
                         <= (data.dmax[m]
                             / data.cmin[m]) 
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)),
-                        'Constraint_1.5f')
+                        'Constraint_1.5f-28')
         
         ### MAKES THIS SENSE ??!??
         '''
@@ -320,14 +322,14 @@ class Model:
                         <= vars.integer.Z[m, 0] 
                         for m in data.MP
                         if data.cty[m] == 0),
-                        'Constraint_1.5g')
+                        'Constraint_1.5g-29')
         
         model.addConstrs((vars.first_stage.A[m, 0]  
                         <= (data.dmax[m]
                             / data.cmin[m]) 
                         for m in data.MP
                         if data.cty[m] == 0),
-                        'Constraint_1.5h') 
+                        'Constraint_1.5h-30') 
         
         model.addConstrs((vars.first_stage.A[m, 0]  
                         >= vars.integer.Z[m, 0] 
@@ -336,7 +338,7 @@ class Model:
                             * vars.binary.R2[m, 0]) 
                         for m in data.MP 
                         if data.cty[m] == 0),
-                        'Constraint_1.5i') 
+                        'Constraint_1.5i-31') 
         
         #### NEW CONSTRAINT
 
@@ -360,7 +362,7 @@ class Model:
                         <= vars.integer.Z[m, t] 
                         for m in data.MP for t in data.T 
                         if data.cty[m] == 1),
-                        'Constraint_1.6a')
+                        'Constraint_1.6a-32')
         
         ## DAMIT FUNKTIONIERT ES NICHT !!
 
@@ -368,7 +370,7 @@ class Model:
                 >= vars.integer.Z[m, t] 
                 for m in data.MP for t in data.T 
                 if data.cty[m] == 1),
-                'Constraint_1.6b')
+                'Constraint_1.6b-33')
                         
 
         ### NEW CONSTRAINTS FOR SHIFT BASED TO RESTRICT VALUES !!! 
@@ -391,14 +393,14 @@ class Model:
                         <= data.zmax[m] 
                         * (1 - vars.binary.Y[m, t]) 
                         for m in data.MP for t in data.T 
-                        if (t > 0)), "Constraint_1.7a")
+                        if (t > 0)), "Constraint_1.7a-34")
         
         #model.addConstr(vars.binary.Y[0, 15] == 1, "TEst_constraint_1.7a")
         
 
         model.addConstrs((vars.binary.R2[m,t] 
                         >= vars.binary.Y[m,t] 
-                        for m in data.MP for t in data.T ), "Constraint_1.7b")
+                        for m in data.MP for t in data.T ), "Constraint_1.7b-35")
         
         ### WHAT ARE YOU DOING??? #### -> Start a new campaign if the previous campaign is finished !!!
         
@@ -406,18 +408,18 @@ class Model:
                         - vars.integer.Z[m, t-1] 
                         <= vars.binary.Y[m,t] 
                         for m in data.MP for t in data.T 
-                        if (t > 0) ), "Constraint_1.7c")
+                        if (t > 0) ), "Constraint_1.7c-36")
         
         model.addConstrs((vars.integer.Z[m,t - t1] 
                         <= data.zmax[m] 
                         * (1 - vars.binary.Y[m,t]) 
                         for m in data.MP for t in data.T for t1 in range(data.alpha[m]) 
-                        if (data.alpha[m] > 0)  and (t - t1 >= 0) ), "Constraint_1.7d")
+                        if (data.alpha[m] > 0)  and (t - t1 >= 0) ), "Constraint_1.7d-37")
         
         model.addConstrs((vars.integer.Z[m,t] 
                         <= 0 
                         for m in data.MP for t in data.T 
-                        if t < data.ost[m]), "Constraint_1.7e")
+                        if t < data.ost[m]), "Constraint_1.7e-38")
         
         ### t < data.ost[m] INSTEAD OF t <= data.ost[m] !!! 
 
@@ -431,7 +433,7 @@ class Model:
                         - gp.quicksum(vars.first_stage.DV[f,l,t1] for l in data.L for t1 in data.T if t1 <= t) 
                         - gp.quicksum(vars.integer.E[f,t1] * data.el[f] for t1 in data.T if t1 <= t) 
                         for f in data.F for t in data.T),
-                        'Constraint_1.8')
+                        'Constraint_1.8-39')
 
         
         # Constraint 1.9: Inventory at DCs
@@ -446,7 +448,7 @@ class Model:
                         + gp.quicksum(vars.second_stage.SO[s,f,l,t1] for t1 in data.T if t1 <= t) 
                         - gp.quicksum(vars.second_stage.OS[s,f,l,t1] for t1 in data.T if t1 <= t) 
                         for s in data.S for f in data.F for l in data.L for t in data.T),
-                        'Constraint_1.9a')
+                        'Constraint_1.9a-40')
         
 
         '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
@@ -454,7 +456,7 @@ class Model:
         model.addConstrs((gp.quicksum(vars.second_stage.ID[s,f,l,t] for f in data.F if data.fty[f] == i) 
                         <= data.imax[l][i] 
                         for s in data.S for l in data.L for i in data.FT for t in data.T),
-                        'Constraint_1.9b')
+                        'Constraint_1.9b-41')
         
         # RUNNING PARAMETER FOR data.T WAS MISSING!!! 
 
@@ -467,7 +469,7 @@ class Model:
                         <= gp.quicksum(vars.first_stage.DV[f,l,t1] for t1 in range(t+1,t+data.omega_fw[f] + 1) for l in data.L) 
                         for f in data.F for t in data.T 
                         if (data.fty[f] == 1) and (t + data.omega_fw[f] <= data.hl)),
-                        'Constraint_1.10a')
+                        'Constraint_1.10a-42')
 
 
         model.addConstrs((vars.first_stage.IF[f,t] 
@@ -477,13 +479,13 @@ class Model:
                         +  gp.quicksum(vars.first_stage.DV[f,l,t2] for t2 in range(t + 1, t + data.omega_fw[f] + 1) for l in data.L if t2 <= data.hl) 
                         for f in data.F for t in data.T 
                         if (data.fty[f] == 1) and (t + data.omega_fw[f] > data.hl)),
-                        'Constraint_1.10b')
+                        'Constraint_1.10b-43')
         
         model.addConstrs((vars.second_stage.ID[s,f,l,t] 
                         <= gp.quicksum(data.dp[s][f][l][t1] for t1 in range(t+1,t+data.omega_dc[f] + 1)) 
                         for s in data.S for f in data.F for l in data.L for t in data.T 
                         if (data.fty[f] == 1) and (t + data.omega_dc[f] <= data.hl)),
-                        'Constraint_1.10c')
+                        'Constraint_1.10c-44')
 
         model.addConstrs((vars.second_stage.ID[s,f,l,t] 
                         <= gp.quicksum((data.dp[s][f][l][t1]
@@ -492,7 +494,7 @@ class Model:
                         + gp.quicksum(data.dp[s][f][l][t2] for t2 in range(t + 1, t + data.omega_dc[f]+1) if t2 <= data.hl) 
                         for s in data.S for f in data.F for l in data.L for t in data.T 
                         if (data.fty[f] == 1) and (t + data.omega_dc[f] > data.hl)),
-                        'Constraint_1.10d')
+                        'Constraint_1.10d-45')
 
         # Constraint 1.11: Shipments consolidation
         """ Shipments (Vi, l, t ) from the factory inventory to DCs l are consolidated into fresh and dry shipments with variables DVf, l, t according to
@@ -502,7 +504,7 @@ class Model:
         model.addConstrs((vars.first_stage.V[i,l,t] 
                         == gp.quicksum(vars.first_stage.DV[f,l,t] for f in data.F if data.fty[f] == i)
                         for i in data.FT for l in data.L for t in data.T),
-                        'Constraint_1.11a')
+                        'Constraint_1.11a-46')
 
         # Constraint 1.12: Required Number Of Trucks
         """ The volume shipped from factory inventory to DC l needs to be loaded in trucks. The number of required trucks (TRi, l, t ) is calculated
@@ -513,14 +515,14 @@ class Model:
                             <= vars.integer.TR[i, l, t] 
                             * data.tl_max 
                         for i in data.FT for l in data.L for t in data.T),
-                        'Constraint_1.12a')
+                        'Constraint_1.12a-47')
         
         model.addConstrs((vars.first_stage.V[i, l, t] 
                             >= (vars.integer.TR[i, l, t] - 1)  
                             * data.tl_max 
                             + data.tl_min 
                         for i in data.FT for l in data.L for t in data.T),
-                        'Constraint_1.12b')
+                        'Constraint_1.12b-48')
         
         """ Every shipment from a factory warehouse to a DC must be planned to arrive within the horizon. For that, Vi, l, t must be set to zero every
             time t + τl > hl     Vi,l,t = 0, ∀i ∈ data.F data.T , l ∈ data.L, t ∈ (hl - τl + 1 )..hl : τl > 0 
@@ -529,7 +531,7 @@ class Model:
                         == 0 
                         for i in data.FT for l in data.L for t in (range(data.hl - data.tau[l] + 1, data.hl))
                         if data.tau[l] > 0),
-                        'Constraint_1.12c')
+                        'Constraint_1.12c-49')
 
         # Constraint 1.13: Exports lots
         """ Bounds for the number of lots to be exported for each family f on the horizon
@@ -538,12 +540,12 @@ class Model:
         model.addConstrs( (data.el_min[f]
                         <= gp.quicksum(vars.integer.E[f, t] for t in data.T) 
                         for f in data.F),
-                        'Constraint_1.13a')
+                        'Constraint_1.13-50a')
         
         model.addConstrs( (gp.quicksum(vars.integer.E[f, t] for t in data.T) 
                         <= data.el_max[f] 
                         for f in data.F),
-                        'Constraint_1.13b')
+                        'Constraint_1.13-50b')
         
 
         ## NEw Constraint Maximum INventtory
@@ -609,10 +611,10 @@ class Model:
         model.setParam('TimeLimit', 60)
 
         # Adaptions to get more preciose results and less floats
-        model.setParam('NumericalFocus', 2)
-        model.setParam('IntFeasTol', 1e-9)
-        model.setParam('FeasibilityTol', 1e-9)
-        model.setParam('OptimalityTol', 1e-9)
+        # model.setParam('NumericalFocus', 2)
+        # model.setParam('IntFeasTol', 1e-9)
+        # model.setParam('FeasibilityTol', 1e-9)
+        # model.setParam('OptimalityTol', 1e-9)
 
         print('============================ Optimize Model ============================')
         model.optimize()
@@ -690,7 +692,7 @@ class Model:
         else:
             logger.error("Optimization ended with status %s", model.status)
         
-        #self.plot_constraints_and_vars(logger, model, 'family_aggregated_model')
+        self.plot_constraints_and_vars(logger, model, 'family_aggregated_model')
         return model, logger
     
     def Detailed_Constraints(self, data:Parameters, vars:DecisionVariablesModel2, model: gp.Model, FP: list[list[float]], E: list[list[int]]):
@@ -1030,10 +1032,53 @@ class Model:
 
     def plot_constraints_and_vars(self, logger, model, model_type='family_aggregated_model'):
         plot_time_start = time.process_time_ns()
-        self.display_constraints(logger, model, model_type)
-        self.display_vars(logger, model, model_type)
+        # self.display_constraints(logger, model, model_type)
+        # self.display_vars(logger, model, model_type)
+
+        combined_plots = [['R1', 'R2'], 
+                          ['Z1', 'Z2'],
+                          ['Zm', 'Y']]
+        self.display_combined_plots(logger, model, model_type, combined_plots)
         plot_time_end = time.process_time_ns()
         logger.info(f'All plots saved in {(plot_time_end - plot_time_start) / (10**9)} seconds')
+
+    def display_combined_plots(self, logger, model, model_type, combined_plots):
+            
+            for i, plot in enumerate(combined_plots):
+                # Start time
+                start_time = time.process_time_ns()
+    
+                # figure size
+                plt.figure(figsize=(20, 10))
+    
+                # Plotting the variable values
+                for p in plot:
+                    names = []
+                    values = []
+                    for v in model.getVars():
+                        if p in v.varName:
+                            names.append(v.varName.split('[')[1])
+                            values.append(v.X)
+    
+                    plt.bar(names, values)
+    
+                plt.xlabel('Variable')
+                plt.ylabel('Value')
+                plt.title(f'Combined Plots: {plot} ({model_type})')
+                plt.xticks(rotation=90)
+                plt.legend(plot)
+                plt.tight_layout()
+                # plt.show()
+                file_name = f"results/{plot}-{model_type}.png"
+                plt.savefig(file_name)
+                plt.clf()
+                plt.close()
+    
+                # End time
+                end_time = time.process_time_ns()
+    
+                # Calculate elapsed time
+                elapsed_time = (end_time - start_time) / (10**9)
     
     def display_vars(self, logger, model, model_type):
 
@@ -1047,7 +1092,7 @@ class Model:
             v_names.append(v_name)
             v_name_split = v_name.split('[')[0]  # Remove brackets from v name
             v_names_split.append(v_name_split)
-            obj_values.append(v.Obj)
+            obj_values.append(v.X)
 
             #logger.info(f"{v.varName}: {v.Obj}")
             v_name = v.varName.split('[')[0]
