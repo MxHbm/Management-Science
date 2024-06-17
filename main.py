@@ -22,7 +22,7 @@ def main():
     m = Model()
     data = Parameters("data/base_data_new.json")
     #data = Parameters("data/base_data.json")
-    data_s_star = S_star("data/base_data_new.json")      # data for EMVP calculation
+    #data_s_star = S_star("data/base_data_new.json")      # data for EMVP calculation
 
 
     try:
