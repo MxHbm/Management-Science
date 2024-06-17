@@ -279,9 +279,11 @@ class Model:
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)),
                         'Constraint_1.5c')
-
+    
+    ### CHANGED TO == INSTEAD OF >= !!!
+    
         model.addConstrs((vars.first_stage.A[m, t]  
-                        >= vars.first_stage.A[m, t-1]
+                        == vars.first_stage.A[m, t-1]
                         + vars.integer.Z[m, t] 
                         - ((data.dmax[m]
                             / data.cmin[m])
@@ -379,12 +381,12 @@ class Model:
                         <= data.zmax[m] 
                         * (1 - vars.binary.Y[m, t]) 
                         for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a")
+                        if (t > 0)), "Constraint_1.7a")
         
 
         model.addConstrs((vars.binary.R2[m,t] 
                         >= vars.binary.Y[m,t] 
-                        for m in data.MP for t in data.T if (data.cty[m] == 0)), "Constraint_1.7b")
+                        for m in data.MP for t in data.T ), "Constraint_1.7b")
         
         ### WHAT ARE YOU DOING??? #### -> Start a new campaign if the previous campaign is finished !!!
         
@@ -392,18 +394,18 @@ class Model:
                         - vars.integer.Z[m, t-1] 
                         <= vars.binary.Y[m,t] 
                         for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7c")
+                        if (t > 0) ), "Constraint_1.7c")
         
         model.addConstrs((vars.integer.Z[m,t - t1] 
                         <= data.zmax[m] 
                         * (1 - vars.binary.Y[m,t]) 
                         for m in data.MP for t in data.T for t1 in range(data.alpha[m]) 
-                        if (data.alpha[m] > 0)  and (t - t1 >= 0) and (data.cty[m] == 0)), "Constraint_1.7d")
+                        if (data.alpha[m] > 0)  and (t - t1 >= 0) ), "Constraint_1.7d")
         
         model.addConstrs((vars.integer.Z[m,t] 
                         <= 0 
                         for m in data.MP for t in data.T 
-                        if (t < data.ost[m]) and (data.cty[m] == 0)), "Constraint_1.7e")
+                        if t < data.ost[m]), "Constraint_1.7e")
         
         ### t < data.ost[m] INSTEAD OF t <= data.ost[m] !!! 
 
