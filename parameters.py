@@ -81,6 +81,9 @@ class Parameters:
             self._re_p = data['re_p']
             self._fly = data['fly']
             self._ratio = data['ratio']
+            self._id0_FW = data["id0_FW"]
+            self._fty_p = data["fty_p"]
+            self._rr_p = data["rr_p"]
 
     def __createSets(self) -> None:
         ''' 
@@ -604,6 +607,24 @@ class Parameters:
         '''
         return self._dpd
     
+    @property
+    def id0_FW(self):
+        ''' Product p initial inventory at FW.
+        '''
+        return self._id0_FW
+    
+
+    @property
+    def fty_p(self):
+        ''' Product p family type.
+        '''
+        return self._fty_p
+    
+    @property
+    def rr_p(self): 
+        ''' Product p revenue from reduced price selling of products of family f over stock (distressed sales).
+        '''
+        return self._rr_p
 
 # class s_star that inherits from class Parameters and it is used to calculate the s_star value (mean values of the demand)
 class S_star(Parameters):
