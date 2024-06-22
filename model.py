@@ -704,9 +704,8 @@ class Model:
         """ In the following constraints, for every product p, flyp accounts for product p family. Manufacturing of products from any family f is
             constrained to the production level previously set in the Family Aggregated Model"""
         
-        # NEED TO BE REVISED, MAYBE CHANGE THE SET PRODUCT TO 15 PRODUCTS BELONGING TO DIFFERERNT PRODUCT FAMILIES
         model.addConstrs((FP[f][t] 
-                          == gp.quicksum(vars.first_stage.PD[p,t] for p in data.P if f == p)
+                          == gp.quicksum(vars.first_stage.PD[p,t] for p in data.P if data.fly[p] == f)
                         for f in data.F for t in data.T ),
                         'Constraint_53')
         
@@ -718,19 +717,10 @@ class Model:
 
         model.addConstrs((data.el[f] 
                           * E[f][t] 
-                          == gp.quicksum(vars.first_stage.ED[p,t] * data.el[p] for p in data.P if f == p) #If product p belongs to family f
+                          == gp.quicksum(vars.first_stage.ED[p,t] * data.el[p] for p in data.P if data.fly[p]== f) 
                         for f in data.F for t in data.T),
                         'Constraint_54')
         
-        ## INFEASIBLE WITH THIS CONSTRAINT !!! 
-        '''
-        model.addConstrs((gp.quicksum(E[p][t] for t in data.T)
-                    == (gp.quicksum(vars.first_stage.ED[p,t] for t in data.T))
-                for p in data.P),
-                'Constraint_54')
-
-
-        '''
         
         # Constraint 55: Inventory Balance 
         '''
@@ -753,7 +743,7 @@ class Model:
         """
         model.addConstrs(
             (vars.first_stage.IFD[p,t] == 
-                        data.i_0_f[p]
+                        data.id0_FW[p]
                         + gp.quicksum(vars.first_stage.PD[p,t1] for t1 in data.T if t1 <= t)
                         - gp.quicksum(vars.first_stage.PS[p,l,t1] for l in data.L for t1 in data.T if t1 <= t)
                         - gp.quicksum(vars.first_stage.ED[p,t1] * data.ls[p] for t1 in data.T if t1 <= t)
@@ -766,19 +756,18 @@ class Model:
         '''
        
         model.addConstrs((vars.first_stage.IFD[p,t] 
-                    <= gp.quicksum(vars.first_stage.PS[p,l,t1] for t1 in range(t+1,t+data.omega_fw[f] + 1) for l in data.L) 
-                    for t in data.T for p in data.P for f in data.F
-                    if (p == f) and (data.fty[f] == 1) and (t + data.omega_fw[f] <= data.hl)),
+                    <= gp.quicksum(vars.first_stage.PS[p,l,t1] for t1 in range(t+1,t+data.omega_fw[data.fly[p]] + 1) for l in data.L) 
+                    for t in data.T for p in data.P
+                    if (data.fty[data.fly[p]] == 1) and (t + data.omega_fw[data.fly[p]] <= data.hl)),
                     'Constraint_57')
 
         model.addConstrs((vars.first_stage.IFD[p,t] 
                     <= gp.quicksum((vars.first_stage.PS[p,l,t1]
-                                    / data.omega_fw[f])
-                                    *(t + data.omega_fw[f] - data.hl) for t1 in range(t - data.omega_fw[f] + 1, t) for l in data.L) 
-                    #+  gp.quicksum(vars.first_stage.DV[f,l,t2] for t2 in range(t + 1, t + data.omega_fw[f] + 1) for l in data.L if t2 <= data.hl) 
-                    +  gp.quicksum(vars.first_stage.PS[f,l,t2] for t2 in range(t + 1, t + data.omega_fw[f] + 1) for l in data.L if t2 <= data.hl) 
-                    for t in data.T for p in data.P for f in data.F
-                    if (p == f) and (data.fty[f] == 1) and (t + data.omega_fw[f] > data.hl)),
+                                    / data.omega_fw[data.fly[p]])
+                                    *(t + data.omega_fw[data.fly[p]] - data.hl) for t1 in range(t - data.omega_fw[data.fly[p]] + 1, t) for l in data.L) 
+                    +  gp.quicksum(vars.first_stage.PS[p,l,t2] for t2 in range(t + 1, t + data.omega_fw[data.fly[p]] + 1) for l in data.L if t2 <= data.hl) 
+                    for t in data.T for p in data.P
+                    if (data.fty[data.fly[p]] == 1) and (t + data.omega_fw[data.fly[p]] > data.hl)),
                     'Constraint_58')
         
         #Constraint 59
@@ -786,21 +775,19 @@ class Model:
         
         # original constraint
         model.addConstrs((vars.second_stage.IDD[s,p,l,t] 
-                         <= gp.quicksum(data.dpd[s][p][l][t1] for t1 in range(t+1,t+data.omega_dc[f] + 1)) 
-                         for s in data.S for f in data.F for l in data.L for t in data.T for p in data.P
-                         if (f == p) and (data.fty[f] == 1) and (t + data.omega_dc[f] <= data.hl)),
+                         <= gp.quicksum(data.dpd[s][p][l][t1] for t1 in range(t+1,t+data.omega_dc[data.fly[p]] + 1)) 
+                         for s in data.S for l in data.L for t in data.T for p in data.P
+                         if (data.fty[data.fly[p]] == 1) and (t + data.omega_dc[data.fly[p]] <= data.hl)),
                          'Constraint_59')
 
-        for f in data.F:
-            model.addConstrs((vars.second_stage.IDD[s,p,l,t] 
-                        <= gp.quicksum((data.dpd[s][p][l][t1]
-                                        / data.omega_dc[f])
-                                        * (t + data.omega_dc[f] - data.hl) for t1 in range(t - data.omega_dc[f] + 1, t)) 
-                        + gp.quicksum(data.dpd[s][p][l][t2] for t2 in range(t + 1, t + data.omega_dc[f]+1) if t2 <= data.hl) 
-                        #for s in data.S for f in data.F for l in data.L for t in data.T for p in data.P
-                        for s in data.S for l in data.L for t in data.T for p in data.P
-                        if (p == f) and (data.fty[f] == 1) and (t + data.omega_dc[f] > data.hl)),
-                        'Constraint_60')
+        model.addConstrs((vars.second_stage.IDD[s,p,l,t] 
+                    <= gp.quicksum((data.dpd[s][p][l][t1]
+                                    / data.omega_dc[data.fly[p]])
+                                    * (t + data.omega_dc[data.fly[p]] - data.hl) for t1 in range(t - data.omega_dc[data.fly[p]] + 1, t)) 
+                    + gp.quicksum(data.dpd[s][p][l][t2] for t2 in range(t + 1, t + data.omega_dc[data.fly[p]]+1) if t2 <= data.hl) 
+                    for s in data.S for l in data.L for t in data.T for p in data.P
+                    if (data.fty[data.fly[p]] == 1) and (t + data.omega_dc[data.fly[p]] > data.hl)),
+                    'Constraint_60')
 
         # Constraint 61... : Shipment to DCs
         """ 
@@ -810,8 +797,8 @@ class Model:
 
         # original constraint
         model.addConstrs((vars.first_stage.VD[i,l,t] 
-                        == gp.quicksum(vars.first_stage.PS[p,l,t] for p in data.P if (data.fty[f] == i) and (f == p))
-                        for f in data.F for i in data.FT for l in data.L for t in data.T),
+                        == gp.quicksum(vars.first_stage.PS[p,l,t] for p in data.P if (data.fty[data.fty_p[p]] == i))
+                        for i in data.FT for l in data.L for t in data.T),
                         'Constraint_61')
     
 
@@ -837,7 +824,7 @@ class Model:
 
         '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
 
-        model.addConstrs((gp.quicksum(vars.second_stage.IDD[s,p,l,t] for p in data.P if data.fty[p] == i) 
+        model.addConstrs((gp.quicksum(vars.second_stage.IDD[s,p,l,t] for p in data.P if data.fty_p[p] == i) 
                         <= data.imax[l][i] 
                         for s in data.S for l in data.L for i in data.FT for t in data.T),
                         'Constraint_1.9b')
@@ -859,18 +846,18 @@ class Model:
 
         # Return
         vars.second_stage.RETURN = ( 
-                    gp.quicksum( data.re[f] 
-                                * data.ls[f] 
-                                * vars.first_stage.ED[f, t]
-                                for f in data.F for t in data.T)
+                    gp.quicksum( data.re_p[p] 
+                                * data.ls[p] 
+                                * vars.first_stage.ED[p, t]
+                                for p in data.P for t in data.T)
                     + gp.quicksum(data.rho[s]
-                                    * (gp.quicksum(data.r[f] 
-                                        * (data.dpd[s][f][l][t] 
-                                            - vars.second_stage.SOD[s, f, l, t])
-                                        for l in data.L for f in data.F for t in data.T)
-                                        + gp.quicksum(vars.second_stage.OSD[s, f, l, t] 
-                                                        * data.rr[f]
-                                        for l in data.L for f in data.F for t in data.T)
+                                    * (gp.quicksum(data.r_p[p] 
+                                        * (data.dpd[s][p][l][t] 
+                                            - vars.second_stage.SOD[s, p, l, t])
+                                        for l in data.L for p in data.P for t in data.T)
+                                        + gp.quicksum(vars.second_stage.OSD[s, p, l, t] 
+                                                        * data.rr_p[p]
+                                        for l in data.L for p in data.P for t in data.T)
                                         )
                                     for s in data.S )
         ) 
@@ -902,6 +889,7 @@ class Model:
 
         
         #Debugging: Print the values of the fixed variables
+        '''
         if 1 == 1:
             print("param_E")
             for f in  data.F:
@@ -916,7 +904,6 @@ class Model:
                     print(f, t, '\t', param_FP[f][t])
                 
                 print("\n")
-        '''
         '''
         return param_FP, param_E
 
