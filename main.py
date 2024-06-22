@@ -20,19 +20,19 @@ def main():
 
     # Model Class Object! 
     m = Model()
-    data = Parameters("data/base_data_new.json")
+    data = Parameters("data/case_study_data.json")
     #data = Parameters("data/base_data.json")
     #data_s_star = S_star("data/base_data_new.json")      # data for EMVP calculation
 
 
     try:
         gp_model, logger = m.Run_Model(data, logger)
-        gp_model.printAttr('X')
+        # gp_model.printAttr('X')
 
         # Run detailed model without logger so far!! 
-        #m = Model()
+        m = Model()
 
-        #gp_model_detailed, logger = m.Run_Detailed_Model(data,gp_model, logger)
+        gp_model_detailed, logger = m.Run_Detailed_Model(data,gp_model, logger)
 
         #results = Results(gp_model, gp_model_detailed, data)
 

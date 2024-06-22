@@ -15,7 +15,7 @@ class Parameters:
         self.__loadData()
         self.__createSets()
         self.__createScenarioReduction()
-        self._mappingFtoM = self.__create_mappingFtoM()
+        self._dpd = self.__create_dpd()
 
 
     def __loadData(self) -> None:
@@ -28,7 +28,7 @@ class Parameters:
             # Zuweisen der Werte zu Klassenvariablen
             self._T_No = data['T_No']
             self._F_No = data['F_No']
-            self._P_No = data['F_No']
+            self._P_No = data['P_No']
             self._FT_No = data['FT_No']
             self._MP_No = data['MP_No']
             self._CT_No = data['CT_No']
@@ -62,21 +62,25 @@ class Parameters:
             self._rr = data['rr']
             self._r = data['r']
             self._re = data['re']
+            self._tc = data['tc']
             self._imax = data['imax']
             self._zmax = data['zmax']
             self._sc = data['sc']
             self._beta = data['beta']
             self._sigma = data['sigma']
             self._iwip0 = data['iwip0']
-            self._tc = data['tc']
             self._sco = data['sco']
-            self._ls_f = data['ls_f']
-            self._ls_p = data['ls_p']
             self._K = data['K']
             self._epsilon = data['epsilon']
             self._N = data['N']
             self._demand_supply = data['demand_supply']
             self._probabilies = data['probabilies']
+            self._ls = data['ls']
+            self._id0 = data['id0']
+            self._r_p = data['r_p']
+            self._re_p = data['re_p']
+            self._fly = data['fly']
+            self._ratio = data['ratio']
 
     def __createSets(self) -> None:
         ''' 
@@ -104,16 +108,12 @@ class Parameters:
             for f in self._F:
                 family_demand = []
                 overall_demand = self._SRA.reduced_scenarios[s][f]
-                share = round((overall_demand // len(self._L)) / self._T_No)
-                last_share = round((share + overall_demand % len(self._L))/ self._T_No)
+                share = round((overall_demand / len(self._L)) / self._T_No)
                 for l in self._L:
                     location_demand = []
                     for t in self._T:
 
-                        if(l == self._L[-1]):
-                            location_demand.append(share)
-                        else: 
-                            location_demand.append(last_share)
+                        location_demand.append(share)
 
                     family_demand .append(location_demand)
                 scenario_demand .append(family_demand )
@@ -147,17 +147,29 @@ class Parameters:
         self._rho =  self._SRA.reduced_scenarios_probabilities
         self._dri = self.__create_dri()
 
-    def __create_mappingFtoM(self) -> list[int]: 
-        ''' Mapping of family f to plant m
-        '''
+    def __create_dpd(self) -> list[list[list[list[int]]]]:
+        ''' Create Demand for each product with ratios'''
 
-        # plant 0 -> family 0 (Powdered Milk)
-        # plant 1 -> family 1 (UHT Milk)
-        # plant 2 -> family 2 (Yogurt)
-        # plant 3 -> family 3 (Cheese)
+        demand = []
 
-        return [m for m in self._MP]
-        
+        for s in self._S:
+            scenario_demand = []
+            for f in self._F:
+                for ratio in self._ratio[f]:
+                    product_demand = []
+                    overall_demand = self._SRA.reduced_scenarios[s][f] * ratio
+                    share = round(overall_demand / len(self._L) / self._T_No)
+                    for l in self._L:
+                        location_demand = []
+                        for t in self._T:
+
+                            location_demand.append(share)
+
+                        product_demand .append(location_demand)
+                    scenario_demand .append(product_demand )
+                demand.append(scenario_demand)
+
+        return demand
     
     ###### MANY PROPERTIES TO NOT CHANGE THE VALUES OF THE VARIABLES ######
     @property
@@ -213,7 +225,6 @@ class Parameters:
     @property
     def roc(self):
         ''' Raw milk over stock cost per volume unit 
-            NOTHING MENTIONED - ASSUMPTION, THAT IT IS THREE TIMES THE NORMAL PRICE!
         '''
 
         return self._roc
@@ -331,7 +342,7 @@ class Parameters:
     @property
     def el_min(self):
         ''' F: lots of family f to be exported; here: Minimum number
-            UHT and Powdered Milk, Yogurt, Cheese
+            Powdered Milk, UHT, Butter, Cheese
         '''
 
         return self._el_min
@@ -339,7 +350,7 @@ class Parameters:
     @property
     def el_max(self):
         ''' F: lots of family f to be exported; here: Maximum number
-            UHT and Powdered Milk, Yogurt, Cheese
+            Powdered Milk, UHT, Butter, Cheese
         '''
 
         return self._el_max
@@ -355,7 +366,7 @@ class Parameters:
     @property
     def omega_fw(self):
         ''' factory warehouse shelf-life of products of family f
-            UHT and Powdered Milk, Yogurt, Cheese
+            Powdered Milk, UHT, Butter, Cheese
             100 as a high number for long time span
         '''
 
@@ -364,7 +375,7 @@ class Parameters:
     @property
     def omega_dc(self):
         ''' distribution center shelf-life of products of family f
-            UHT and Powdered Milk, Yogurt, Cheese
+            Powdered Milk, UHT, Butter, Cheese
             100 as a high number for long time span
         '''
 
@@ -373,7 +384,7 @@ class Parameters:
     @property
     def rr(self):
         ''' revenue from reduced price selling of products of family f over stock (distressed sales) 
-            UHT and Powdered Milk, Yogurt, Cheese
+            Powdered Milk, UHT, Butter, Cheese
         '''
 
         return self._rr
@@ -381,7 +392,7 @@ class Parameters:
     @property
     def r(self):
         ''' revenue from selling one ton of family f in any distribution center of the Supply Chain 
-            UHT and Powdered Milk, Yogurt, Cheese
+            Powdered Milk, UHT, Butter, Cheese
         '''
 
         return self._r
@@ -433,7 +444,7 @@ class Parameters:
             List for availability of product lines 
             Powdered Milk: Need to be quality tested -> 1 day 
             UHT Milk: Nothing mentioned -> 0 day
-            Yogurt: Nothing mentioned -> 0 day
+            Butter: Nothing mentioned -> 0 day
             Cheese: Ripening phase -> 4 days
         '''
 
@@ -445,16 +456,7 @@ class Parameters:
         '''
 
         return self._iwip0
-
-    @property
-    def tc(self):
-        ''' Transportation costs from the production complex to the distribution center l 
-        
-            Names Of Distribution Centers:
-            ["DC-SAL", "DC-CBA", "DC-CTE","DC-POS","DC-RAF","DC-MZA", "DC-ROS", "DC_NQN", "DC-BUE"]
-        '''
-
-        return self._tc
+    
 
     @property
     def sco(self):
@@ -563,19 +565,44 @@ class Parameters:
     def ls(self):
         ''' Product p export lot size, expressed in metric tons.
         '''
-        return self._el
+        return self._ls
 
     @property
     def id0(self):
         ''' Product p initial inventory at any location l ∈ L∪ < {FW}.
         '''
-        return self._i_0
+        return self._id0
+    
+    @property
+    def r_p(self):
+        ''' Product p revenue from selling one ton in any distribution center of the supply chain.
+        '''
+        return self._r_p
+    
+    @property
+    def tc(self): 
+        ''' Product p transportation cost from factory to distribution center l.
+        '''
+
+        return self._tc
+    
+    @property
+    def re_p(self):
+        ''' Product p revenue from exporting a batch.
+        '''
+        return self._re_p
+    
+    @property
+    def fly(self):
+        ''' Product p family type.
+        '''
+        return self._fly
 
     @property
     def dpd (self):
         ''' Product p demand for distribution center l on day t under scenario s.
         '''
-        return self._dp
+        return self._dpd
     
 
 # class s_star that inherits from class Parameters and it is used to calculate the s_star value (mean values of the demand)
