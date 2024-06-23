@@ -717,7 +717,7 @@ class Model:
 
         model.addConstrs((data.el[f] 
                           * E[f][t] 
-                          == gp.quicksum(vars.first_stage.ED[p,t] * data.el[p] for p in data.P if data.fly[p]== f) 
+                          == gp.quicksum(vars.first_stage.ED[p,t] * data.ls[p] for p in data.P if data.fly[p]== f) 
                         for f in data.F for t in data.T),
                         'Constraint_54')
         
