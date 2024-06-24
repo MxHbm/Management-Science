@@ -587,7 +587,7 @@ class Model:
         logger.info(f'mvp: {mvp_solution_obj}')
         logger.info(f'emvp: {emvp_solution_obj}')
 
-        return emvp_solution_obj, logger
+        return emvp_solution_obj, emvp_solution, mvp_solution, logger
     
 
     
@@ -668,6 +668,8 @@ class Model:
 
 
             logger.info('Obj: %g' % model.objVal)
+
+            
 
             # Save the model
             if 1 == 0:
@@ -917,7 +919,7 @@ class Model:
         # Get the needed fixed variable values from model 1
         param_FP, param_E = self.get_fixed_values(model_first_stage, data)
 
-        model_first_stage.reset()
+        #model_first_stage.reset()
 
         # Create a new model
         model = gp.Model("second_stage")
