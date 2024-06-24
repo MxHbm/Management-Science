@@ -1,5 +1,7 @@
 import pandas as pd
 from parameters import Parameters
+import matplotlib.pyplot as plt
+import numpy as np
 
 ''' results.py '''
 
@@ -7,6 +9,7 @@ class Results:
     def __init__(self, model1, model2, data:Parameters):
         self.family_model = model1
         self.detailed_model = model2
+        self.data = data
 
         self.T = data.T
         self.F = data.F
@@ -34,7 +37,7 @@ class Results:
         self.expected_net_benefits_mu = self.create_expected_net_benefits_mu()
 
         pd.set_option('display.width', 100)
-
+        self.create_result_visualization(self.family_model, self.detailed_model, self.data)
         pass
 
     def paper_values_table6(self):
@@ -364,3 +367,93 @@ class Results:
 
         return vss, logger
     
+
+    def create_result_visualization(self, model1, model2, data_path):
+        # visualize milk input and family output
+        # self.graph_milk_input_output(model1, model2, data_path)
+        # self.plot_sales_perspective(data_path)
+        pass
+
+ 
+    def graph_milk_input_output(self, model1, model2, data_path):
+        # Import the results
+        data_path = 'results/plot_table_ts.csv'
+        df = pd.read_csv(data_path) 
+
+        # Create subplots for each scenario
+        # Convert relevant columns to float
+        columns_to_convert = ['RM_t', 'SAs_f_l_t', 'SOs_f_l_t', 'OSs_f_l_t', 'RCs', 'RSs_t', 'ROs_t', 'RIs_t']
+        df[columns_to_convert] = df[columns_to_convert].astype(float)
+
+        # Get unique scenarios
+        scenarios = df['s'].unique()
+
+        for scenario in scenarios:
+            scenario_data = df[df['s'] == scenario].groupby('t').sum().reset_index()
+            fig, ax = plt.subplots(figsize=(12, 6))
+
+            x = np.arange(len(scenario_data['t'].unique()))
+            
+            width = 0.2  # Width of the bars
+
+            # Plot RM_t
+            data_RMt = df[df['s'] == scenario][['t', 'RM_t']].drop_duplicates().set_index('t').sort_index()['RM_t']
+            print(data_RMt)
+            ax.bar(x - width, data_RMt, width, label='RM_t', color='blue')
+
+            # Plot SA, SO, OS stacked
+            ax.bar(x, scenario_data.groupby('t')['SAs_f_l_t'].sum(), width, label='SAs_f_l_t', color='orange', bottom=scenario_data.groupby('t')['SOs_f_l_t'].sum() + scenario_data.groupby('t')['OSs_f_l_t'].sum())
+            ax.bar(x, scenario_data.groupby('t')['SOs_f_l_t'].sum(), width, label='SOs_f_l_t', color='green', bottom=scenario_data.groupby('t')['OSs_f_l_t'].sum())
+            ax.bar(x, scenario_data.groupby('t')['OSs_f_l_t'].sum(), width, label='OSs_f_l_t', color='red')
+
+            # Plot RS, RO, RI stacked
+            ax.bar(x + width, scenario_data.groupby('t')['RSs_t'].sum(), width, label='RSs_t', color='purple', bottom=scenario_data.groupby('t')['ROs_t'].sum() + scenario_data.groupby('t')['RIs_t'].sum())
+            ax.bar(x + width, scenario_data.groupby('t')['ROs_t'].sum(), width, label='ROs_t', color='brown', bottom=scenario_data.groupby('t')['RIs_t'].sum())
+            ax.bar(x + width, scenario_data.groupby('t')['RIs_t'].sum(), width, label='RIs_t', color='gray')
+
+            ax.set_title(f'Scenario {scenario}')
+            ax.set_xlabel('Time t')
+            ax.set_ylabel('Values')
+            ax.set_xticks(x)
+            ax.set_xticklabels(scenario_data['t'].unique())
+            ax.grid(True)
+            ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+
+            plt.tight_layout()
+            plt.savefig(f'figures/plot_scenario_{scenario}.png')
+            # plt.show()
+
+    def plot_sales_perspective(self, data_path):
+        # Import the results
+        data_path = 'results/plot_table_ts.csv'
+        df = pd.read_csv(data_path)
+
+        columns_to_convert = ['RM_t', 'SAs_f_l_t', 'SOs_f_l_t', 'OSs_f_l_t', 'RCs', 'RSs_t', 'ROs_t', 'RIs_t']
+        df[columns_to_convert] = df[columns_to_convert].astype(float)
+
+        # Get unique scenarios
+        scenarios = df['s'].unique()
+
+        for scenario in scenarios:
+            scenario_data = df[df['s'] == scenario].groupby('t').sum().reset_index()
+            fig, ax = plt.subplots(figsize=(12, 6))
+
+            x = np.arange(len(scenario_data['t']))
+            
+            width = 0.4  # Width of the bars
+
+            # Plot sales perspective with SA, SO, OS stacked
+            ax.bar(x, scenario_data['SAs_f_l_t'], width, label='SAs_f_l_t', color='orange', bottom=scenario_data['SOs_f_l_t'] + scenario_data['OSs_f_l_t'])
+            ax.bar(x, scenario_data['SOs_f_l_t'], width, label='SOs_f_l_t', color='green', bottom=scenario_data['OSs_f_l_t'])
+            ax.bar(x, scenario_data['OSs_f_l_t'], width, label='OSs_f_l_t', color='red')
+
+            ax.set_title(f'Sales Perspective - Scenario {scenario}')
+            ax.set_xlabel('Time t')
+            ax.set_ylabel('Sales Quantities')
+            ax.set_xticks(x)
+            ax.set_xticklabels(scenario_data['t'])
+            ax.grid(True)
+            ax.legend(loc='upper left', bbox_to_anchor=(1,1))
+
+            plt.tight_layout()
+            plt.savefig(f'figures/plot_scenario_{scenario}-sales.png')

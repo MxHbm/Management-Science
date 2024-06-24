@@ -12,6 +12,9 @@ class Parameters:
         '''
 
         self.json_file_path = json_file_path
+        if not hasattr(self, '_use_SRA'):
+            self._use_SRA = None
+
         self.__loadData()
         self.__createSets()
         if self._use_SRA:
@@ -20,6 +23,7 @@ class Parameters:
         else: 
             self._S = range(0, 1)
             self._rho = [1]
+
 
         self._dp = self.__create_dp()
         self._dri = self.__create_dri()
@@ -78,7 +82,8 @@ class Parameters:
             self._sigma = data['sigma']
             self._iwip0 = data['iwip0']
             self._sco = data['sco']
-            self._use_SRA = data['use_SRA']
+            if self._use_SRA is None:
+                self._use_SRA = data['use_SRA']
             self._K = data['K']
             self._epsilon = data['epsilon']
             self._N = data['N']
@@ -656,12 +661,14 @@ class Parameters:
 class S_star(Parameters):
     ''' Class to calculate the s_star value (mean values of the demand)'''
 
-    def __init__(self, json_file_path = "data/base_data.json"):
+    def __init__(self, json_file_path = "data/case_study_data.json"):
         ''' Constructor for this class.
         :param file_path: path to the file with the datafile (txt file)
         '''
+        self._use_SRA = False       # False to indicate that we do not want to use the SRA
 
         super().__init__(json_file_path)
+
         self.__calculate_s_star()
         self._s_star = 0
 
@@ -669,11 +676,11 @@ class S_star(Parameters):
         ''' Calculate the mean values of the demand
         '''
 
-        self._dp = self.recreate_dp()           # demand
-        self._dri = self.recreate_dri()         # raw milk input
+        # self._dp = self.recreate_dp()           # demand
+        # self._dri = self.recreate_dri()         # raw milk input
         #self.dpd = self.recreate_dpd()
-        self._S = range(0, 1)                   # only one scenario
-        self._rho = self.calculate_expected_value()    # expected value of all scenarios
+        # self._S = range(0, 1)                   # only one scenario
+        # self._rho = self.calculate_expected_value()    # expected value of all scenarios
 
 
     def recreate_dp(self):

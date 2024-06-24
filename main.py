@@ -22,7 +22,7 @@ def main():
     m = Model()
     data = Parameters("data/case_study_data.json")
     #data = Parameters("data/base_data.json")
-    #data_s_star = S_star("data/base_data_new.json")      # data for EMVP calculation
+    data_s_star = S_star("data/case_study_data.json")      # data for EMVP calculation
 
     if data.use_SRA: 
         #print(data.SRA.reduced_scenarios)
@@ -38,34 +38,34 @@ def main():
 
     try:
         gp_model, logger = m.Run_Model(data, logger)
-        gp_model.printAttr('X')
+        #gp_model.printAttr('X')
 
         # Run detailed model without logger so far!! 
-        #m = Model()
+        m = Model()
 
-        #gp_model_detailed, logger = m.Run_Detailed_Model(data,gp_model, logger)
+        gp_model_detailed, logger = m.Run_Detailed_Model(data,gp_model, logger)
 
-        #results = Results(gp_model, gp_model_detailed, data)
+        results = Results(gp_model, gp_model_detailed, data)
 
 
         # Calculate the EMVP
-        #emvp, logger = m.Calculate_emvp(data_s_star, logger)
-        #logger.info(f'data.rho: {data.rho}')
-        #logger.info(f'data_s_star.rho: {data_s_star.rho}')
+        emvp, logger = m.Calculate_emvp(data_s_star, logger)
+        logger.info(f'data.rho: {data.rho}')
+        logger.info(f'data_s_star.rho: {data_s_star.rho}')
 
         # calculate stochastic solution
-        #ss, logger = results.Calculate_ss(data, gp_model_detailed, logger)
+        ss, logger = results.Calculate_ss(data, gp_model_detailed, logger)
 
         # calculate the VSS
-        #vss, logger = results.Calculate_vss(ss, emvp, logger)
+        vss, logger = results.Calculate_vss(ss, emvp, logger)
         # Print the EMVP
-        #print('VSS = SS - EMVP')
-        #print(f"SS: {ss}")
-        #print(f"EMVP: {emvp}")
-        #print(f"VSS: {vss}")
+        print('VSS = SS - EMVP')
+        print(f"SS: {ss}")
+        print(f"EMVP: {emvp}")
+        print(f"VSS: {vss}")
             
         # results.Evaluate_results()
-        #gp_model_detailed.printAttr('X')
+        # gp_model_detailed.printAttr('X')
 
     except Exception as e:
         logger.exception(e)    
