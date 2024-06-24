@@ -14,7 +14,15 @@ class Parameters:
         self.json_file_path = json_file_path
         self.__loadData()
         self.__createSets()
-        self.__createScenarioReduction()
+        if self._use_SRA:
+            self.__createScenarioReduction()
+            self._rho =  self._SRA.reduced_scenarios_probabilities
+        else: 
+            self._S = range(0, 1)
+            self._rho = [1]
+
+        self._dp = self.__create_dp()
+        self._dri = self.__create_dri()
         self._dpd = self.__create_dpd()
 
 
@@ -70,6 +78,7 @@ class Parameters:
             self._sigma = data['sigma']
             self._iwip0 = data['iwip0']
             self._sco = data['sco']
+            self._use_SRA = data['use_SRA']
             self._K = data['K']
             self._epsilon = data['epsilon']
             self._N = data['N']
@@ -110,7 +119,11 @@ class Parameters:
             scenario_demand = []
             for f in self._F:
                 family_demand = []
-                overall_demand = self._SRA.reduced_scenarios[s][f]
+                if self._use_SRA:
+                    overall_demand = self._SRA.reduced_scenarios[s][f]
+                else: 
+                    overall_demand = sum([self._demand_supply[f][i] * self._probabilies[f][i] for i in range(len(self._demand_supply[0]))])
+
                 share = round((overall_demand / len(self._L)) / self._T_No)
                 for l in self._L:
                     location_demand = []
@@ -132,7 +145,11 @@ class Parameters:
 
         for s in self._S:
             scenario_milk_input = []
-            milk = self._SRA.reduced_scenarios[s][-1]
+            if self._use_SRA:
+                milk = self._SRA.reduced_scenarios[s][-1]
+            else: 
+                milk = sum([self._demand_supply[-1][i] * self._probabilies[-1][i] for i in range(len(self._demand_supply[0]))])
+
             milk_share = round(milk / self._T_No)
             for t in self._T:
                 scenario_milk_input.append(milk_share)
@@ -145,10 +162,7 @@ class Parameters:
         ''' Create the scenario reduction object '''
 
         self._SRA = Scenario_Analyse(self._demand_supply, self._probabilies, self._K, self._epsilon, self._N)
-        
-        self._dp = self.__create_dp()
-        self._rho =  self._SRA.reduced_scenarios_probabilities
-        self._dri = self.__create_dri()
+    
 
     def __create_dpd(self) -> list[list[list[list[int]]]]:
         ''' Create Demand for each product with ratios'''
@@ -160,7 +174,12 @@ class Parameters:
             for f in self._F:
                 for ratio in self._ratio[f]:
                     product_demand = []
-                    overall_demand = self._SRA.reduced_scenarios[s][f] * ratio
+
+                    if self._use_SRA:
+                        overall_demand = self._SRA.reduced_scenarios[s][f] * ratio
+                    else: 
+                        overall_demand = sum([self._demand_supply[f][i] * self._probabilies[f][i] for i in range(len(self._demand_supply[0]))]) * ratio
+
                     share = round(overall_demand / len(self._L) / self._T_No)
                     for l in self._L:
                         location_demand = []
@@ -231,6 +250,13 @@ class Parameters:
         '''
 
         return self._roc
+    
+    @property
+    def use_SRA(self):
+        ''' Use of Scenario Reduction Analysis
+        ''' 
+
+        return self._use_SRA
 
     @property
     def el(self):
