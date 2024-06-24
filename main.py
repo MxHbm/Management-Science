@@ -38,7 +38,7 @@ def main():
 
     try:
         gp_model, logger = m.Run_Model(data, logger)
-        gp_model.printAttr('X')
+        #gp_model.printAttr('X')
 
         # Run detailed model without logger so far!! 
         #m = Model()

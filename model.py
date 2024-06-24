@@ -9,6 +9,8 @@ import time as time
 from parameters import *   # All parameters
 
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 
 class Model:
@@ -692,7 +694,9 @@ class Model:
         else:
             logger.error("Optimization ended with status %s", model.status)
         
-        self.plot_constraints_and_vars(logger, model, 'family_aggregated_model')
+        #self.plot_constraints_and_vars(logger, model, 'family_aggregated_model')
+        self.create_table_of_ZRA(data, model)
+        
         return model, logger
     
     def Detailed_Constraints(self, data:Parameters, vars:DecisionVariablesModel2, model: gp.Model, FP: list[list[float]], E: list[list[int]]):
@@ -1172,5 +1176,130 @@ class Model:
 
             print(f"saved plot to {file_name} (plot {i+1}/{len(set(constraint_names_split))}) [{round(elapsed_time, 2)} seconds]")
 
+    def create_table_of_ZRA(self, data:Parameters, model: gp.Model):
+        # Create a table of the ZRA values
+        table = []
+
+        for m in data.MP:
+            for t in data.T:
+                row = {}
+                row['m'] = m
+                row['t'] = t
+                row['Zm'] = model.getVarByName(f'Zm_t[{m},{t}]').X
+                row['Z1m_t'] = model.getVarByName(f'Z1m_t[{m},{t}]').X
+                row['Z2m_t'] = model.getVarByName(f'Z2m_t[{m},{t}]').X
+                row['Zm_t-1'] = model.getVarByName(f'Zm_t[{m},{t-1}]').X if t > 0 else np.nan
+                row['Am'] = model.getVarByName(f'Am_t[{m},{t}]').X
+                row['Am_t-1'] = model.getVarByName(f'Am_t[{m},{t-1}]').X if t > 0 else np.nan
+                row['R1m'] = model.getVarByName(f'R1m_t[{m},{t}]').X
+                row['R2m'] = model.getVarByName(f'R2m_t[{m},{t}]').X
+                row['Ym_t'] = model.getVarByName(f'Ym_t[{m},{t}]').X
+                row['Auxm_t'] = model.getVarByName(f'Auxm_t[{m},{t}]').X
+                row['Qm_t'] = model.getVarByName(f'Qm_t[{m},{t}]').X
+                row['MOm_t'] = model.getVarByName(f'MOm_t[{m},{t}]').X
+                row['MOm_t>sigma'] = (1-data.beta[m]) * model.getVarByName(f'Qm_t[{m},{t-data.sigma[m]}]').X if t > data.sigma[m] else np.nan  
+                row['MOm_t<=sigma'] = (1-data.beta[m]) * data.wp[m][t] if t <= data.sigma[m] else np.nan  
+                row['iwip0m'] = data.iwip0[m]
+                row['IWIPm_t'] = model.getVarByName(f'IWIPm_t[{m},{t}]').X
+                row['FPf_t'] = model.getVarByName(f'FPf_t[{m},{t}]').X
+                row['i0f_fw'] = data.i_0_f[m]
+                row['IFm_t'] = model.getVarByName(f'IFf_t[{m},{t}]').X 
+
+                row['Zmax=Q/cmin'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.cmin[m]
+                row['Zmin=Q/cmax'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.cmax[m]
+
+                row['Qm_t/sc_m'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.sc[m] if data.sc[m] > 0 else np.nan
+                row['Qm_t/sc_m(1-ism)'] = model.getVarByName(f'Qm_t[{m},{t}]').X / (data.sc[m] * (1 - data.is_[m])) if data.sc[m] > 0 else np.nan
+                row['Qm_t/fym'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.fy[m] if data.fy[m] > 0 else np.nan
+                row['RM_t'] = model.getVarByName(f'RMt[{t}]').X 
+                row['dmax/cmin'] = data.dmax[m]/data.cmin[m]
+                row['R2*dmax/cmin'] = model.getVarByName(f'R2m_t[{m},{t}]').X * data.dmax[m]/data.cmin[m]
+                row['zmax'] = data.zmax[m]
+                row['zmax*(1-R1)'] = data.zmax[m] * (1 - model.getVarByName(f'R1m_t[{m},{t}]').X)
+                row['cmax'] = data.cmax[m]
+                row['cmin'] = data.cmin[m]
+
+                table.append(row)
+
+        # table to df
+        table = pd.DataFrame(table)
+        table.to_csv('results/table_mt.csv', index=False)
+
+        table2 = []
+
+        for f in data.F:
+            for t in data.T:
+                row = {}
+                row['f'] = f
+                row['t'] = t
+
+                row['IFf_t'] = model.getVarByName(f'IFf_t[{f},{t}]').X
+                row['i_0f'] = data.i_0_f[f]
+                row['FPf_t'] = model.getVarByName(f'FPf_t[{f},{t}]').X
+
+                for l in data.L:
+                    row[f'DVf_{l}_t'] = model.getVarByName(f'DVf_l_t[{f},{l},{t}]').X
+
+                row['Ef_t'] = model.getVarByName(f'Ef_t[{f},{t}]').X * data.el[f]
+
+                table2.append(row)
+
+        table2 = pd.DataFrame(table2)
+        table2.to_csv('results/table_flt.csv', index=False)
+
+        table2 = []
+
+        for i in data.FT:
+            for t in data.T:
+                row = {}
+                row['i'] = i
+                row['t'] = t
+
+
+                for l in data.L:
+                    row[f'Vi_{l}_t'] = model.getVarByName(f'Vi_l_t[{i},{l},{t}]').X
+                    row[f'TRi_{l}_t'] = model.getVarByName(f'TRi_l_t[{i},{l},{t}]').X
+
+
+                table2.append(row)
+
+        table2 = pd.DataFrame(table2)
+        table2.to_csv('results/table_ilt.csv', index=False)
+
+
+        # data for plotting 
+        table = []
+            
+        for s in data.S:
+
+            for t in data.T:
+                for f in data.F:
+                    for l in data.L:
+                        row = {}
+
+                        row['f'] = f
+                        row['l'] = l
+                        row['s'] = s
+                        row['t'] = t
+                        
+                        row['RM_t'] = model.getVarByName(f'RMt[{t}]').X
+                        row[f'SAs_f_l_t'] = model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').X
+                        row[f'SOs_f_l_t'] = model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                        row[f'OSs_f_l_t'] = model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
+                
+                        row[f'RCs'] = model.getVarByName(f'RCs_s[{s}]').X
+                        row[f'RSs_t'] = model.getVarByName(f'RSs_t[{s},{t}]').X
+                        row[f'ROs_t'] = model.getVarByName(f'ROs_t[{s},{t}]').X
+                        row[f'RIs_t'] = model.getVarByName(f'RIs_t[{s},{t}]').X
+                        table.append(row)
+
+        # table to df
+        table = pd.DataFrame(table)
+        # 
+
+        table.drop_duplicates(inplace=True)
+        table.to_csv('results/plot_table_ts.csv', index=False)
+
+        return table
 
 
