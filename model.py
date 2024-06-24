@@ -131,7 +131,7 @@ class Model:
             m represents inventory from the previous planning horizon at manufacturing plant m. """
         
         ### SHOULD ONLY TAKE VALUES AT THE BEGININNG OF THE PLANNING HORIZON !!!
-        
+
         model.addConstrs((vars.first_stage.IWIP[m,t] 
                         == data.iwip0[m]
                         + gp.quicksum(vars.first_stage.Q[m,t1] for t1 in data.T if t1 <= t)
@@ -139,7 +139,7 @@ class Model:
                         for m in data.MP for t in data.T 
                         if data.sigma[m] > 0),
                         'Constraint_1.3a-11')
-        
+
         # Constraint 4
         model.addConstrs((vars.integer.Z[m, t]
                         == vars.first_stage.Z1[m, t] 
@@ -413,7 +413,7 @@ class Model:
         model.addConstrs((vars.integer.Z[m,t - t1] 
                         <= data.zmax[m] 
                         * (1 - vars.binary.Y[m,t]) 
-                        for m in data.MP for t in data.T for t1 in range(data.alpha[m]) 
+                        for m in data.MP for t in data.T for t1 in range(1,data.alpha[m] + 1) 
                         if (data.alpha[m] > 0)  and (t - t1 >= 0) ), "Constraint_1.7d-37")
         
         model.addConstrs((vars.integer.Z[m,t] 

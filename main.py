@@ -23,6 +23,8 @@ def main():
     data = Parameters("data/case_study_data.json")
     #data = Parameters("data/base_data.json")
     #data_s_star = S_star("data/base_data_new.json")      # data for EMVP calculation
+    print(data.SRA.reduced_scenarios)
+    print(data.SRA.reduced_scenarios_probabilities)
 
 
 
@@ -31,9 +33,9 @@ def main():
         gp_model.printAttr('X')
 
         # Run detailed model without logger so far!! 
-        m = Model()
+        #m = Model()
 
-        gp_model_detailed, logger = m.Run_Detailed_Model(data,gp_model, logger)
+        #gp_model_detailed, logger = m.Run_Detailed_Model(data,gp_model, logger)
 
         #results = Results(gp_model, gp_model_detailed, data)
 
@@ -55,7 +57,7 @@ def main():
         #print(f"VSS: {vss}")
             
         # results.Evaluate_results()
-        # gp_model_detailed.printAttr('X')
+        #gp_model_detailed.printAttr('X')
 
     except Exception as e:
         logger.exception(e)    
