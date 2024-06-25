@@ -108,6 +108,14 @@ class Model:
                         for f in data.F for t in data.T),
                         'Constraint_1.2a-8')
         
+        
+        '''
+            model.addConstrs((vars.first_stage.FP[f,t] 
+                        == gp.quicksum(vars.first_stage.MO[m,t] for m in data.MP if m == f)   # Product family is produced by plant m
+                        for f in data.F for t in data.T),
+                        'Constraint_1.2a')
+        '''
+    
         '''
             model.addConstrs((vars.first_stage.FP[f,t] 
                         == gp.quicksum(vars.first_stage.MO[m,t] for m in data.MP if m == f)   # Product family is produced by plant m
@@ -139,8 +147,8 @@ class Model:
                         - gp.quicksum(vars.first_stage.MO[m,t1] for t1 in data.T if t1 <= t)
                         for m in data.MP for t in data.T 
                         if data.sigma[m] > 0),
-                        'Constraint_1.3a-11')'''
-
+                        'Constraint_1.3a-11')
+    '''
         # Constraint 4
 
                 #Constraint 6
@@ -277,12 +285,13 @@ class Model:
                         'Constraint_1.5h-30') 
         
         model.addConstrs((vars.first_stage.A[m, 0]  
-                        >= vars.integer.Z[m, 0] 
+                        == vars.integer.Z[m, 0] 
                         - ((data.dmax[m]/ data.cmin[m])  
                             * vars.binary.Y[m, 0]) 
                         for m in data.MP 
                         if data.cty[m] == 0),
                         'Constraint_1.5i-31') 
+
         
         '''
         model.addConstrs((vars.integer.Z[m,t] 
@@ -460,12 +469,11 @@ class Model:
         model.addConstrs((vars.integer.Z[m, t] 
                         >= (1 - vars.binary.rM[m,t]) - (1 - vars.integer.Z[m, t-1])
             for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
-        
-        '''
+
         model.addConstrs((vars.binary.Y[m, t] 
-                        >= (1 - vars.integer.Z[m, t-1]) - (1 - vars.binary.R2[m,t])
-            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
-            '''
+                        >= 1 - (1 - vars.integer.Z[m, t]) - (1 - vars.binary.R2[m,t])
+            for m in data.MP for t in data.T if (data.cty[m] == 0)), "lower_bound_constraint_z")
+
         
        # model.addConstrs(vars.integer.Z[m, data.hl] == 1 for m in data.MP if (data.cty[m] == 0))
 
