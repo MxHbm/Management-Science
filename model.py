@@ -4,6 +4,7 @@
 from variables import *  #Werte für Parameter
 #from gurobipy import * #Gurobi
 import gurobipy as gp
+from gurobipy import GRB, quicksum, Model, abs_ 
 import datetime as dt
 import time as time
 from parameters import *   # All parameters
@@ -131,117 +132,51 @@ class Model:
             m represents inventory from the previous planning horizon at manufacturing plant m. """
         
         ### SHOULD ONLY TAKE VALUES AT THE BEGININNG OF THE PLANNING HORIZON !!!
-
+        '''
         model.addConstrs((vars.first_stage.IWIP[m,t] 
                         == data.iwip0[m]
                         + gp.quicksum(vars.first_stage.Q[m,t1] for t1 in data.T if t1 <= t)
                         - gp.quicksum(vars.first_stage.MO[m,t1] for t1 in data.T if t1 <= t)
                         for m in data.MP for t in data.T 
                         if data.sigma[m] > 0),
-                        'Constraint_1.3a-11')
+                        'Constraint_1.3a-11')'''
 
         # Constraint 4
-        model.addConstrs((vars.integer.Z[m, t]
-                        == vars.first_stage.Z1[m, t] 
-                        + vars.first_stage.Z2[m, t] 
-                        for m in data.MP for t in data.T),
-                        'Constraint_1.4a-12')
-        
-        ##### NEW CONSTRAINT ######
 
-        model.addConstrs((vars.first_stage.Z1[m, t] 
-                >= vars.binary.R1[m, t]  
-                for m in data.MP for t in data.T),
-                'Constraint_1.4a-NEW')
-        
-        '''
-        Am_t[0,0]            1 
-        Am_t[0,1]            2 
-        Am_t[0,2]            3 
-        Am_t[0,3]            4 
-        Am_t[0,4]            5 
-        Am_t[0,5]            6 
-        Am_t[0,6]            7 
-        Am_t[0,7]            8 
-        Am_t[0,8]            9 
-        Am_t[0,9]           10 
-        Am_t[0,10]           11 
-        Am_t[0,11]           12 
-        Am_t[0,12]           13 
-        Am_t[0,13]           14 
-        Am_t[0,14]           15 
-        Am_t[0,15]            7 
-        Am_t[0,16]            7 
-        Am_t[0,17]            7 
-        Am_t[0,18]            7 
-        Am_t[0,19]            7 
-        Am_t[0,20]            7 
-        Am_t[0,21]            7 
-        Am_t[0,22]            7 
-        Am_t[0,23]            7 
-        Am_t[0,24]            7 
-        Am_t[0,25]            7 
-        Am_t[0,26]            7 
-        Am_t[0,27]            1 
-        Am_t[0,28]            1 
-        Am_t[0,29]            1 
+                #Constraint 6
+        """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
+        according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
+        capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
+        can be idle.
+        """
 
-        '''
+        model.addConstrs(((vars.first_stage.Q[m, t] 
+                        / data.sc[m])
+                        <= vars.integer.Z[m, t] 
+                        for m in data.MP for t in data.T 
+                        if data.cty[m] == 1),
+                        'Constraint_1.6a-32')
         
-        model.addConstrs((vars.first_stage.Z1[m, t]
-                        <= data.zmax[m] * vars.binary.R1[m, t] 
-                        for m in data.MP for t in data.T),
-                        'Constraint_1.4b-13')
+        ## DAMIT FUNKTIONIERT ES NICHT !!
+
+        model.addConstrs(((vars.first_stage.Q[m, t] / data.sc[m]) * (1/(1 - data.is_[m]))
+                >= vars.integer.Z[m, t] 
+                for m in data.MP for t in data.T 
+                if data.cty[m] == 1),
+                'Constraint_1.6b-33')
         
-        model.addConstrs((vars.first_stage.Z2[m, t]
-                        <= data.zmax[m] 
-                        * vars.binary.R2[m, t] 
-                        for m in data.MP for t in data.T),
-                        'Constraint_1.4c-14')
+        # Constraint 4                 
         
         model.addConstrs((vars.binary.R1[m, t]
                         + vars.binary.R2[m, t] 
                         == 1 
-                        for m in data.MP for t in data.T),
+                        for m in data.MP for t in data.T if data.cty[m] == 0),
                         'Constraint_1.4d-15')
         
         model.addConstrs((vars.binary.R1[m, 0] 
                         == 1 
-                        for m in data.MP),
+                        for m in data.MP if data.cty[m]==0),
                         'Constraint_1.4e-16')
-        
-        model.addConstrs((vars.first_stage.Z1[m, t]
-                        <= vars.integer.Z[m, t-1] 
-                        for m in data.MP for t in data.T 
-                        if t > 0 ),
-                        'Constraint_1.4f-17') 
-        
-        # constraint 18 not implemented
-        
-        model.addConstrs((vars.first_stage.Aux[m, t]
-                        <= vars.integer.Z[m, t-1] 
-                        for m in data.MP for t in data.T 
-                        if  (t > 0)),
-                        'Constraint_1.4h-19') 
-        
-        model.addConstrs((vars.first_stage.Aux[m, t]
-                        >= vars.integer.Z[m, t-1] 
-                        - data.zmax[m] 
-                            * (1 - vars.binary.R1[m, t]) 
-                        for m in data.MP for t in data.T 
-                        if (t > 0)),
-                        'Constraint_1.4i-20')
-        
-        model.addConstrs((vars.first_stage.Aux[m, t]
-                        <= vars.first_stage.Z1[m, t] 
-                        for m in data.MP for t in data.T),
-                        'Constraint_1.4j-21' )
-        
-        model.addConstrs((vars.first_stage.Aux[m, t]
-                        <= vars.binary.R1[m, t] 
-                        * data.zmax[m] 
-                        for m in data.MP for t in data.T),
-                        'Constraint_1.4k-22') 
         
         #Constraint 5: Length-based campaign
         """ The level of production capacity during a production campaign of a length-based plant is set """
@@ -274,14 +209,14 @@ class Model:
 
         ### WHY DMAX / CMIN ??? --> MAXIMUM NUMBER WOULD BE CMAX / CMIN !!! 
         ## AND HOW TO SET UP THE CAMPAIGN LENGTH ??? --> WHEN DMAX IS REACHED, then NEW CAMPAIGN WITH SETUP IS NEEDED! 
-
+        '''
         model.addConstrs((vars.first_stage.A[m, t]  
                         <= vars.first_stage.A[m, t-1] 
                         + vars.integer.Z[m,t] 
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)),
                         'Constraint_1.5c-25')
-    
+        '''
     ### CHANGED TO == INSTEAD OF >= !!!
     
         model.addConstrs((vars.first_stage.A[m, t]  
@@ -289,11 +224,11 @@ class Model:
                         + vars.integer.Z[m, t] 
                         - ((data.dmax[m]
                             / data.cmin[m])
-                            * vars.binary.R2[m, t]) 
+                            * vars.binary.Y[m, t]) 
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)),
                         'Constraint_1.5d-26')
-        
+    
         model.addConstrs((vars.first_stage.A[m, t]  
                         >= vars.integer.Z[m, t] 
                         for m in data.MP for t in data.T 
@@ -307,13 +242,6 @@ class Model:
                         if (t > 0) and (data.cty[m] == 0)),
                         'Constraint_1.5f-28')
         
-        ### MAKES THIS SENSE ??!??
-        '''
-                model.addConstrs((vars.first_stage.A[m, t] 
-                <= (1 - vars.binary.Y[m, t]) * data.dmax[m]
-                for m in data.MP for t in data.T if (data.cty[m] == 1) and (t > 0)), 
-                "Constraint_1.7new")
-        '''
 
 
         """ Accumulated production at the beginning of the horizon. The following equations (constraints (29) and (30)) model the remaining quantity
@@ -333,22 +261,62 @@ class Model:
         
         model.addConstrs((vars.first_stage.A[m, 0]  
                         >= vars.integer.Z[m, 0] 
-                        - ((data.dmax[m]
-                            / data.cmin[m]) 
-                            * vars.binary.R2[m, 0]) 
+                        - ((data.dmax[m]/ data.cmin[m])  
+                            * vars.binary.Y[m, 0]) 
                         for m in data.MP 
                         if data.cty[m] == 0),
                         'Constraint_1.5i-31') 
         
-        #### NEW CONSTRAINT
-
         '''
-        model.addConstrs((vars.first_stage.A[m,t] 
-                          - (data.dmax[m]
-                            / data.cmin[m]) >= vars.binary.Y[m,t] - 1
+        model.addConstrs((vars.integer.Z[m,t] 
+                          >= 1 - ((data.dmax[m]
+                            / data.cmin[m]) - 1 - vars.first_stage.A[m,t]) 
+                for m in data.MP for t in data.T[data.alpha[m] + 1:] for t1 in range(1,data.alpha[m] + 1)
+                if data.cty[m] == 0),
+                "A_less_than_14") 
+        '''
+        '''
+        #### NEW CONSTRAINT
+        big_M = 1000
+        model.addConstrs((vars.first_stage.A[m,t] - (data.dmax[m]/ data.cmin[m]) 
+                          <= big_M * (1 - vars.integer.Z[m,t])
                 for m in data.MP for t in data.T
                 if data.cty[m] == 0),
-                'Constraint_1.5_new') '''
+                "A_less_than_14") 
+                '''
+        '''
+        model.addConstrs((vars.first_stage.A[m,t] - (data.dmax[m]/ data.cmin[m]) 
+                          >= - big_M * (1 - vars.integer.Z[m,t])
+                for m in data.MP for t in data.T
+                if data.cty[m] == 0),
+                "A_greater_than_14")
+        ''' 
+        
+        #Constraint 6
+        """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
+        according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
+        capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
+        can be idle.
+        """
+
+        model.addConstrs(((vars.first_stage.Q[m, t] 
+                        / data.sc[m])
+                        <= vars.integer.Z[m, t] 
+                        for m in data.MP for t in data.T 
+                        if data.cty[m] == 1),
+                        'Constraint_1.6a-32')
+        
+        ## DAMIT FUNKTIONIERT ES NICHT !!
+
+        model.addConstrs(((vars.first_stage.Q[m, t] / data.sc[m]) * (1/(1 - data.is_[m]))
+                >= vars.integer.Z[m, t] 
+                for m in data.MP for t in data.T 
+                if data.cty[m] == 1),
+                'Constraint_1.6b-33')
+                        
+
+        #### NEW CONSTRAINT
+
         
         #Constraint 6
         """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
@@ -378,7 +346,7 @@ class Model:
         #                for m in data.MP for t in data.T 
         #               if data.cty[m] == 1),
         #                 'Constraint_1.5_new')
-
+        
         
         # Constraint 1.7: Campaign Setups
         """In order to model these features, the binary variable Ym, t is introduced. This variable takes value 1 when a new production campaign
@@ -389,32 +357,67 @@ class Model:
         production) until finish the setup task (constraint (37)). Now for the special case that at the beginning of the horizon there is a setup task
         in progress, this is reflected in the parameter ostm > 0, constraint (38) keeping campaign indicator variable to 0 until the task is finished.
         """
-        model.addConstrs((vars.integer.Z[m, t-1] 
-                        <= data.zmax[m] 
-                        * (1 - vars.binary.Y[m, t]) 
-                        for m in data.MP for t in data.T 
-                        if (t > 0)), "Constraint_1.7a-34")
-        
-        #model.addConstr(vars.binary.Y[0, 15] == 1, "TEst_constraint_1.7a")
-        
 
-        model.addConstrs((vars.binary.R2[m,t] 
-                        >= vars.binary.Y[m,t] 
-                        for m in data.MP for t in data.T ), "Constraint_1.7b-35")
+        model.addConstrs((vars.binary.R2[m, t] >=  vars.integer.Z[m, t-1] - vars.integer.Z[m, t]
+                        for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
+        model.addConstrs((vars.binary.R2[m, t] >=  vars.integer.Z[m, t] - vars.integer.Z[m, t-1]
+                        for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
+        model.addConstrs((vars.binary.R1[m, t] >=  (1 - vars.integer.Z[m, t]) - vars.integer.Z[m, t-1]
+                        for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
+        model.addConstrs((vars.binary.R1[m, t] >=  (1 - vars.integer.Z[m, t-1]) - vars.integer.Z[m, t] 
+                        for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
+        model.addConstrs((vars.binary.R1[m, t] >=  (-1)*((1 - vars.integer.Z[m, t]) - vars.integer.Z[m, t-1])
+                        for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
+        model.addConstrs((vars.binary.R1[m, t] >=  (-1)*((1 - vars.integer.Z[m, t-1]) - vars.integer.Z[m, t])
+                        for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+
+        model.addConstrs((vars.integer.Z[m, t] >=  vars.integer.Z[m, t-1] * vars.binary.R1[m, t]
+                        for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+
         
         ### WHAT ARE YOU DOING??? #### -> Start a new campaign if the previous campaign is finished !!!
+        # This is the constraint to ensure Z[m,t] is 1 when Z[m,t-1] and R1[m,t] are both 1 
+        
+        # Adding the big-M constraints in a similar style
+        
+        model.addConstrs((vars.integer.Z[m, t] 
+                        >=  (-1)*(vars.integer.Z[m, t-1] - (1- vars.binary.R1[m, t]))
+            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "upper_bound_constraint_z")
+
+        model.addConstrs((vars.integer.Z[m, t] 
+                        >=  vars.integer.Z[m, t-1] - (1- vars.binary.R1[m, t])
+            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
+        
         
         model.addConstrs((vars.binary.R2[m,t] 
                         - vars.integer.Z[m, t-1] 
                         <= vars.binary.Y[m,t] 
                         for m in data.MP for t in data.T 
                         if (t > 0) ), "Constraint_1.7c-36")
-        
+
+        model.addConstrs((vars.binary.R2[m,t] 
+                        - vars.integer.Z[m, t-1] 
+                        <= vars.binary.Y[m,t] 
+                        for m in data.MP for t in data.T 
+                        if (t > 0) ), "Constraint_1.7c-36")
+         
         model.addConstrs((vars.integer.Z[m,t - t1] 
                         <= data.zmax[m] 
                         * (1 - vars.binary.Y[m,t]) 
                         for m in data.MP for t in data.T for t1 in range(1,data.alpha[m] + 1) 
-                        if (data.alpha[m] > 0)  and (t - t1 >= 0) ), "Constraint_1.7d-37")
+                        if (data.alpha[m] > 0)  and (t - t1 >= 0) and (data.cty[m] == 0)), "Constraint_1.7d-37")
         
         model.addConstrs((vars.integer.Z[m,t] 
                         <= 0 
