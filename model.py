@@ -210,13 +210,29 @@ class Model:
         ### WHY DMAX / CMIN ??? --> MAXIMUM NUMBER WOULD BE CMAX / CMIN !!! 
         ## AND HOW TO SET UP THE CAMPAIGN LENGTH ??? --> WHEN DMAX IS REACHED, then NEW CAMPAIGN WITH SETUP IS NEEDED! 
         '''
-        model.addConstrs((vars.first_stage.A[m, t]  
-                        <= vars.first_stage.A[m, t-1] 
+        model.addConstrs((vars.first_stage.A[m, t +1 ]  
+                        <= vars.first_stage.A[m, t] 
                         + vars.integer.Z[m,t] 
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)),
+                        for m in data.MP for t in data.T[:-1]
+                        if (data.cty[m] == 0)),
                         'Constraint_1.5c-25')
         '''
+
+        #Constraint: rM[m, t] becomes 1 only when A[m, t] is at its maximum (A_ub[m])
+        M = 10000
+        A_ub = {m: data.dmax[m] / data.cmin[m] for m in data.MP}
+        for m in data.MP:
+            for t in data.T[1:]:
+                if data.cty[m] == 0:
+                    # Constraint to ensure rM[m, t] is 1 when A[m, t] is at its maximum
+                    model.addConstr(vars.first_stage.A[m, t] <= A_ub[m] + M * (1 - vars.binary.rM[m, t]), name=f"Max_A_Upper_{m}_{t}")
+                    model.addConstr(vars.first_stage.A[m, t] >= A_ub[m] - M * (1 - vars.binary.rM[m, t]), name=f"Max_A_Lower_{m}_{t}")
+                    model.addConstr(vars.first_stage.A[m, t] <= A_ub[m] * vars.binary.rM[m, t] + A_ub[m] * (1 - vars.binary.rM[m, t]), name=f"Max_A_Exact_Upper_{m}_{t}")
+                    model.addConstr(vars.first_stage.A[m, t] >= A_ub[m] * vars.binary.rM[m, t], name=f"Max_A_Exact_Lower_{m}_{t}")
+
+        ##model.addConstrs(vars.first_stage.A[m, t] == vars.first_stage.A[m, t - 1] + (1 - vars.binary.rM[m, t])
+          #                for m in data.MP for t in data.T[1:] if data.cty[m] == 0)
+        
     ### CHANGED TO == INSTEAD OF >= !!!
     
         model.addConstrs((vars.first_stage.A[m, t]  
@@ -228,7 +244,8 @@ class Model:
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)),
                         'Constraint_1.5d-26')
-    
+
+        
         model.addConstrs((vars.first_stage.A[m, t]  
                         >= vars.integer.Z[m, t] 
                         for m in data.MP for t in data.T 
@@ -241,7 +258,6 @@ class Model:
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)),
                         'Constraint_1.5f-28')
-        
 
 
         """ Accumulated production at the beginning of the horizon. The following equations (constraints (29) and (30)) model the remaining quantity
@@ -251,6 +267,7 @@ class Model:
                         for m in data.MP
                         if data.cty[m] == 0),
                         'Constraint_1.5g-29')
+    
         
         model.addConstrs((vars.first_stage.A[m, 0]  
                         <= (data.dmax[m]
@@ -393,19 +410,32 @@ class Model:
         # Adding the big-M constraints in a similar style
         
         model.addConstrs((vars.integer.Z[m, t] 
-                        >=  (-1)*(vars.integer.Z[m, t-1] - (1- vars.binary.R1[m, t]))
+                        >=  (-1)*(vars.integer.Z[m, t-1] - vars.binary.R2[m, t])
             for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "upper_bound_constraint_z")
 
         model.addConstrs((vars.integer.Z[m, t] 
-                        >=  vars.integer.Z[m, t-1] - (1- vars.binary.R1[m, t])
+                        >=  vars.integer.Z[m, t-1] - vars.binary.R2[m, t]
             for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
         
+        model.addConstrs((vars.integer.Z[m, t] 
+                        >=  (-1)*(vars.integer.Z[m, t-1] - vars.binary.R2[m, t])
+            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "upper_bound_constraint_z")
+
+        model.addConstrs((vars.integer.Z[m, t] 
+                        >=  vars.integer.Z[m, t-1] - vars.binary.R2[m, t]
+            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
         
-        model.addConstrs((vars.binary.R2[m,t] 
-                        - vars.integer.Z[m, t-1] 
-                        <= vars.binary.Y[m,t] 
-                        for m in data.MP for t in data.T 
-                        if (t > 0) ), "Constraint_1.7c-36")
+        model.addConstrs((vars.integer.Z[m, t] 
+                        >= (1 - vars.binary.rM[m,t]) - (1 - vars.integer.Z[m, t-1])
+            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
+        
+        '''
+        model.addConstrs((vars.binary.Y[m, t] 
+                        >= (1 - vars.integer.Z[m, t-1]) - (1 - vars.binary.R2[m,t])
+            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
+            '''
+        
+       # model.addConstrs(vars.integer.Z[m, data.hl] == 1 for m in data.MP if (data.cty[m] == 0))
 
         model.addConstrs((vars.binary.R2[m,t] 
                         - vars.integer.Z[m, t-1] 

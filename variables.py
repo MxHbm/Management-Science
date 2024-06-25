@@ -54,6 +54,7 @@ class DecisionVariablesModel1:
             self.R1 = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="R1m_t")
             self.R2 = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="R2m_t")
             self.Y = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="Ym_t")
+            self.rM = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="Ym_t")
 
     class Integer:
         ''' Integer decision variables of the model '''
