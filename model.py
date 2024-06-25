@@ -398,11 +398,43 @@ class Model:
         model.addConstrs((vars.binary.R1[m, t] >=  (-1)*((1 - vars.integer.Z[m, t-1]) - vars.integer.Z[m, t])
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
 
+
+        '''
         model.addConstrs((vars.integer.Z[m, t] >=  vars.integer.Z[m, t-1] * vars.binary.R1[m, t]
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
 
+                        '''
+        
+        model.addConstrs((vars.integer.Z[m, t] >=  vars.integer.Z[m, t-1] - (1 - vars.binary.R1[m, t])
+                        for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+
+        
+        ## NEw ATTEMPT 
+
+        model.addConstrs((vars.first_stage.Z1[m,t] <= data.zmax[m] * vars.binary.R1[m, t]
+                                                 for m in data.MP for t in data.T 
+                        if (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
+        model.addConstrs((vars.first_stage.Z1[m,t] <= vars.integer.Z[m, t-1]
+                                                 for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
+        model.addConstrs((vars.first_stage.Aux[m,t] <= vars.integer.Z[m, t-1]
+                                                 for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
+        model.addConstrs((vars.first_stage.Aux[m,t] >= vars.integer.Z[m, t-1] -data.zmax[m] * (1- vars.binary.R1[m, t])
+                                                 for m in data.MP for t in data.T 
+                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
+        model.addConstrs((vars.first_stage.Aux[m,t] <= vars.first_stage.Z1[m, t]
+                                                 for m in data.MP for t in data.T 
+                        if (data.cty[m] == 0)), "Constraint_1.7a-34")
+        
         
         ### WHAT ARE YOU DOING??? #### -> Start a new campaign if the previous campaign is finished !!!
         # This is the constraint to ensure Z[m,t] is 1 when Z[m,t-1] and R1[m,t] are both 1 
