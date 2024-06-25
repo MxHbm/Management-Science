@@ -1,17 +1,18 @@
 import pandas as pd
-from parameters import Parameters
+from parameters import Parameters, S_star
 import matplotlib.pyplot as plt
 import numpy as np
 import gurobipy as gp
 ''' results.py '''
 
 class Results:
-    def __init__(self, model1, model2, emvpModel, mvpModel, data:Parameters):
+    def __init__(self, model1, model2, emvpModel, mvpModel, data:Parameters, data_s_star:S_star):
         self.family_model = model1
         self.detailed_model = model2
         self.emvp_model = emvpModel
         self.mvp_model = mvpModel
         self.data = data
+        self.data_s_star = data_s_star
 
         self.T = data.T
         self.F = data.F
@@ -100,14 +101,17 @@ class Results:
             for f in self.F:
                 for l in self.L:
                     for t in self.T:
-                            so = self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                            so = self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X 
                             dp = self.data.dp[s][f][l][t]
 
-                            sales_family_t += dp - so
+                            sales_family_t += (dp - so) * self.data.rho[s]
 
                             # mvp
                             if self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]') is not None:
-                                sales_mvp_t += self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                                so_mvp = self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+
+                                dp_mvp = self.data_s_star.dp[s][f][l][t]    
+                                sales_mvp_t += (dp_mvp - so_mvp) * self.data_s_star.rho[s]
         
         for s in self.S:
             for p in self.P:
@@ -118,16 +122,22 @@ class Results:
                             sod = self.detailed_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X
                             dpd = self.data.dpd[s][p][l][t]
 
-                            sales_detailed_t += dpd - sod
+                            sales_detailed_t += (dpd - sod) * self.data.rho[s]
+
 
                             if self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]') is not None:
                                 sod_emvp = self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X
+                                dpd_emvp = self.data_s_star.dpd[s][p][l][t]
+                                rho_emvp = self.data_s_star.rho[s]
 
-                            sales_emvp_t += dpd - sod_emvp
+                                sales_emvp_t += (dpd_emvp- sod_emvp) * rho_emvp
+
+                            
 
                         # if self.family_model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]') is not None:
                         #     sales_t += self.family_model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').X
 
+        # print(f'Sales Family: {sales_family_t} \t\t Sales Detailed: {sales_detailed_t} \t\t Sales MVP: {sales_mvp_t} \t\t Sales EMVP: {sales_emvp_t}')
 
         return [sales_family_t, sales_detailed_t,  sales_mvp_t, sales_emvp_t]
 
@@ -144,21 +154,21 @@ class Results:
             for f in self.F:
                 for l in self.L:
                     for t in self.T:
-                        lost_sales_t_family += self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                        lost_sales_t_family += self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X * self.data.rho[s]
 
 
                         if self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]') is not None:
-                            lost_sales_t_mvp += self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X       
+                            lost_sales_t_mvp += self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X * self.data_s_star.rho[s]
                             
         for s in self.S:
             for p in self.P:
                 for l in self.L:
                     for t in self.T:
-                        lost_sales_t_detailed += self.detailed_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X
+                        lost_sales_t_detailed += self.detailed_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X * self.data.rho[s]
 
                         # emvp
                         if self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]') is not None:
-                            lost_sales_t_emvp += self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X
+                            lost_sales_t_emvp += self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X * self.data_s_star.rho[s]
 
 
 
@@ -178,21 +188,21 @@ class Results:
                 for l in self.L:
                     for t in self.T:
                         # OS 
-                        distressed_sales_family += self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
+                        distressed_sales_family += self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rho[s]
 
 
                         if self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]') is not None:
-                            distressed_sales_mvp += self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
+                            distressed_sales_mvp += self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data_s_star.rho[s]
 
         for s in self.S:
             for p in self.P:
                 for l in self.L:
                     for t in self.T:
-                        distressed_sales_detailed += self.detailed_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X
+                        distressed_sales_detailed += self.detailed_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X * self.data.rho[s]
 
                         # emvp
                         if self.emvp_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]') is not None:
-                            distressed_sales_emvp += self.emvp_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X
+                            distressed_sales_emvp += self.emvp_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X * self.data_s_star.rho[s]
                         
                         
 
@@ -208,21 +218,18 @@ class Results:
 
         for s in self.S:
             for t in self.T:
-                raw_material_losses_family_t += self.family_model.getVarByName(f'ROs_t[{s},{t}]').X
+                raw_material_losses_family_t += self.family_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.rho[s]
                 # raw_material_losses_detailed_t += self.detailed_model.getVarByName(f'ROs_t[{s},{t}]').X
 
                 # mvp
                 if self.mvp_model.getVarByName(f'ROs_t[{s},{t}]') is not None:
-                    raw_material_losses_mvp_t += self.mvp_model.getVarByName(f'ROs_t[{s},{t}]').X
+                    raw_material_losses_mvp_t += self.mvp_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data_s_star.rho[s]
 
                 # emvp
                 if self.emvp_model.getVarByName(f'ROs_t[{s},{t}]') is not None:
-                    raw_material_losses_emvp_t += self.emvp_model.getVarByName(f'ROs_t[{s},{t}]').X
+                    raw_material_losses_emvp_t += self.emvp_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data_s_star.rho[s]
 
-
-                # if self.family_model.getVarByName(f'ROs_t[{s},{t}]') is not None:
-                #     raw_material_losses_t += self.family_model.getVarByName(f'ROs_t[{s},{t}]').Obj
-        return [raw_material_losses_family_t, raw_material_losses_family_t, raw_material_losses_mvp_t, raw_material_losses_emvp_t]
+        return [raw_material_losses_family_t, raw_material_losses_detailed_t, raw_material_losses_mvp_t, raw_material_losses_emvp_t]
 
     def create_raw_material_purchase_t(self):
         # Compute the value for 'Raw Material Purchase [t]'
@@ -235,18 +242,21 @@ class Results:
         for s in self.S:
             for t in self.T:
                 if self.family_model.getVarByName(f'RSs_t[{s},{t}]') is not None:
-                    raw_material_purchase_family_t += self.family_model.getVarByName(f'RSs_t[{s},{t}]').X
+                    raw_material_purchase_family_t += self.family_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.rho[s]
                 #raw_material_purchase_detailed_t += self.detailed_model.getVarByName(f'RSs_t[{s},{t}]').X
 
                 # mvp
                 if self.mvp_model.getVarByName(f'RSs_t[{s},{t}]') is not None:
-                    raw_material_purchase_mvp_t += self.mvp_model.getVarByName(f'RSs_t[{s},{t}]').X
+                    raw_material_purchase_mvp_t += self.mvp_model.getVarByName(f'RSs_t[{s},{t}]').X  * self.data_s_star.rho[s]
                 
                 # emvp
                 if self.emvp_model.getVarByName(f'RSs_t[{s},{t}]') is not None:
-                    raw_material_purchase_emvp_t += self.emvp_model.getVarByName(f'RSs_t[{s},{t}]').X
+                    raw_material_purchase_emvp_t += self.emvp_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data_s_star.rho[s]
 
-        return [raw_material_purchase_family_t, raw_material_purchase_family_t, raw_material_purchase_mvp_t, raw_material_purchase_emvp_t]
+        # raw_material_purchase_detailed_t = raw_material_purchase_family_t
+        # raw_material_purchase_emvp_t = raw_material_purchase_mvp_t
+
+        return [raw_material_purchase_family_t, raw_material_purchase_detailed_t, raw_material_purchase_mvp_t, raw_material_purchase_emvp_t]
 
     def create_exports_t(self):
         # Compute the value for 'Exports [t]'
@@ -296,10 +306,8 @@ class Results:
                 if self.emvp_model.getVarByName(f'FPf_t[{f},{t}]') is not None:
                     production_emvp_t += self.emvp_model.getVarByName(f'FPf_t[{f},{t}]').X
 
-                # if self.family_model.getVarByName(f'FPf_t[{f},{t}]') is not None:
-                #     production_t += self.family_model.getVarByName(f'FPf_t[{f},{t}]').Obj
-
-        production_detailed_t = production_family_t
+        # production_detailed_t = production_family_t
+        # production_emvp_t = production_mvp_t
         return [production_family_t, production_detailed_t, production_mvp_t, production_emvp_t]
 
     def create_product_shipped_t(self):
@@ -326,7 +334,8 @@ class Results:
                     if self.emvp_model.getVarByName(f'Vi_l_t[{i},{l},{t}]') is not None:
                         product_shipped_emvp_t += self.emvp_model.getVarByName(f'Vi_l_t[{i},{l},{t}]').X 
 
-        product_shipped_detailed_t = product_shipped_family_t
+        # product_shipped_detailed_t = product_shipped_family_t
+        # product_shipped_emvp_t = product_shipped_mvp_t
         return [product_shipped_family_t, product_shipped_detailed_t, product_shipped_mvp_t, product_shipped_emvp_t]
 
     def create_sales_income_mu(self):
@@ -337,6 +346,9 @@ class Results:
         sales_income_mvp_mu = 0
         sales_income_emvp_mu = 0
 
+        sales_income_detailed_mu_negative = 0
+        sales_income_emvp_mu_negative = 0
+
         for s in self.S:
             for f in self.F:
                 for l in self.L:
@@ -344,28 +356,52 @@ class Results:
                             so = self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
                             dp = self.data.dp[s][f][l][t]
 
-                            sales_income_family_mu += (dp - so) * self.data.r[f]
-
+                            sales_income_family_mu += (dp - so) * self.data.r[f] * self.data.rho[s]
 
                             if self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]') is not None:
-                                sales_income_mvp_mu += self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                                so_mvp = self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                                dp_mvp = self.data_s_star.dp[s][f][l][t]
+
+                                sales_income_mvp_mu += (dp_mvp - so_mvp) * self.data.r[f]  * self.data_s_star.rho[s]
 
         for s in self.S:
             for p in self.MP:
+                sales_income_detailed_mu_product = 0
+                sales_income_emvp_mu_product = 0
                 for l in self.L:
                     for t in self.T:
                             
                             sod = self.detailed_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X
                             dpd = self.data.dpd[s][p][l][t]
 
-                            sales_income_detailed_mu += (dpd - sod) * self.data.r_p[p]
+                            sales = (dpd - sod) * self.data.r_p[p] * self.data.rho[s]
+
+                            sales_income_detailed_mu_product += sales
+
+                            if sales < 0:
+                                # print(f'Detail: s:{s}, p:{p}, l:{l}, t:{t} - Sales: {sales} \t\t SOD: {sod} \t\t DPD: {dpd}')
+                                sales_income_detailed_mu_negative += sales
 
                             # emvp
                             if self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]') is not None:
                                 sod_emvp = self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X
+                                dpd_emvp = self.data_s_star.dpd[s][p][l][t]
 
-                            sales_income_emvp_mu += (dpd - sod_emvp)  * self.data.r_p[p]
+                                sales_emvp = (dpd_emvp - sod_emvp)  * self.data.r_p[p]  * self.data_s_star.rho[s]
 
+                                sales_income_emvp_mu_product += sales_emvp
+
+                                if sales_emvp < 0:
+                                    # print(f'EMVP: s:{s}, p:{p}, l:{l}, t:{t} - Sales: {sales_emvp} \t\t SOD: {sod_emvp} \t\t DPD: {dpd_emvp}')
+                                    sales_income_emvp_mu_negative += sales_emvp
+
+                # print(f's:{s}, p:{p} - Sales Income Family: {sales_income_family_mu} \t\t Sales Income Detailed: {sales_income_detailed_mu} \t\t Sales Income MVP: {sales_income_mvp_mu} \t\t Sales Income EMVP: {sales_income_emvp_mu}')
+                sales_income_detailed_mu += sales_income_detailed_mu_product
+                sales_income_emvp_mu += sales_income_emvp_mu_product
+
+        # print(f'Sales Income Family: {sales_income_family_mu} \t\t Sales Income Detailed: {sales_income_detailed_mu} \t\t Sales Income MVP: {sales_income_mvp_mu} \t\t Sales Income EMVP: {sales_income_emvp_mu}')
+        # print(f'Sales Income Detailed Negative: {sales_income_detailed_mu_negative} \t\t Sales Income EMVP Negative: {sales_income_emvp_mu_negative}')
+        # print(f'Sales Income Detailed Positive: {sales_income_detailed_mu - sales_income_detailed_mu_negative} \t\t Sales Income EMVP Positive: {sales_income_emvp_mu - sales_income_emvp_mu_negative}')
         return [sales_income_family_mu, sales_income_detailed_mu, sales_income_mvp_mu, sales_income_emvp_mu]
 
     def create_distressed_sales_mu(self):
@@ -381,28 +417,26 @@ class Results:
                 for l in self.L:
                     for t in self.T:
                         # OS 
-                        distressed_sales_family_mu += self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f]
+                        distressed_sales_family_mu += self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f] * self.data.rho[s]
 
                         # mvp
                         if self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]') is not None:
-                            distressed_sales_mvp_mu += self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f]
+                            distressed_sales_mvp_mu += self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f]  * self.data_s_star.rho[s]
         for s in self.S:
             for p in self.MP:
                 for l in self.L:
                     for t in self.T:
                         # OSD
-                        distressed_sales_detailed_mu += self.detailed_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X * self.data.rr_p[p]
+                        distressed_sales_detailed_mu += self.detailed_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X * self.data.rr_p[p] * self.data.rho[s]
 
                         # emvp
                         if self.emvp_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]') is not None:
-                            distressed_sales_emvp_mu += self.emvp_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X * self.data.rr_p[p]
+                            distressed_sales_emvp_mu += self.emvp_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X * self.data.rr_p[p] * self.data_s_star.rho[s]
                         
                         
 
         return [distressed_sales_family_mu, distressed_sales_detailed_mu, distressed_sales_mvp_mu, distressed_sales_emvp_mu]
 
-
-        return [0, 0, 0]
 
     def create_raw_material_losses_cost_mu(self):
         # Compute the value for 'Raw Material Losses Cost [MU]'
@@ -414,21 +448,19 @@ class Results:
 
         for s in self.S:
             for t in self.T:
-                raw_material_losses_family_mu += self.family_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.roc
+                raw_material_losses_family_mu += self.family_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.roc * self.data.rho[s]
                 # raw_material_losses_detailed_t += self.detailed_model.getVarByName(f'ROs_t[{s},{t}]').X
 
                 # mvp
                 if self.mvp_model.getVarByName(f'ROs_t[{s},{t}]') is not None:
-                    raw_material_losses_mvp_mu += self.mvp_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.roc
+                    raw_material_losses_mvp_mu += self.mvp_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.roc * self.data_s_star.rho[s]
 
                 # emvp
                 if self.emvp_model.getVarByName(f'ROs_t[{s},{t}]') is not None:
-                    raw_material_losses_emvp_mu += self.emvp_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.roc
+                    raw_material_losses_emvp_mu += self.emvp_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.roc * self.data_s_star.rho[s]
 
-
-                # if self.family_model.getVarByName(f'ROs_t[{s},{t}]') is not None:
-                #     raw_material_losses_t += self.family_model.getVarByName(f'ROs_t[{s},{t}]').Obj
-        return [raw_material_losses_family_mu, raw_material_losses_family_mu, raw_material_losses_mvp_mu, raw_material_losses_emvp_mu]
+        # raw_material_losses_detailed_mu = raw_material_losses_family_mu
+        return [raw_material_losses_family_mu, raw_material_losses_detailed_mu, raw_material_losses_mvp_mu, raw_material_losses_emvp_mu]
 
     def create_raw_material_purchase_cost_mu(self):
         # Compute the value for 'Raw Material Purchase Cost [MU]'
@@ -441,21 +473,19 @@ class Results:
         for s in self.S:
             for t in self.T:
                 if self.family_model.getVarByName(f'RSs_t[{s},{t}]') is not None:
-                    raw_material_purchase_family_mu += self.family_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.roc
+                    raw_material_purchase_family_mu += self.family_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.rsc * self.data.rho[s]
                 #raw_material_purchase_detailed_t += self.detailed_model.getVarByName(f'RSs_t[{s},{t}]').X
 
                 # mvp
                 if self.mvp_model.getVarByName(f'RSs_t[{s},{t}]') is not None:
-                    raw_material_purchase_mvp_mu += self.mvp_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.roc
+                    raw_material_purchase_mvp_mu += self.mvp_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.rsc * self.data_s_star.rho[s]
 
                 # emvp
                 if self.emvp_model.getVarByName(f'RSs_t[{s},{t}]') is not None:
-                    raw_material_purchase_emvp_mu += self.emvp_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.roc
+                    raw_material_purchase_emvp_mu += self.emvp_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.rsc * self.data_s_star.rho[s]
 
-                # if self.family_model.getVarByName(f'RSs_t[{s},{t}]') is not None:
-                #     raw_material_purchase_t += self.family_model.getVarByName(f'RSs_t[{s},{t}]').Obj
-
-        return [raw_material_purchase_family_mu, raw_material_purchase_family_mu, raw_material_purchase_mvp_mu, raw_material_purchase_emvp_mu]
+        # raw_material_purchase_detailed_mu = raw_material_purchase_family_mu
+        return [raw_material_purchase_family_mu, raw_material_purchase_detailed_mu, raw_material_purchase_mvp_mu, raw_material_purchase_emvp_mu]
 
     def create_exports_income_mu(self):
         # Compute the value for 'Exports Income [MU]'
@@ -467,21 +497,18 @@ class Results:
 
         for f in self.F:
             for t in self.T:
-                exports_family_mu += self.family_model.getVarByName(f'Ef_t[{f},{t}]').X * self.data.re[f] * self.data.ls[f]
+                exports_family_mu += self.family_model.getVarByName(f'Ef_t[{f},{t}]').X * self.data.re[f] * self.data.el[f]
 
                 # mvp
                 if self.mvp_model.getVarByName(f'Ef_t[{f},{t}]') is not None:
-                    exports_mvp_mu += self.mvp_model.getVarByName(f'Ef_t[{f},{t}]').X
+                    exports_mvp_mu += self.mvp_model.getVarByName(f'Ef_t[{f},{t}]').X * self.data.re[f] * self.data.el[f]
         
         for p in self.MP:
             for t in self.T:
-                exports_detailed_mu += self.detailed_model.getVarByName(f'EDp_t[{p},{t}]').X * self.data.re_p[p] * self.data.el[p]
+                exports_detailed_mu += self.detailed_model.getVarByName(f'EDp_t[{p},{t}]').X * self.data.re_p[p] * self.data.ls[p]
 
                 if self.emvp_model.getVarByName(f'EDp_t[{p},{t}]') is not None:
-                    exports_emvp_mu += self.emvp_model.getVarByName(f'EDp_t[{p},{t}]').X
-
-                # if self.family_model.getVarByName(f'Ef_t[{f},{t}]') is not None:
-                #     exports_t += self.family_model.getVarByName(f'Ef_t[{f},{t}]').Obj
+                    exports_emvp_mu += self.emvp_model.getVarByName(f'EDp_t[{p},{t}]').X * self.data.re_p[p] * self.data.ls[p]
 
         return [exports_family_mu, exports_detailed_mu, exports_mvp_mu, exports_emvp_mu]
 
@@ -502,15 +529,12 @@ class Results:
                     product_shipped_detailed_mu += self.detailed_model.getVarByName(f'TRDi_l_t[{i},{l},{t}]').X * self.data.tc[l][i]
 
                     # mvp
-                    if self.mvp_model.getVarByName(f'TRDi_l_t[{i},{l},{t}]') is not None:
-                        product_shipped_mvp_mu += self.mvp_model.getVarByName(f'TRDi_l_t[{i},{l},{t}]').X * self.data.tc[l][i]
+                    if self.mvp_model.getVarByName(f'TRi_l_t[{i},{l},{t}]') is not None:
+                        product_shipped_mvp_mu += self.mvp_model.getVarByName(f'TRi_l_t[{i},{l},{t}]').X * self.data.tc[l][i]
 
                     # emvp
                     if self.emvp_model.getVarByName(f'TRDi_l_t[{i},{l},{t}]') is not None:
                         product_shipped_emvp_mu += self.emvp_model.getVarByName(f'TRDi_l_t[{i},{l},{t}]').X * self.data.tc[l][i]
-
-                    # if self.family_model.getVarByName(f'DVf_l_t[{f},{l},{t}]') is not None:
-                    #     product_shipped_t += self.family_model.getVarByName(f'DVf_l_t[{f},{l},{t}]').Obj
 
         return [product_shipped_family_mu, product_shipped_detailed_mu, product_shipped_mvp_mu, product_shipped_emvp_mu]
 
@@ -532,12 +556,12 @@ class Results:
                 if self.emvp_model.getVarByName(f'Ym_t[{m},{t}]') is not None:
                     setup_costs_emvp_mu += self.emvp_model.getVarByName(f'Ym_t[{m},{t}]').X * self.data.sco
 
-        setup_costs_detailed_mu = setup_costs_family_mu
+        # setup_costs_detailed_mu = setup_costs_family_mu
         return [setup_costs_family_mu, setup_costs_detailed_mu, setup_costs_mvp_mu, setup_costs_emvp_mu]
 
     def create_expected_net_benefits_mu(self):
         # Compute the value for 'Expected Net Benefits [MU]'
-        # Replace the following line with your computation
+
         expected_net_benefits_family_mu = self.family_model.objVal
         expected_net_benefits_detailed_mu = self.detailed_model.objVal
         expected_net_benefits_mvp_mu = self.mvp_model.objVal
@@ -570,18 +594,22 @@ class Results:
             return 'N/A'
         return f'{round((value - comparison) / comparison * 100, 1)}%'
 
-    def PrintResults(self, table6, table8):
+    def PrintResults(self, table6, table8, objFunction):
         pd.options.display.float_format = '{:,.2f}'.format
         print('=========================================')
         print('Results:')
         print('Objective value FAM: %g' % self.family_model.objVal)
         print('Objective value DPM: %g' % self.detailed_model.objVal)
+        print('Objective value MVP: %g' % self.mvp_model.objVal)
         print('Objective value EMVP: %g' % self.emvp_model.objVal)
         print('table 6:')
         print(table6)
 
-        print('table 8:')
-        print(table8)
+        print('ObjectiveFunction:')
+        print(objFunction)
+
+        #print('table 8:')
+        #print(table8)
 
     
 
@@ -591,17 +619,17 @@ class Results:
             'sales_t': self.sales_t,
             'lost_sales_t': self.lost_sales_t,
             'distressed_sales_t': self.distressed_sales_t,
+            'exports_t': self.exports_t,
             'raw_material_losses_t': self.raw_material_losses_t,
             'raw_material_purchase_t': self.raw_material_purchase_t,
-            'exports_t': self.exports_t,
             'production_t': self.production_t,
             'product_shipped_t': self.product_shipped_t,
             'trucks_required': self.trucks_required,
             'sales_income_mu': self.sales_income_mu,
             'distressed_sales_mu': self.distressed_sales_mu,
+            'exports_income_mu': self.exports_income_mu,
             'raw_material_losses_cost_mu': self.raw_material_losses_cost_mu,
             'raw_material_purchase_cost_mu': self.raw_material_purchase_cost_mu,
-            'exports_income_mu': self.exports_income_mu,
             'cost_shipped_dc_mu': self.cost_shipped_dc_mu,
             'setups_cost_mu': self.setups_cost_mu,
             'expected_net_benefits_mu': self.expected_net_benefits_mu,
@@ -646,7 +674,7 @@ class Results:
             'SP-DPM': [costs_sum['SP-DPM']],
             'MVP': [costs_sum['MVP']],
             'EMVP': [costs_sum['EMVP']],
-            '% deviation SP-DPM from EMVP': ['N/A']
+            '% deviation SP-DPM from EMVP': [self.calculate_deviation(costs_sum['SP-DPM'], costs_sum['EMVP'])]
         })
 
         total_income_row = pd.DataFrame({
@@ -655,7 +683,7 @@ class Results:
             'SP-DPM': [income_sum['SP-DPM']],
             'MVP': [income_sum['MVP']],
             'EMVP': [income_sum['EMVP']],
-            '% deviation SP-DPM from EMVP': ['N/A']
+            '% deviation SP-DPM from EMVP': [self.calculate_deviation(costs_sum['SP-DPM'], costs_sum['EMVP'])]
         })
 
         difference_row = pd.DataFrame({
@@ -664,12 +692,16 @@ class Results:
             'SP-DPM': [difference_sum['SP-DPM']],
             'MVP': [difference_sum['MVP']],
             'EMVP': [difference_sum['EMVP']],
-            '% deviation SP-DPM from EMVP': ['N/A']
+            '% deviation SP-DPM from EMVP': [self.calculate_deviation(costs_sum['SP-DPM'], costs_sum['EMVP'])]
         })
 
         # Concatenate the original DataFrame with the new rows
         df = pd.concat([df, total_costs_row, total_income_row, difference_row], ignore_index=True)
 
+        # aggregate SP-FAM and SP-DPM to SP_agg and MVP and EMVP to EMVP_agg
+        df['SP_agg'] = df['SP-FAM'] + df['SP-DPM']
+        df['EMVP_agg'] = df['MVP'] + df['EMVP']
+        df['% deviation SP_agg from EMVP_agg'] = df.apply(lambda row: self.calculate_deviation(row['SP_agg'], row['EMVP_agg']), axis=1)
 
         return df
 
@@ -701,13 +733,173 @@ class Results:
 
         df = pd.DataFrame(data, index = self.paper_values_table8().index)
         return df
+    
+    def ComputeObjFunction(self):
+
+        # Initialize total cost
+        T_COST = 0
+        cost1_fam, cost2_fam, cost3_fam = 0, 0, 0
+        cost1_mvp, cost2_mvp, cost3_mvp = 0, 0, 0
+        cost1_dpm = 0
+        cost1_emvp = 0
+
+        # First Summation
+        for i in self.data.FT:
+            for l in self.data.L:
+                for t in self.data.T:
+                    if self.family_model.getVarByName(f'TRi_l_t[{i},{l},{t}]') is not None:
+                        cost = self.family_model.getVarByName(f'TRi_l_t[{i},{l},{t}]').X * self.data.tc[l][i]  
+                        cost1_fam += cost
+
+                    if self.mvp_model.getVarByName(f'TRi_l_t[{i},{l},{t}]') is not None:
+                        cost = self.mvp_model.getVarByName(f'TRi_l_t[{i},{l},{t}]').X * self.data.tc[l][i]  
+                        cost1_mvp += cost
+
+                    if self.detailed_model.getVarByName(f'TRDi_l_t[{i},{l},{t}]') is not None:
+                        cost1_dpm += self.detailed_model.getVarByName(f'TRDi_l_t[{i},{l},{t}]').X * self.data.tc[l][i]
+
+                    if self.emvp_model.getVarByName(f'TRDi_l_t[{i},{l},{t}]') is not None:
+                        cost1_emvp += self.emvp_model.getVarByName(f'TRDi_l_t[{i},{l},{t}]').X * self.data.tc[l][i]
+
+
+        # Second Summation
+        for m in self.data.MP:
+            for t in self.data.T:
+                if self.family_model.getVarByName(f'Ym_t[{m},{t}]') is not None:
+                    cost = self.family_model.getVarByName(f'Ym_t[{m},{t}]').X * self.data.sco
+                    cost2_fam += cost
+
+                if self.mvp_model.getVarByName(f'Ym_t[{m},{t}]') is not None:
+                    cost = self.mvp_model.getVarByName(f'Ym_t[{m},{t}]').X * self.data.sco
+                    cost2_mvp += cost
+
+        # Third Summation
+        for s in self.data.S:
+            for t in self.data.T:
+                # if self.family_model.getVarByName(f'ROs_t[{s},{t}]') is not None:
+                cost = (self.family_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.rsc
+                        + self.family_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.roc)
+                cost3_fam += cost
+
+                if s in self.data_s_star.S:
+                    cost = (self.mvp_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.rsc
+                            + self.mvp_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.roc)
+                    cost3_mvp += cost
+
+            cost3_fam = cost3_fam * self.data.rho[s]
+            if s in self.data_s_star.S:
+                cost3_mvp = cost3_mvp * self.data_s_star.rho[s]
+        
+        objValue_FAM = self.family_model.objVal
+        objValue_DPM = self.detailed_model.objVal
+        objValue_MVP = self.mvp_model.objVal
+        objValue_EMVP = self.emvp_model.objVal
+        
+
+        # Initialize sums
+        sum_part1_fam, sum_part2_fam = 0, 0
+        sum_part1_dpm, sum_part2_dpm = 0, 0
+        sum_part1_mvp, sum_part2_mvp = 0, 0
+        sum_part1_emvp, sum_part2_emvp = 0, 0
+
+
+        # Calculate first part of the equation
+        for f in self.data.F:
+            for t in self.data.T:
+                sum_part1_fam += self.data.re[f] * self.data.ls[f] * self.family_model.getVarByName(f'Ef_t[{f},{t}]').X
+                sum_part1_mvp += self.data.re[f] * self.data.ls[f] * self.mvp_model.getVarByName(f'Ef_t[{f},{t}]').X
+
+        for p in self.P:
+            for t in self.data.T:
+                sum_part1_dpm += self.data.re[f] * self.data.ls[f] * self.detailed_model.getVarByName(f'EDp_t[{p},{t}]').X
+                sum_part1_emvp += self.data.re[f] * self.data.ls[f] * self.emvp_model.getVarByName(f'EDp_t[{p},{t}]').X
+
+        # Calculate second part of the equation
+        for s in self.data.S:
+            sum_s = 0
+            sum_s_mvp = 0
+            for l in self.data.L:
+                for f in self.data.F:
+                    for t in self.data.T:
+                        sum_s += (self.data.r[f] * (self.data.dp[s][f][l][t] - self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X )
+                                  + self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f])
+                        if self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]') is not None:
+                            sum_s_mvp += (self.data.r[f] * (self.data.dp[s][f][l][t] - self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X )
+                                        + self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f])
+                            
+                        
+            sum_part2_fam += self.data.rho[s] * sum_s
+            # print(f'Detailed: s:{s} - sum_s: {sum_s} * rho: {self.data.rho[s]} = {self.data.rho[s] * sum_s}')
+            if s in self.data_s_star.S:
+                sum_part2_mvp += self.data_s_star.rho[s] * sum_s_mvp
+                # print(f'EMVP: s:{s} - sum_s: {sum_s_mvp} * rho: {self.data_s_star.rho[s]} = {self.data_s_star.rho[s] * sum_s_mvp}')
+
+            sum_s_dpm = 0
+            sum_s_emvp = 0
+            for l in self.data.L:
+                for p in self.data.P:
+                    for t in self.data.T:
+                        sum_s_dpm += (self.data.r_p[p] * (self.data.dpd[s][p][l][t] - self.detailed_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X )
+                                     + self.detailed_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X * self.data.rr_p[p])
+                        
+                        if self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]') is not None:
+                            sum_s_emvp += (self.data.r_p[p] * (self.data.dpd[s][p][l][t] - self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X )
+                                         + self.emvp_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X * self.data.rr_p[p])
+            
+            sum_part2_dpm += self.data.rho[s] * sum_s_dpm
+
+            if s in self.data_s_star.S:
+                sum_part2_emvp += self.data_s_star.rho[s] * sum_s_emvp
+
+        # Calculate ENB
+        benefit_fam = sum_part1_fam + sum_part2_fam
+        t_cost_fam = (cost1_fam + cost2_fam + cost3_fam)
+        enb_fam = benefit_fam - t_cost_fam
+
+        benefit_dpm = sum_part1_dpm + sum_part2_dpm
+        t_cost_dpm = (cost1_dpm)
+        enb_dpm = benefit_dpm - t_cost_dpm
+
+        benefit_mvp = sum_part1_mvp + sum_part2_mvp
+        t_cost_mvp = (cost1_mvp + cost2_mvp + cost3_mvp)
+        enb_mvp = benefit_mvp - t_cost_mvp
+
+        benefit_emvp = sum_part1_emvp + sum_part2_emvp
+        t_cost_emvp = (cost1_emvp)
+        enb_emvp = benefit_emvp - t_cost_emvp
+
+        pd.options.display.float_format = '{:,.2f}'.format
+
+
+        # costs and benefits to df - new row for every cost and benefit:
+        data = {'SP-FAM':   [cost1_fam, cost2_fam, cost3_fam,   sum_part1_fam, sum_part2_fam, cost1_fam + cost2_fam + cost3_fam, benefit_fam, enb_fam, objValue_FAM],
+                'SP-DPM':   [cost1_dpm, 0,          0,          sum_part1_dpm, sum_part2_dpm, cost1_dpm, benefit_dpm, enb_dpm, objValue_DPM],
+                'MVP':      [cost1_mvp, cost2_mvp, cost3_mvp,   sum_part1_mvp, sum_part2_mvp, cost1_mvp + cost2_mvp + cost3_mvp, benefit_mvp, enb_mvp, objValue_MVP],
+                'EMVP':     [cost1_emvp, 0,         0,          sum_part1_emvp, sum_part2_emvp, cost1_emvp, benefit_emvp, enb_emvp, objValue_EMVP]}
+        df = pd.DataFrame(data, index = ['Cost 1', 'Cost 2', 'Cost 3', 'Benefit1', 'Benefit2', 'TCOST', 'Benefit', 'ENB', 'ObjValue'])
+
+        # aggregated df: SP ( FAM + DPM) and EMVP (MVP + EMVP):
+        df['SP_agg'] = df['SP-FAM'] + df['SP-DPM']
+        df['EMVP_agg'] = df['MVP'] + df['EMVP']
+        # deviation for each row:
+        df['% agg deviation'] = df.apply(lambda row: self.calculate_deviation(row['SP_agg'], row['EMVP_agg']), axis=1)
+
+        print(df)
+        
+
+
+        return
 
 
     def Evaluate_results(self):
         pd.options.display.float_format = '{:.2f}'.format
+        pd.set_option('display.max_rows', 500)
+        pd.set_option('display.max_columns', 500)
+        pd.set_option('display.width', 1000)
         table6 = self.ComputeResultsOfTable6()
         table8 = self.ComputeResultsOfTable8()
-        self.PrintResults(table6, table8)
+        objFunction = self.ComputeObjFunction()
+        self.PrintResults(table6, table8, objFunction)
         pass
 
     def Calculate_ss(self, data:Parameters, gp_model_detailed, logger):
