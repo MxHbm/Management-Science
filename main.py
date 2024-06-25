@@ -51,7 +51,7 @@ def main():
         logger.info(f'data_s_star.rho: {data_s_star.rho}')
 
         # Create Results Object
-        results = Results(gp_model, gp_model_detailed, emvp_model, mvp_model, data)
+        results = Results(gp_model, gp_model_detailed, emvp_model, mvp_model, data, data_s_star)
 
         # calculate stochastic solution
         ss, logger = results.Calculate_ss(data, gp_model_detailed, logger)
