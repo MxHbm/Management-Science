@@ -30,9 +30,6 @@ class DecisionVariablesModel1:
             self.MO = model.addVars(data.MP, data.T, lb=0, name="MOm_t")
             self.IWIP = model.addVars(data.MP, data.T, lb=0, name="IWIPm_t")
             self.Q = model.addVars(data.MP, data.T, lb=0, name="Qm_t")
-            self.Z1 = model.addVars(data.MP, data.T, name="Z1m_t")
-            self.Z2 = model.addVars(data.MP, data.T, name="Z2m_t")
-            self.Aux = model.addVars(data.MP, data.T, lb=0, name="Auxm_t")
 
     class SecondStage:
         ''' Continuous decision variables of the second stage of the model '''
@@ -51,10 +48,9 @@ class DecisionVariablesModel1:
         ''' Binary decision variables of the model '''
 
         def __init__(self, model: gp.Model, data: Parameters):
-            self.R1 = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="R1m_t")
-            self.R2 = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="R2m_t")
-            self.Y = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="Ym_t")
-            self.rM = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="Ym_t")
+            #self.R1 = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="R1m_t")
+            #self.R2 = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="R2m_t")
+            self.Y = model.addVars(data.MP, data.T,data.dmax[0], vtype=GRB.BINARY, name="Ym_t")
 
     class Integer:
         ''' Integer decision variables of the model '''
