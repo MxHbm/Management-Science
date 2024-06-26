@@ -29,6 +29,10 @@ class Parameters:
         self._dri = self.__create_dri()
         self._dpd = self.__create_dpd()
 
+        self.__create_big_phi()
+        self.__create_big_theta()
+        self.__create_big_omega()
+
 
     def __loadData(self) -> None:
         ''' Load the data from the json file and assign the values to the class variables
@@ -111,6 +115,70 @@ class Parameters:
         self._L = range(self._L_No)
         self._S = range(self._K)
         self._P = range(self._P_No)
+
+    def __find_incompatible_tuples(self, t , k ):
+
+        starting_set = {t + i for i in range(k + 3)}
+        incompatible_tuples = set()
+        for t_ in range(self._T_No):
+            for k_ in range(self._dmax[0]):
+                    new_set = {t_ + i_ for i_ in range(k_ + 3)}
+                    if starting_set & new_set:
+                        incompatible_tuples.add((t_, k_))
+
+        incompatible_tuples.remove((t,k))
+
+        return incompatible_tuples
+
+    def __create_big_omega(self):
+        
+        self._big_omega = []
+        
+        for t in range(self._T_No):
+            sub_list_incompatible_tuples = []
+            for k in range(self.dmax[0]):
+                incompatible_tuples = self.__find_incompatible_tuples(t,k)
+                sub_list_incompatible_tuples.append(incompatible_tuples)
+
+            self._big_omega.append(sub_list_incompatible_tuples)
+
+    def __find_setup_tuples(self, t):
+
+        setup_tuples = set()
+
+        for t_ in range(self._T_No):
+            for k in range(self._dmax[0]):
+                if t in {t_ + k + 1, t_ + k + 2}:
+                    setup_tuples.add((t_,k))
+
+        return setup_tuples
+    
+
+    def __create_big_theta(self):
+        
+        self._big_theta = []
+        
+        for t in range(self._T_No):
+            setup_tuples = self.__find_setup_tuples(t)
+            self._big_theta.append(setup_tuples)
+
+
+    def __find_active_tuples(self,t):
+            
+            active_tuples = set()
+            for t_ in range(self._T_No):
+                for k in range(self._dmax[0]):
+                    if t_ <= t <= t_ + k:
+                        active_tuples.add((t_,k))
+            return active_tuples
+
+    def __create_big_phi(self):
+        
+        self._big_phi = []
+        
+        for t in range(self._T_No):
+            active_tuples = self.__find_active_tuples(t)
+            self._big_phi.append(active_tuples)
 
 
     def __create_dp(self) -> list[list[list[list[int]]]]:
@@ -225,6 +293,27 @@ class Parameters:
         '''
 
         return self._cty
+    
+    @property
+    def big_omega(self):
+        ''' all possible cmapagign tuples whoch should be blocked for one tuple combination
+        '''
+        
+        return self._big_omega
+    
+    @property
+    def big_phi(self):
+        ''' all possible active campaign tuples for each time point t
+        '''
+        
+        return self._big_phi
+    
+    @property
+    def big_theta(self):
+        ''' all possible active campaign tuples which are causing setup times at time point t
+        '''
+        
+        return self._big_theta
 
     @property
     def fpr(self):

@@ -36,8 +36,8 @@ class Model:
         vars.first_stage.TCOST = (
                 gp.quicksum(vars.integer.TR[i, l, t]           # for debugging
                             * data.tc[l][i] for i in data.FT for l in data.L for t in data.T) 
-                + gp.quicksum(vars.binary.Y[m, t] 
-                            * data.sco for m in data.MP for t in data.T) 
+                + gp.quicksum(vars.binary.Y[m, t,k] 
+                            * data.sco for m in data.MP for t in data.T for k in range(data.dmax[m]) if data.cty[m] == 0) 
                 + gp.quicksum(data.rho[s] 
                             * (vars.second_stage.RS[s, t] 
                                 * data.rsc 
@@ -177,7 +177,7 @@ class Model:
                 'Constraint_1.6b-33')
         
         # Constraint 4                 
-        
+        '''
         model.addConstrs((vars.binary.R1[m, t]
                         + vars.binary.R2[m, t] 
                         == 1 
@@ -188,7 +188,7 @@ class Model:
                         == 1 
                         for m in data.MP if data.cty[m]==0),
                         'Constraint_1.4e-16')
-        
+        '''
          #Constraint 5: Length-based campaign
         """ The level of production capacity during a production campaign of a length-based plant is set """
 
@@ -208,139 +208,8 @@ class Model:
                         if data.cty[m] == 0),
                         'Constraint_1.5b-24')
         
-        
 
-        """ In this type of campaigns, a variable Am, t accounts for accumulated production days at manufacturing plant m on day t. This accumula-
-            tion (constraints (25) and (26)) continues until the current campaign ends. Parameter dmax
-            m represents maximal value of Am, t . If a campaign        ends on day t, then the mandatory accumulation of production on day t + 1 (i.e. Am,t+1 ) is relaxed (constraint (26)). This allows to set the
-            accumulator variable in a new campaign to zero in a posterior campaign. In these equations the Boolean variable R2m, t (previously de-
-            fined), is used to model the start or end of a length-based campaign. Constraints (27) and (28) define upper and lower bounds for Am, t .
-            The quotient dmax_m / cmin_m, represents the maximum number of campaigns that might take place for manufacturing plant m within the current
-            planning horizon"
-        """
-
-        ### WHY DMAX / CMIN ??? --> MAXIMUM NUMBER WOULD BE CMAX / CMIN !!! 
-        ## AND HOW TO SET UP THE CAMPAIGN LENGTH ??? --> WHEN DMAX IS REACHED, then NEW CAMPAIGN WITH SETUP IS NEEDED! 
-
-
-        #Constraint: rM[m, t] becomes 1 only when A[m, t] is at its maximum (A_ub[m])
-        M = 10000
-        A_ub = {m: data.dmax[m] / data.cmin[m] for m in data.MP}
-        for m in data.MP:
-            for t in data.T[1:]:
-                if data.cty[m] == 0:
-                    # Constraint to ensure rM[m, t] is 1 when A[m, t] is at its maximum
-                    model.addConstr(vars.first_stage.A[m, t] <= A_ub[m] + M * (1 - vars.binary.rM[m, t]), name=f"Max_A_Upper_{m}_{t}")
-                    model.addConstr(vars.first_stage.A[m, t] >= A_ub[m] - M * (1 - vars.binary.rM[m, t]), name=f"Max_A_Lower_{m}_{t}")
-                    model.addConstr(vars.first_stage.A[m, t] <= A_ub[m] * vars.binary.rM[m, t] + A_ub[m] * (1 - vars.binary.rM[m, t]), name=f"Max_A_Exact_Upper_{m}_{t}")
-                    model.addConstr(vars.first_stage.A[m, t] >= A_ub[m] * vars.binary.rM[m, t], name=f"Max_A_Exact_Lower_{m}_{t}")
-
-        ##model.addConstrs(vars.first_stage.A[m, t] == vars.first_stage.A[m, t - 1] + (1 - vars.binary.rM[m, t])
-          #                for m in data.MP for t in data.T[1:] if data.cty[m] == 0)
-        
-    ### CHANGED TO == INSTEAD OF >= !!!
-    
-        model.addConstrs((vars.first_stage.A[m, t]  
-                        == vars.first_stage.A[m, t-1]
-                        + vars.integer.Z[m, t] 
-                        - ((data.dmax[m]
-                            / data.cmin[m])
-                            * vars.binary.Y[m, t]) 
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)),
-                        'Constraint_1.5d-26')
-
-        
-        model.addConstrs((vars.first_stage.A[m, t]  
-                        >= vars.integer.Z[m, t] 
-                        for m in data.MP for t in data.T 
-                        if data.cty[m] == 0),
-                        'Constraint_1.5e-27')
-        
-        model.addConstrs((vars.first_stage.A[m, t]
-                        <= (data.dmax[m]
-                            / data.cmin[m]) 
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)),
-                        'Constraint_1.5f-28')
-
-
-        """ Accumulated production at the beginning of the horizon. The following equations (constraints (29) and (30)) model the remaining quantity
-        production for the special case of t = 0."""
-        model.addConstrs((vars.first_stage.A[m, 0]  
-                        <= vars.integer.Z[m, 0] 
-                        for m in data.MP
-                        if data.cty[m] == 0),
-                        'Constraint_1.5g-29')
-    
-        
-        model.addConstrs((vars.first_stage.A[m, 0]  
-                        <= (data.dmax[m]
-                            / data.cmin[m]) 
-                        for m in data.MP
-                        if data.cty[m] == 0),
-                        'Constraint_1.5h-30') 
-        
-        model.addConstrs((vars.first_stage.A[m, 0]  
-                        == vars.integer.Z[m, 0] 
-                        - ((data.dmax[m]/ data.cmin[m])  
-                            * vars.binary.Y[m, 0]) 
-                        for m in data.MP 
-                        if data.cty[m] == 0),
-                        'Constraint_1.5i-31') 
-
-        
-        
-        #Constraint 6
-        """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
-        according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
-        capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
-        can be idle.
-        """
-
-        model.addConstrs(((vars.first_stage.Q[m, t] 
-                        / data.sc[m])
-                        <= vars.integer.Z[m, t] 
-                        for m in data.MP for t in data.T 
-                        if data.cty[m] == 1),
-                        'Constraint_1.6a-32')
-        
-        ## DAMIT FUNKTIONIERT ES NICHT !!
-
-        model.addConstrs(((vars.first_stage.Q[m, t] / data.sc[m]) * (1/(1 - data.is_[m]))
-                >= vars.integer.Z[m, t] 
-                for m in data.MP for t in data.T 
-                if data.cty[m] == 1),
-                'Constraint_1.6b-33')
-                        
-
-        #### NEW CONSTRAINT
-
-        
-        #Constraint 6
-        """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
-        according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
-        capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
-        can be idle.
-        """
-
-        model.addConstrs(((vars.first_stage.Q[m, t] 
-                        / data.sc[m])
-                        <= vars.integer.Z[m, t] 
-                        for m in data.MP for t in data.T 
-                        if data.cty[m] == 1),
-                        'Constraint_1.6a-32')
-        
-        ## DAMIT FUNKTIONIERT ES NICHT !!
-
-        model.addConstrs(((vars.first_stage.Q[m, t] / data.sc[m]) * (1/(1 - data.is_[m]))
-                >= vars.integer.Z[m, t] 
-                for m in data.MP for t in data.T 
-                if data.cty[m] == 1),
-                'Constraint_1.6b-33')
-                        
-
-        
+          
         
         # Constraint 1.7: Campaign Setups
         """In order to model these features, the binary variable Ym, t is introduced. This variable takes value 1 when a new production campaign
@@ -351,8 +220,10 @@ class Model:
         production) until finish the setup task (constraint (37)). Now for the special case that at the beginning of the horizon there is a setup task
         in progress, this is reflected in the parameter ostm > 0, constraint (38) keeping campaign indicator variable to 0 until the task is finished.
         """
+        
 
         # Zusammenfassen als R2 >= abs(Zm-t - Zm-t-1) !!!
+        '''
         model.addConstrs((vars.binary.R2[m, t] >=  vars.integer.Z[m, t-1] - vars.integer.Z[m, t]
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
@@ -360,9 +231,9 @@ class Model:
         model.addConstrs((vars.binary.R2[m, t] >=  vars.integer.Z[m, t] - vars.integer.Z[m, t-1]
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        
+        '''
         #Ensure that R1 is 1 ewhen Zt-1 and Zt are equal
-        
+        '''
         model.addConstrs((vars.binary.R1[m, t] >=  1 - vars.integer.Z[m, t] - vars.integer.Z[m, t-1]
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
@@ -370,91 +241,32 @@ class Model:
         model.addConstrs((vars.binary.R1[m, t] >=  (-1)*((1 - vars.integer.Z[m, t-1]) - vars.integer.Z[m, t])
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        
-
-        ## MOdel vars.integer.Z[m, t] >=  vars.integer.Z[m, t-1] * vars.binary.R1[m, t]
-
         '''
-        model.addConstrs((vars.integer.Z[m, t] >=  vars.integer.Z[m, t-1] * vars.binary.R1[m, t]
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-
+        
+        
+        ####### NEW BECKER FORMULATION ########
+        '''I want to find a lot of tuples (k,t') in a set Omega_t, which are defined as follows:
+        if at time t the tuple k,t' could be active at time t, being active is defined as follows,
+        that t' is the starting point and k is the duration. 
         '''
-
-        model.addConstrs((vars.integer.Z[m, t] >=  vars.integer.Z[m, t-1] - (1 - vars.binary.R1[m, t])
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-
-        '''
-        model.addConstrs((vars.first_stage.Z1[m,t] <= data.zmax[m] * vars.binary.R1[m, t]
-                                                 for m in data.MP for t in data.T 
-                        if (data.cty[m] == 0)), "Constraint_1.7a-34")
         
-        model.addConstrs((vars.first_stage.Z1[m,t] <= vars.integer.Z[m, t-1]
-                                                 for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        
-        model.addConstrs((vars.first_stage.Aux[m,t] <= vars.integer.Z[m, t-1]
-                                                 for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        
-        model.addConstrs((vars.first_stage.Aux[m,t] >= vars.integer.Z[m, t-1] - data.zmax[m] * (1- vars.binary.R1[m, t])
-                                                 for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        
-        model.addConstrs((vars.first_stage.Aux[m,t] <= vars.first_stage.Z1[m, t]
-                                                 for m in data.MP for t in data.T 
-                        if (data.cty[m] == 0)), "Constraint_1.7a-34")
-
-        '''
-
-        ### WHAT ARE YOU DOING??? #### -> Start a new campaign if the previous campaign is finished !!!
-        # This is the constraint to ensure Z[m,t] is 1 when Z[m,t-1] and R1[m,t] are both 1 
-        
-        # Enforcing that Z has to be value 1 when Z_t-1 = 0 and R2_t = 1 or Z_t-1 = 1 and R2_t = 0 -> Z >= abs(Z - R2)
-        
-        model.addConstrs((vars.integer.Z[m, t] 
-                        >=  - vars.integer.Z[m, t-1] + vars.binary.R2[m, t]
-            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "upper_bound_constraint_z")
-
-        model.addConstrs((vars.integer.Z[m, t] 
-                        >=  vars.integer.Z[m, t-1] - vars.binary.R2[m, t]
-            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
-        
-        ### Adding constraint, that Z always until limit is reached
-        
-        model.addConstrs((vars.integer.Z[m, t] 
-                        >= (1 - vars.binary.rM[m,t]) - (1 - vars.integer.Z[m, t-1])
-            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
-                
-
-        ### Think about this more!     
-        model.addConstrs((vars.binary.Y[m, t] 
-                        >= 1 - (1 - vars.integer.Z[m, t]) - (1 - vars.binary.R2[m,t])
-            for m in data.MP for t in data.T if (data.cty[m] == 0)), "lower_bound_constraint_z")
-        
-        
-       # model.addConstrs(vars.integer.Z[m, data.hl] == 1 for m in data.MP if (data.cty[m] == 0))
-
-        model.addConstrs((vars.binary.R2[m,t] 
-                        - vars.integer.Z[m, t-1] 
-                        <= vars.binary.Y[m,t] 
-                        for m in data.MP for t in data.T 
-                        if (t > 0) ), "Constraint_1.7c-36")
-         
-        model.addConstrs((vars.integer.Z[m,t - t1] 
-                        <= data.zmax[m] 
-                        * (1 - vars.binary.Y[m,t]) 
-                        for m in data.MP for t in data.T for t1 in range(1,data.alpha[m] + 1) 
-                        if (data.alpha[m] > 0)  and (t - t1 >= 0) and (data.cty[m] == 0)), "Constraint_1.7d-37")
-        
+        # Z has to be 1 if one of the campaign is 1 in the past or now! 
         model.addConstrs((vars.integer.Z[m,t] 
-                        <= 0 
-                        for m in data.MP for t in data.T 
-                        if t < data.ost[m]), "Constraint_1.7e-38")
-        
-        ### t < data.ost[m] INSTEAD OF t <= data.ost[m] !!! 
+                         <= gp.quicksum(vars.binary.Y[m, t_, k] for t_,k in data.big_phi[t]) 
+                         for m in data.MP for t in data.T
+                         if (data.cty[m] == 0)), "set_constraint_1")
 
+        model.addConstrs((vars.integer.Z[m,t] 
+                         <= 1 - gp.quicksum(vars.binary.Y[m, t_, k] for t_,k in data.big_theta[t]) 
+                         for m in data.MP for t in data.T
+                         if (data.cty[m] == 0)), "set_constraint_2")
+        
+        model.addConstrs((vars.binary.Y[m, t, k]
+                         <= 1 - gp.quicksum(vars.binary.Y[m, t_, k_] for t_, k_ in data.big_omega[t][k]) 
+                         for m in data.MP for t in data.T for k in range(data.dmax[m])
+                         if (data.cty[m] == 0)), "set_constraint_2")
+                        
+      
         #5.1.8. Factory inventory balances
         """ The following constraints model the filling of factory inventory with finished products and the shipments and exports that deplete this
         inventory."""
