@@ -103,15 +103,14 @@ class Model:
                         for t in data.T),
                         'Constraint_1.1c-7')
         
-        # Constraint 2: General production constraints
+      # Constraint 2: General production constraints
         """ Family f production of all plants in the complex is equal to the manufacturing output of plants producing f. """
-        # model.addConstrs((vars.first_stage.FP[f,t] 
-        #                 == vars.first_stage.MO[f,t]   # Product family is produced by plant m
-        #                 for f in data.F for t in data.T),
-        #                 'Constraint_1.2a-8')
+        model.addConstrs((vars.first_stage.FP[f,t] 
+                        == vars.first_stage.MO[f,t]   # Product family is produced by plant m
+                        for f in data.F for t in data.T),
+                        'Constraint_1.2a-8')
         
         
-
         '''
             model.addConstrs((vars.first_stage.FP[f,t] 
                         == gp.quicksum(vars.first_stage.MO[m,t] for m in data.MP if m == f)   # Product family is produced by plant m
@@ -121,7 +120,10 @@ class Model:
     
         '''
             model.addConstrs((vars.first_stage.FP[f,t] 
-
+                        == gp.quicksum(vars.first_stage.MO[m,t] for m in data.MP if m == f)   # Product family is produced by plant m
+                        for f in data.F for t in data.T),
+                        'Constraint_1.2a')
+        '''
 
         model.addConstrs((vars.first_stage.MO[m,t] 
                         == (1 - data.beta[m]) 
@@ -134,6 +136,7 @@ class Model:
                         * data.wp[m][t] 
                         for m in data.MP for t in data.T if t < data.sigma[m]),
                         'Constraint_1.2c-10')
+        
 
         # Constraint 3: Work-in-progress (WIP) inventory constraints
         """ Manufacturing products with σ m > 0 generate WIP inventory which is depleted by the volume of finished products in period t represented by the variable MOm, t. Parameter iwip0
@@ -149,20 +152,14 @@ class Model:
                         if data.sigma[m] > 0),
                         'Constraint_1.3a-11')
     '''
-        # Constraint 4
-        #Constraint 6
+          # Constraint 4
+
+                #Constraint 6
         """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
         according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
         capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
         can be idle.
         """
-
-        # model.addConstrs((vars.first_stage.Z1[m, t] 
-        #         >= vars.binary.R1[m, t]  
-        #         for m in data.MP for t in data.T),
-        #         'Constraint_1.4a-NEW')
-        
-
 
         model.addConstrs(((vars.first_stage.Q[m, t] 
                         / data.sc[m])
@@ -192,7 +189,7 @@ class Model:
                         for m in data.MP if data.cty[m]==0),
                         'Constraint_1.4e-16')
         
-        #Constraint 5: Length-based campaign
+         #Constraint 5: Length-based campaign
         """ The level of production capacity during a production campaign of a length-based plant is set """
 
 
@@ -210,6 +207,7 @@ class Model:
                         for m in data.MP for t in data.T
                         if data.cty[m] == 0),
                         'Constraint_1.5b-24')
+        
         
 
         """ In this type of campaigns, a variable Am, t accounts for accumulated production days at manufacturing plant m on day t. This accumula-
