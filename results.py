@@ -46,7 +46,7 @@ class Results:
         pd.set_option('display.width', 100)
         self.create_result_visualization(self.family_model, self.detailed_model, self.data)
 
-        # self.evaluate_cost_distribution(self.family_model, self.detailed_model)
+        self.evaluate_cost_distribution()
         pass
 
     def paper_values_table6(self):
@@ -1014,69 +1014,196 @@ class Results:
             plt.savefig(f'figures/plot_scenario_{scenario}-sales.png')
 
     # evaluate cost distribution
-    def evaluate_cost_distribution(self, model1, model2):
-        for model in [model1, model2]:
-            F = self.F
-            L = self.L
-            T = self.T
-            S = self.S
-            MP = self.MP
+    def evaluate_cost_distribution(self):
+        # plot RSs_t, ROs_t over time per scenario
+
+ 
+
+        self.plot1_ri_rs_ro()
+        self.plot2_ri_rs_ro()
+        self.plot3_sa_so_os()
+
+    def plot1_ri_rs_ro(self):
+        rs_mvp = {}
+        ro_mvp = {}
+        ri_mvp = {}
+
+        for s in self.data.S:
+            rs_data = {}
+            ro_data = {}
+            ri_data = {}
+
+            fig = plt.figure(figsize=(12, 6))
+            axes = fig.subplot_mosaic([['RS'], ['RO'], ['RI']], sharex=True)
             
-            TR_var = model.getVarByName('TRi_l_t')
-            Y_var = model.getVarByName('Ym_t')
-            RS_var = model.getVarByName('RSs_t')
-            RO_var = model.getVarByName('ROs_t')
-            E_var = model.getVarByName('Ef_t')
-            dp_var = model.getVarByName('dp_s_f_l_t')
-            SO_var = model.getVarByName('SOs_f_l_t')
-            OS_var = model.getVarByName('OSs_f_l_t')
+
+            for t in self.data.T:
+                rs_data[t] = self.family_model.getVarByName(f'RSs_t[{s},{t}]').X
+                ro_data[t] = self.family_model.getVarByName(f'ROs_t[{s},{t}]').X
+                ri_data[t] = self.family_model.getVarByName(f'RIs_t[{s},{t}]').X
+                #rc_data = self.family_model.getVarByName(f'RCs_t[{s},{t}]').X
+
+                if s in self.data_s_star.S:
+                    rs_mvp[t] = self.mvp_model.getVarByName(f'RSs_t[{s},{t}]').X
+                    ro_mvp[t] = self.mvp_model.getVarByName(f'ROs_t[{s},{t}]').X
+                    ri_mvp[t] = self.mvp_model.getVarByName(f'RIs_t[{s},{t}]').X
+
+            # Correct plotting by separating keys and values
+            axes['RS'].plot(list(rs_data.keys()), list(rs_data.values()), label='RSs_t', color='green')
+            axes['RO'].plot(list(ro_data.keys()), list(ro_data.values()), label='ROs_t', color='red')
+            axes['RI'].plot(list(ri_data.keys()), list(ri_data.values()), label='RIs_t', color='blue')
+
+            # For MVP data, ensure you're also separating keys and values
+            axes['RS'].plot(list(rs_mvp.keys()), list(rs_mvp.values()), label='RSs_t_mvp', color='black', linestyle='dashed')
+            axes['RO'].plot(list(ro_mvp.keys()), list(ro_mvp.values()), label='ROs_t_mvp', color='black', linestyle='dashed')
+            axes['RI'].plot(list(ri_mvp.keys()), list(ri_mvp.values()), label='RIs_t_mvp', color='black', linestyle='dashed')
+
+            axes['RI'].set_title(f'Raw Milk Inventory - Scenario {s}')
+            axes['RS'].set_title(f'Raw Milk Supply - Scenario {s}')
+            axes['RO'].set_title(f'Raw Milk Overstock - Scenario {s}')
+            axes['RI'].set_xlabel('Time t')
+            axes['RI'].set_ylabel('Values')
+            axes['RS'].set_ylabel('Values')
+            axes['RO'].set_ylabel('Values')
+            axes['RI'].legend()
+            axes['RS'].legend()
+            axes['RO'].legend()
+            
+            plt.savefig(f'figures/cost_distribution_scenario_{s}.png')
+
+    def plot2_ri_rs_ro(self):
+
+        # Initialize dictionaries to hold the aggregated data for all scenarios
+        rs_data_all = []
+        ro_data_all = []
+        ri_data_all = []
+        rs_mvp_mean = []
+        ro_mvp_mean = []
+        ri_mvp_mean = []
+
+        # Collect data for each scenario
+        for s in self.data.S:
+            rs_data = []
+            ro_data = []
+            ri_data = []
+
+            for t in self.data.T:
+                rs_data.append(self.family_model.getVarByName(f'RSs_t[{s},{t}]').X)
+                ro_data.append(self.family_model.getVarByName(f'ROs_t[{s},{t}]').X)
+                ri_data.append(self.family_model.getVarByName(f'RIs_t[{s},{t}]').X)
+
+                # Calculate mean values for MVP model
+                if s in self.data_s_star.S:
+                    rs_mvp_mean.append([self.mvp_model.getVarByName(f'RSs_t[{s},{t}]').X ])
+                    ro_mvp_mean.append([self.mvp_model.getVarByName(f'ROs_t[{s},{t}]').X ])
+                    ri_mvp_mean.append([self.mvp_model.getVarByName(f'RIs_t[{s},{t}]').X ])
+
+            rs_data_all.append(rs_data)
+            ro_data_all.append(ro_data)
+            ri_data_all.append(ri_data)
+
+            
+
+        # Plotting
+        fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=(18, 18))
+
+        # RS plot
+        for rs_data in rs_data_all:
+            axes[0].plot(self.data.T, rs_data, color='grey', alpha=0.5)
+        axes[0].plot(self.data.T, rs_mvp_mean, label='RSs_t_mvp_mean', color='black', linestyle='dashed')
+        axes[0].set_title('Raw Milk Supply')
+        axes[0].set_ylabel('Values')
+        axes[0].legend()
+
+        # RO plot
+        for ro_data in ro_data_all:
+            axes[1].plot(self.data.T, ro_data, color='grey', alpha=0.5)
+        axes[1].plot(self.data.T, ro_mvp_mean, label='ROs_t_mvp_mean', color='black', linestyle='dashed')
+        axes[1].set_title('Raw Milk Overstock')
+        axes[1].set_ylabel('Values')
+        axes[1].legend()
+
+        # RI plot
+        for ri_data in ri_data_all:
+            axes[2].plot(self.data.T, ri_data, color='grey', alpha=0.5)
+        axes[2].plot(self.data.T, ri_mvp_mean, label='RIs_t_mvp_mean', color='black', linestyle='dashed')
+        axes[2].set_title('Raw Milk Inventory')
+        axes[2].set_xlabel('Time t')
+        axes[2].set_ylabel('Values')
+        axes[2].legend()
+
+        plt.tight_layout()
+
+        plt.savefig(f'figures/plot2_raw-milk_distribution_over-{s}-scenarios.png')
+        plt.close(fig)  # Close the figure to avoid display issues in some environments
+
+    def plot3_sa_so_os(self):
+
+        # Initialize dictionaries to hold the aggregated data for all scenarios
+        sa_data_all = []
+        so_data_all = []
+        os_data_all = []
+        sa_mvp_mean = []
+        so_mvp_mean = []
+        os_mvp_mean = []
+
+        # Collect data for each scenario
+        for s in self.data.S:
+            sa_data = []
+            so_data = []
+            os_data = []
+
+            for f in self.data.F:
+                for l in self.data.L:
+
+                    for t in self.data.T:
+                        sa_data.append(self.family_model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').X)
+                        so_data.append(self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X)
+                        os_data.append(self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X)
+
+                        # Calculate mean values for MVP model
+                        if s in self.data_s_star.S:
+                            sa_mvp_mean.append([self.mvp_model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').X ])
+                            so_mvp_mean.append([self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X ])
+                            os_mvp_mean.append([self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X ])
+
+            sa_data_all.append(sa_data)
+            so_data_all.append(so_data)
+            os_data_all.append(os_data)
+
+            
+
+        # Plotting
+        fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=(18, 18))
+
+        # RS plot
+        for data in sa_data_all:
+            axes[0].plot(self.data.T, data, color='grey', alpha=0.5)
+        axes[0].plot(self.data.T, sa_mvp_mean, label='RSs_t_mvp_mean', color='black', linestyle='dashed')
+        axes[0].set_title('Raw Milk Supply')
+        axes[0].set_ylabel('Values')
+        axes[0].legend()
+
+        # RO plot
+        for data in so_data_all:
+            axes[1].plot(self.data.T, data, color='grey', alpha=0.5)
+        axes[1].plot(self.data.T, so_mvp_mean, label='ROs_t_mvp_mean', color='black', linestyle='dashed')
+        axes[1].set_title('Raw Milk Overstock')
+        axes[1].set_ylabel('Values')
+        axes[1].legend()
+
+        # RI plot
+        for data in os_data_all:
+            axes[2].plot(self.data.T, data, color='grey', alpha=0.5)
+        axes[2].plot(self.data.T, os_mvp_mean, label='RIs_t_mvp_mean', color='black', linestyle='dashed')
+        axes[2].set_title('Raw Milk Inventory')
+        axes[2].set_xlabel('Time t')
+        axes[2].set_ylabel('Values')
+        axes[2].legend()
+
+        plt.tight_layout()
+
+        plt.savefig(f'figures/plot2_sales_distribution_over-{s}-scenarios.png')
+        plt.close(fig)  # Close the figure to avoid display issues in some environments
 
 
-
-            print("Optimaler erwarteter Nettoertrag (ENB):", model.objVal)
-            print("Transportkosten (TR):")
-            for i in range(len(F)):
-                for l in range(len(L)):
-                    for t in range(len(T)):
-                        print(f"F: {F[i]}, L: {L[l]}, T: {T[t]}, TR: {TR_var[i, l, t].X}")
-            
-            print("Setup-Kosten (Y):")
-            for m in range(len(MP)):
-                for t in range(len(T)):
-                    print(f"MP: {MP[m]}, T: {T[t]}, Y: {Y_var[m, t].X}")
-            
-            print("Rohmilchkosten bei Unterbestand (RS):")
-            for s in range(len(S)):
-                for t in range(len(T)):
-                    print(f"S: {S[s]}, T: {T[t]}, RS: {RS_var[s, t].X}")
-            
-            print("Rohmilchkosten bei Überbestand (RO):")
-            for s in range(len(S)):
-                for t in range(len(T)):
-                    print(f"S: {S[s]}, T: {T[t]}, RO: {RO_var[s, t].X}")
-            
-            print("Exporteinnahmen (E):")
-            for f in range(len(F)):
-                for t in range(len(T)):
-                    print(f"F: {F[f]}, T: {T[t]}, E: {E_var[f, t].x}")
-            
-            print("Nachfrage (dp):")
-            for s in range(len(S)):
-                for f in range(len(F)):
-                    for l in range(len(L)):
-                        for t in range(len(T)):
-                            print(f"S: {S[s]}, F: {F[f]}, L: {L[l]}, T: {T[t]}, dp: {dp_var[s, f, l, t].x}")
-            
-            print("Überbestand (SO):")
-            for s in range(len(S)):
-                for f in range(len(F)):
-                    for l in range(len(L)):
-                        for t in range(len(T)):
-                            print(f"S: {S[s]}, F: {F[f]}, L: {L[l]}, T: {T[t]}, SO: {SO_var[s, f, l, t].x}")
-            
-            print("Verkauf von Überbestand (OS):")
-            for s in range(len(S)):
-                for l in range(len(L)):
-                    for f in range(len(F)):
-                        for t in range(len(T)):
-                            print(f"S: {S[s]}, L: {L[l]}, F: {F[f]}, T: {T[t]}, OS: {OS_var[s, l, f, t].x}")
