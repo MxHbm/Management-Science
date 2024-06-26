@@ -24,6 +24,7 @@ def main():
     #data = Parameters("data/base_data.json")
     data_s_star = S_star("data/case_study_data.json")      # data for EMVP calculation
 
+
     # if data.use_SRA: 
     #     #print(data.SRA.reduced_scenarios)
     #     #print(data.SRA.reduced_scenarios_probabilities)
