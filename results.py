@@ -779,16 +779,12 @@ class Results:
                 # if self.family_model.getVarByName(f'ROs_t[{s},{t}]') is not None:
                 cost = (self.family_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.rsc
                         + self.family_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.roc)
-                cost3_fam += cost
+                cost3_fam += cost * self.data.rho[s]
 
                 if s in self.data_s_star.S:
                     cost = (self.mvp_model.getVarByName(f'RSs_t[{s},{t}]').X * self.data.rsc
                             + self.mvp_model.getVarByName(f'ROs_t[{s},{t}]').X * self.data.roc)
-                    cost3_mvp += cost
-
-            cost3_fam = cost3_fam * self.data.rho[s]
-            if s in self.data_s_star.S:
-                cost3_mvp = cost3_mvp * self.data_s_star.rho[s]
+                    cost3_mvp += cost * self.data_s_star.rho[s]
         
         objValue_FAM = self.family_model.objVal
         objValue_DPM = self.detailed_model.objVal
@@ -817,21 +813,21 @@ class Results:
         # Calculate second part of the equation
         for s in self.data.S:
             sum_s = 0
-            sum_s_mvp = 0
+
             for l in self.data.L:
                 for f in self.data.F:
                     for t in self.data.T:
                         sum_s += (self.data.r[f] * (self.data.dp[s][f][l][t] - self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X )
                                   + self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f])
                         if self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]') is not None:
-                            sum_s_mvp += (self.data.r[f] * (self.data.dp[s][f][l][t] - self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X )
-                                        + self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f])
+                            sum_part2_mvp += (self.data.r[f] * (self.data.dp[s][f][l][t] - self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X )
+                                        + self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f]) * self.data_s_star.rho[s]
                             
                         
             sum_part2_fam += self.data.rho[s] * sum_s
             # print(f'Detailed: s:{s} - sum_s: {sum_s} * rho: {self.data.rho[s]} = {self.data.rho[s] * sum_s}')
-            if s in self.data_s_star.S:
-                sum_part2_mvp += self.data_s_star.rho[s] * sum_s_mvp
+            # if s in self.data_s_star.S:
+            #     sum_part2_mvp += self.data_s_star.rho[s] * sum_s_mvp
                 # print(f'EMVP: s:{s} - sum_s: {sum_s_mvp} * rho: {self.data_s_star.rho[s]} = {self.data_s_star.rho[s] * sum_s_mvp}')
 
             sum_s_dpm = 0
@@ -1017,17 +1013,54 @@ class Results:
     def evaluate_cost_distribution(self):
         # plot RSs_t, ROs_t over time per scenario
 
- 
+        s_min, s_mean, s_max = self.get_scenario_with_demand('mid')
+        
 
         self.plot1_ri_rs_ro()
         self.plot2_ri_rs_ro()
         self.plot3_sales_quantities()
         self.plot4_sales_income()
 
+        self.plot5_costs_and_sales_with_minmaxmean(s_min, s_max, s_mean)
+
+    
+
         #self.plot_combined_sales_quantities_and_income()
 
+    def get_scenario_with_demand(self, demand='mid'):
+        demand = pd.DataFrame()
+        for s in self.data.S:
+            demand_value = 0
+            for f in self.data.F:
+                for l in self.data.L:
+                    for t in self.data.T:
+                        demand_value+= self.data.dp[s][f][l][t]
+            demand[s] = [demand_value]
+        demand = demand.T.rename(columns={0: 'demand'})
+        print(demand)
+        min = demand['demand'].min()
+        max = demand['demand'].max()
+        mean = demand['demand'].mean()
+        # mean = abs(demand['demand'] - mean ).argsort()[:1]
+        mean = demand.iloc[(demand['demand'] - mean).abs().argsort()[:1]].index[0]
+        
+        min = np.where(demand['demand'] == min)[0][0]
+        max = np.where(demand['demand'] == max)[0][0]
+        # mean = np.where(demand['demand'] == mean)[0]
 
-    def plot1_ri_rs_ro(self):
+        print(min, max, mean)
+
+        return min, mean, max
+    
+    def plot5_costs_and_sales_with_minmaxmean(self, s_min, s_max, s_mean):
+
+        self.plot1_ri_rs_ro(s_min=s_min, s_max=s_max, s_mean=s_mean)
+        pass
+
+
+    def plot1_ri_rs_ro(self, s_min = None, s_max = None, s_mean = None):
+        # Initialize dictionaries to hold the aggregated data for all scenarios
+        min_mean_max = {'min': s_min, 'max': s_max, 'mean': s_mean}
         rs_mvp = {}
         ro_mvp = {}
         ri_mvp = {}
@@ -1062,9 +1095,14 @@ class Results:
             axes['RO'].plot(list(ro_mvp.keys()), list(ro_mvp.values()), label='ROs_t_mvp', color='black', linestyle='dashed')
             axes['RI'].plot(list(ri_mvp.keys()), list(ri_mvp.values()), label='RIs_t_mvp', color='black', linestyle='dashed')
 
-            axes['RI'].set_title(f'Raw Milk Inventory - Scenario {s}')
-            axes['RS'].set_title(f'Raw Milk Supply - Scenario {s}')
-            axes['RO'].set_title(f'Raw Milk Overstock - Scenario {s}')
+            if s in min_mean_max.values():
+                value = [i for i in min_mean_max if min_mean_max[i] == s][0]
+                demand_suffix = f' ({value} demand)'
+            else:
+                demand_suffix = ''
+            axes['RI'].set_title(f'Raw Milk Inventory - Scenario {s}{demand_suffix}')
+            axes['RS'].set_title(f'Raw Milk Supply - Scenario {s}{demand_suffix}')
+            axes['RO'].set_title(f'Raw Milk Overstock - Scenario {s}{demand_suffix}')
             axes['RI'].set_xlabel('Time t')
             axes['RI'].set_ylabel('Values')
             axes['RS'].set_ylabel('Values')
@@ -1072,7 +1110,15 @@ class Results:
             axes['RI'].legend()
             axes['RS'].legend()
             axes['RO'].legend()
-            
+
+
+
+            plt.tight_layout()
+
+            if s in min_mean_max.values():
+                value = [i for i in min_mean_max if min_mean_max[i] == s][0]
+                plt.savefig(f'figures/cost_distribution_scenario_{s}_{value}.png')
+
             plt.savefig(f'figures/cost_distribution_scenario_{s}.png')
 
     def plot2_ri_rs_ro(self):
