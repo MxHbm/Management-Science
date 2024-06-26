@@ -217,14 +217,7 @@ class Model:
 
         ### WHY DMAX / CMIN ??? --> MAXIMUM NUMBER WOULD BE CMAX / CMIN !!! 
         ## AND HOW TO SET UP THE CAMPAIGN LENGTH ??? --> WHEN DMAX IS REACHED, then NEW CAMPAIGN WITH SETUP IS NEEDED! 
-        '''
-        model.addConstrs((vars.first_stage.A[m, t +1 ]  
-                        <= vars.first_stage.A[m, t] 
-                        + vars.integer.Z[m,t] 
-                        for m in data.MP for t in data.T[:-1]
-                        if (data.cty[m] == 0)),
-                        'Constraint_1.5c-25')
-        '''
+
 
         #Constraint: rM[m, t] becomes 1 only when A[m, t] is at its maximum (A_ub[m])
         M = 10000
@@ -293,30 +286,6 @@ class Model:
                         'Constraint_1.5i-31') 
 
         
-        '''
-        model.addConstrs((vars.integer.Z[m,t] 
-                          >= 1 - ((data.dmax[m]
-                            / data.cmin[m]) - 1 - vars.first_stage.A[m,t]) 
-                for m in data.MP for t in data.T[data.alpha[m] + 1:] for t1 in range(1,data.alpha[m] + 1)
-                if data.cty[m] == 0),
-                "A_less_than_14") 
-        '''
-        '''
-        #### NEW CONSTRAINT
-        big_M = 1000
-        model.addConstrs((vars.first_stage.A[m,t] - (data.dmax[m]/ data.cmin[m]) 
-                          <= big_M * (1 - vars.integer.Z[m,t])
-                for m in data.MP for t in data.T
-                if data.cty[m] == 0),
-                "A_less_than_14") 
-                '''
-        '''
-        model.addConstrs((vars.first_stage.A[m,t] - (data.dmax[m]/ data.cmin[m]) 
-                          >= - big_M * (1 - vars.integer.Z[m,t])
-                for m in data.MP for t in data.T
-                if data.cty[m] == 0),
-                "A_greater_than_14")
-        ''' 
         
         #Constraint 6
         """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
@@ -367,11 +336,6 @@ class Model:
                 'Constraint_1.6b-33')
                         
 
-        ### NEW CONSTRAINTS FOR SHIFT BASED TO RESTRICT VALUES !!! 
-        # model.addConstrs((vars.first_stage.Q[m, t] <=  data.cmax[m]
-        #                for m in data.MP for t in data.T 
-        #               if data.cty[m] == 1),
-        #                 'Constraint_1.5_new')
         
         
         # Constraint 1.7: Campaign Setups
@@ -384,6 +348,7 @@ class Model:
         in progress, this is reflected in the parameter ostm > 0, constraint (38) keeping campaign indicator variable to 0 until the task is finished.
         """
 
+        # Zusammenfassen als R2 >= abs(Zm-t - Zm-t-1) !!!
         model.addConstrs((vars.binary.R2[m, t] >=  vars.integer.Z[m, t-1] - vars.integer.Z[m, t]
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
@@ -392,15 +357,9 @@ class Model:
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
         
-        model.addConstrs((vars.binary.R1[m, t] >=  (1 - vars.integer.Z[m, t]) - vars.integer.Z[m, t-1]
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+        #Ensure that R1 is 1 ewhen Zt-1 and Zt are equal
         
-        model.addConstrs((vars.binary.R1[m, t] >=  (1 - vars.integer.Z[m, t-1]) - vars.integer.Z[m, t] 
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        
-        model.addConstrs((vars.binary.R1[m, t] >=  (-1)*((1 - vars.integer.Z[m, t]) - vars.integer.Z[m, t-1])
+        model.addConstrs((vars.binary.R1[m, t] >=  1 - vars.integer.Z[m, t] - vars.integer.Z[m, t-1]
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
         
@@ -409,21 +368,20 @@ class Model:
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
         
 
+        ## MOdel vars.integer.Z[m, t] >=  vars.integer.Z[m, t-1] * vars.binary.R1[m, t]
 
         '''
         model.addConstrs((vars.integer.Z[m, t] >=  vars.integer.Z[m, t-1] * vars.binary.R1[m, t]
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
 
-                        '''
-        
+        '''
+
         model.addConstrs((vars.integer.Z[m, t] >=  vars.integer.Z[m, t-1] - (1 - vars.binary.R1[m, t])
                         for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
 
-        
-        ## NEw ATTEMPT 
-
+        '''
         model.addConstrs((vars.first_stage.Z1[m,t] <= data.zmax[m] * vars.binary.R1[m, t]
                                                  for m in data.MP for t in data.T 
                         if (data.cty[m] == 0)), "Constraint_1.7a-34")
@@ -436,44 +394,41 @@ class Model:
                                                  for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
         
-        model.addConstrs((vars.first_stage.Aux[m,t] >= vars.integer.Z[m, t-1] -data.zmax[m] * (1- vars.binary.R1[m, t])
+        model.addConstrs((vars.first_stage.Aux[m,t] >= vars.integer.Z[m, t-1] - data.zmax[m] * (1- vars.binary.R1[m, t])
                                                  for m in data.MP for t in data.T 
                         if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
         
         model.addConstrs((vars.first_stage.Aux[m,t] <= vars.first_stage.Z1[m, t]
                                                  for m in data.MP for t in data.T 
                         if (data.cty[m] == 0)), "Constraint_1.7a-34")
-        
-        
+
+        '''
+
         ### WHAT ARE YOU DOING??? #### -> Start a new campaign if the previous campaign is finished !!!
         # This is the constraint to ensure Z[m,t] is 1 when Z[m,t-1] and R1[m,t] are both 1 
         
-        # Adding the big-M constraints in a similar style
+        # Enforcing that Z has to be value 1 when Z_t-1 = 0 and R2_t = 1 or Z_t-1 = 1 and R2_t = 0 -> Z >= abs(Z - R2)
         
         model.addConstrs((vars.integer.Z[m, t] 
-                        >=  (-1)*(vars.integer.Z[m, t-1] - vars.binary.R2[m, t])
+                        >=  - vars.integer.Z[m, t-1] + vars.binary.R2[m, t]
             for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "upper_bound_constraint_z")
 
         model.addConstrs((vars.integer.Z[m, t] 
                         >=  vars.integer.Z[m, t-1] - vars.binary.R2[m, t]
             for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
         
-        model.addConstrs((vars.integer.Z[m, t] 
-                        >=  (-1)*(vars.integer.Z[m, t-1] - vars.binary.R2[m, t])
-            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "upper_bound_constraint_z")
-
-        model.addConstrs((vars.integer.Z[m, t] 
-                        >=  vars.integer.Z[m, t-1] - vars.binary.R2[m, t]
-            for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
+        ### Adding constraint, that Z always until limit is reached
         
         model.addConstrs((vars.integer.Z[m, t] 
                         >= (1 - vars.binary.rM[m,t]) - (1 - vars.integer.Z[m, t-1])
             for m in data.MP for t in data.T[1:] if (t > 0) and (data.cty[m] == 0)), "lower_bound_constraint_z")
+                
 
+        ### Think about this more!     
         model.addConstrs((vars.binary.Y[m, t] 
                         >= 1 - (1 - vars.integer.Z[m, t]) - (1 - vars.binary.R2[m,t])
             for m in data.MP for t in data.T if (data.cty[m] == 0)), "lower_bound_constraint_z")
-
+        
         
        # model.addConstrs(vars.integer.Z[m, data.hl] == 1 for m in data.MP if (data.cty[m] == 0))
 
