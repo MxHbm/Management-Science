@@ -1021,7 +1021,11 @@ class Results:
 
         self.plot1_ri_rs_ro()
         self.plot2_ri_rs_ro()
-        self.plot3_sa_so_os()
+        self.plot3_sales_quantities()
+        self.plot4_sales_income()
+
+        #self.plot_combined_sales_quantities_and_income()
+
 
     def plot1_ri_rs_ro(self):
         rs_mvp = {}
@@ -1111,7 +1115,7 @@ class Results:
         for rs_data in rs_data_all:
             axes[0].plot(self.data.T, rs_data, color='grey', alpha=0.5)
         axes[0].plot(self.data.T, rs_mvp_mean, label='RSs_t_mvp_mean', color='black', linestyle='dashed')
-        axes[0].set_title('Raw Milk Supply')
+        axes[0].set_title('Raw Milk Supply per Scenario vs. MVP')
         axes[0].set_ylabel('Values')
         axes[0].legend()
 
@@ -1119,7 +1123,7 @@ class Results:
         for ro_data in ro_data_all:
             axes[1].plot(self.data.T, ro_data, color='grey', alpha=0.5)
         axes[1].plot(self.data.T, ro_mvp_mean, label='ROs_t_mvp_mean', color='black', linestyle='dashed')
-        axes[1].set_title('Raw Milk Overstock')
+        axes[1].set_title('Raw Milk Overstock Quantity per Scenario vs. MVP')
         axes[1].set_ylabel('Values')
         axes[1].legend()
 
@@ -1127,7 +1131,7 @@ class Results:
         for ri_data in ri_data_all:
             axes[2].plot(self.data.T, ri_data, color='grey', alpha=0.5)
         axes[2].plot(self.data.T, ri_mvp_mean, label='RIs_t_mvp_mean', color='black', linestyle='dashed')
-        axes[2].set_title('Raw Milk Inventory')
+        axes[2].set_title('Raw Milk Inventory per Scenario vs. MVP')
         axes[2].set_xlabel('Time t')
         axes[2].set_ylabel('Values')
         axes[2].legend()
@@ -1137,73 +1141,338 @@ class Results:
         plt.savefig(f'figures/plot2_raw-milk_distribution_over-{s}-scenarios.png')
         plt.close(fig)  # Close the figure to avoid display issues in some environments
 
-    def plot3_sa_so_os(self):
+    def plot3_sales_quantities(self):
 
         # Initialize dictionaries to hold the aggregated data for all scenarios
-        sa_data_all = []
         so_data_all = []
         os_data_all = []
-        sa_mvp_mean = []
-        so_mvp_mean = []
-        os_mvp_mean = []
+        dp_data_all = []
+        so_mvp_data = []
+        os_mvp_data = []
+        dp_mvp_data = []
 
         # Collect data for each scenario
         for s in self.data.S:
-            sa_data = []
             so_data = []
             os_data = []
+            dp_data = []
 
-            for f in self.data.F:
-                for l in self.data.L:
 
-                    for t in self.data.T:
-                        sa_data.append(self.family_model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').X)
-                        so_data.append(self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X)
-                        os_data.append(self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X)
+            for t in self.data.T:
+                so, os, dp = 0, 0, 0
+                so_mvp, os_mvp, dp_mvp = 0, 0, 0
+
+                for f in self.data.F:
+                    for l in self.data.L:
+                        so += self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                        os += self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
+                        dp += self.data.dp[s][f][l][t]
 
                         # Calculate mean values for MVP model
                         if s in self.data_s_star.S:
-                            sa_mvp_mean.append([self.mvp_model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').X ])
-                            so_mvp_mean.append([self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X ])
-                            os_mvp_mean.append([self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X ])
+                            so_mvp += self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                            os_mvp += self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
+                            dp_mvp += self.data_s_star.dp[s][f][l][t]
+                            
+                
+                so_data.append(so)
+                os_data.append(os)
+                dp_data.append(dp)
 
-            sa_data_all.append(sa_data)
+                if s in self.data_s_star.S:
+                    so_mvp_data.append(so_mvp)
+                    os_mvp_data.append(os_mvp)
+                    dp_mvp_data.append(dp_mvp)
+
             so_data_all.append(so_data)
             os_data_all.append(os_data)
+            dp_data_all.append(dp_data)
 
-            
+        exp = {}
+        exp_mvp = {}
+        for t in self.data.T:
+            exp_f = {}
+            exp_f[t] = 0
+
+            exp_mvp_f = {}
+            exp_mvp_f[t] = 0
+            for f in self.data.F:
+                # Ef_t
+                exp_f[t] += self.family_model.getVarByName(f'Ef_t[{f},{t}]').X
+                exp_mvp_f[t] += self.mvp_model.getVarByName(f'Ef_t[{f},{t}]').X
+
+            exp[t] = exp_f[t]
+            exp_mvp[t] = exp_mvp_f[t]
+
+        # exp dict to list:
+        exp = [exp[t] for t in self.data.T]        
+        exp_mvp = [exp_mvp[t] for t in self.data.T]    
 
         # Plotting
-        fig, axes = plt.subplots(nrows=3, ncols=1, sharex=True, figsize=(18, 18))
+        fig, axes = plt.subplots(nrows=4, ncols=1, sharex=True, figsize=(18, 18))
 
-        # RS plot
-        for data in sa_data_all:
-            axes[0].plot(self.data.T, data, color='grey', alpha=0.5)
-        axes[0].plot(self.data.T, sa_mvp_mean, label='RSs_t_mvp_mean', color='black', linestyle='dashed')
-        axes[0].set_title('Raw Milk Supply')
+        # Export plot
+        axes[0].plot(self.data.T, exp, color='grey', alpha=0.5)
+        axes[0].plot(self.data.T, exp_mvp, label='Ef_t_mvp_mean', color='black', linestyle='dashed')
+        axes[0].set_title('Export Quantity vs. MVP')
         axes[0].set_ylabel('Values')
         axes[0].legend()
 
-        # RO plot
+        # SO plot
         for data in so_data_all:
             axes[1].plot(self.data.T, data, color='grey', alpha=0.5)
-        axes[1].plot(self.data.T, so_mvp_mean, label='ROs_t_mvp_mean', color='black', linestyle='dashed')
-        axes[1].set_title('Raw Milk Overstock')
+        axes[1].plot(self.data.T, so_mvp_data, label='SOs_t_mvp_mean', color='black', linestyle='dashed')
+        axes[1].set_title('Stock Out Quantity per Scenario vs. Mean Value Problem')
         axes[1].set_ylabel('Values')
         axes[1].legend()
 
-        # RI plot
+        # OS plot
         for data in os_data_all:
             axes[2].plot(self.data.T, data, color='grey', alpha=0.5)
-        axes[2].plot(self.data.T, os_mvp_mean, label='RIs_t_mvp_mean', color='black', linestyle='dashed')
-        axes[2].set_title('Raw Milk Inventory')
+        axes[2].plot(self.data.T, os_mvp_data, label='OSs_f_l_t_mvp_mean', color='black', linestyle='dashed')
+        axes[2].set_title('Over Stock Quantity per Scenario vs. Mean Value Problem')
         axes[2].set_xlabel('Time t')
         axes[2].set_ylabel('Values')
         axes[2].legend()
 
+        for data in dp_data_all:
+            axes[3].plot(self.data.T, data, color='grey', alpha=0.5)
+        axes[3].plot(self.data.T, dp_mvp_data, label='dps_f_l_t_mvp_mean', color='black', linestyle='dashed')
+        axes[3].set_title('Demand - Over Stock Quantity per Scenario vs. Mean Value Problem')
+        axes[3].set_xlabel('Time t')
+        axes[3].set_ylabel('Values')
+        axes[3].legend()
+
         plt.tight_layout()
 
-        plt.savefig(f'figures/plot2_sales_distribution_over-{s}-scenarios.png')
+        plt.savefig(f'figures/plot3_sales_quantities_distribution_over-{s}-scenarios.png')
         plt.close(fig)  # Close the figure to avoid display issues in some environments
 
+    def plot4_sales_income(self):
 
+        # Initialize dictionaries to hold the aggregated data for all scenarios
+        so_data_all = []
+        os_data_all = []
+        dp_data_all = []
+        so_mvp_data = []
+        os_mvp_data = []
+        dp_mvp_data = []
+
+        # Collect data for each scenario
+        for s in self.data.S:
+            so_data = []
+            os_data = []
+            dp_data = []
+
+
+            for t in self.data.T:
+                so, os, dp = 0, 0, 0
+                so_mvp, os_mvp, dp_mvp = 0, 0, 0
+
+                for f in self.data.F:
+                    for l in self.data.L:
+                        so += self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X * self.data.r[f]
+                        os += self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f]
+                        dp += self.data.dp[s][f][l][t]  * self.data.r[f]
+
+                        # Calculate mean values for MVP model
+                        if s in self.data_s_star.S:
+                            so_mvp += self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X * self.data.r[f]
+                            os_mvp += self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f]
+                            dp_mvp += self.data_s_star.dp[s][f][l][t] * self.data.r[f]
+                            
+                
+                so_data.append(so)
+                os_data.append(os)
+                dp_data.append(dp)
+
+                if s in self.data_s_star.S:
+                    so_mvp_data.append(so_mvp)
+                    os_mvp_data.append(os_mvp)
+                    dp_mvp_data.append(dp_mvp)
+
+            so_data_all.append(so_data)
+            os_data_all.append(os_data)
+            dp_data_all.append(dp_data)
+
+        exp = {}
+        exp_mvp = {}
+        for t in self.data.T:
+            exp_f = {}
+            exp_f[t] = 0
+
+            exp_mvp_f = {}
+            exp_mvp_f[t] = 0
+            for f in self.data.F:
+                # Ef_t
+                exp_f[t] += self.family_model.getVarByName(f'Ef_t[{f},{t}]').X * self.data.re[f] * self.data.ls[f]
+                exp_mvp_f[t] += self.mvp_model.getVarByName(f'Ef_t[{f},{t}]').X * self.data.re[f] * self.data.ls[f]
+
+            exp[t] = exp_f[t]
+            exp_mvp[t] = exp_mvp_f[t]
+
+        # exp dict to list:
+        exp = [exp[t] for t in self.data.T]        
+        exp_mvp = [exp_mvp[t] for t in self.data.T]    
+
+        # Plotting
+        fig, axes = plt.subplots(nrows=4, ncols=1, sharex=True, figsize=(18, 18))
+
+        # Export plot
+        axes[0].plot(self.data.T, exp, color='grey', alpha=0.5)
+        axes[0].plot(self.data.T, exp_mvp, label='Ef_t_mvp_mean', color='black', linestyle='dashed')
+        axes[0].set_title('Export Value vs. MVP')
+        axes[0].set_ylabel('Values')
+        axes[0].legend()
+
+        # SO plot
+        for data in so_data_all:
+            axes[1].plot(self.data.T, data, color='grey', alpha=0.5)
+        axes[1].plot(self.data.T, so_mvp_data, label='SOs_t_mvp_mean', color='black', linestyle='dashed')
+        axes[1].set_title('Stock Out Value per Scenario vs. Mean Value Problem')
+        axes[1].set_ylabel('Values')
+        axes[1].legend()
+
+        # OS plot
+        for data in os_data_all:
+            axes[2].plot(self.data.T, data, color='grey', alpha=0.5)
+        axes[2].plot(self.data.T, os_mvp_data, label='OSs_f_l_t_mvp_mean', color='black', linestyle='dashed')
+        axes[2].set_title('Over Stock Value per Scenario vs. Mean Value Problem')
+        axes[2].set_xlabel('Time t')
+        axes[2].set_ylabel('Values')
+        axes[2].legend()
+
+        for data in dp_data_all:
+            axes[3].plot(self.data.T, data, color='grey', alpha=0.5)
+        axes[3].plot(self.data.T, dp_mvp_data, label='dps_f_l_t_mvp_mean', color='black', linestyle='dashed')
+        axes[3].set_title('Demand - Over Stock Value per Scenario vs. Mean Value Problem')
+        axes[3].set_xlabel('Time t')
+        axes[3].set_ylabel('Values')
+        axes[3].legend()
+
+        plt.tight_layout()
+
+        plt.savefig(f'figures/plot4_sales_values_distribution_over-{s}-scenarios.png')
+        plt.close(fig)  # Close the figure to avoid display issues in some environments
+
+    def plot_combined_sales_quantities_and_income(self):
+        # Initialize dictionaries to hold the aggregated data for all scenarios
+        so_data_all_quantities = []
+        os_data_all_quantities = []
+        dp_data_all_quantities = []
+        so_mvp_data_quantities = []
+        os_mvp_data_quantities = []
+        dp_mvp_data_quantities = []
+        
+        so_data_all_income = []
+        os_data_all_income = []
+        dp_data_all_income = []
+        so_mvp_data_income = []
+        os_mvp_data_income = []
+        dp_mvp_data_income = []
+
+        # Collect data for each scenario
+        for s in self.data.S:
+            so_data_quantities = []
+            os_data_quantities = []
+            dp_data_quantities = []
+            
+            so_data_income = []
+            os_data_income = []
+            dp_data_income = []
+
+            for t in self.data.T:
+                so_quantities, os_quantities, dp_quantities = 0, 0, 0
+                so_mvp_quantities, os_mvp_quantities, dp_mvp_quantities = 0, 0, 0
+                
+                so_income, os_income, dp_income = 0, 0, 0
+                so_mvp_income, os_mvp_income, dp_mvp_income = 0, 0, 0
+
+                for f in self.data.F:
+                    for l in self.data.L:
+                        so_quantities += self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                        os_quantities += self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
+                        dp_quantities += self.data.dp[s][f][l][t]
+
+                        so_income += self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X * self.data.r[f]
+                        os_income += self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f]
+                        dp_income += self.data.dp[s][f][l][t] * self.data.r[f]
+
+                        if s in self.data_s_star.S:
+                            so_mvp_quantities += self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                            os_mvp_quantities += self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
+                            dp_mvp_quantities += self.data_s_star.dp[s][f][l][t]
+
+                            so_mvp_income += self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X * self.data.r[f]
+                            os_mvp_income += self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f]
+                            dp_mvp_income += self.data_s_star.dp[s][f][l][t] * self.data.r[f]
+
+                so_data_quantities.append(so_quantities)
+                os_data_quantities.append(os_quantities)
+                dp_data_quantities.append(dp_quantities)
+
+                so_data_income.append(so_income)
+                os_data_income.append(os_income)
+                dp_data_income.append(dp_income)
+
+                if s in self.data_s_star.S:
+                    so_mvp_data_quantities.append(so_mvp_quantities)
+                    os_mvp_data_quantities.append(os_mvp_quantities)
+                    dp_mvp_data_quantities.append(dp_mvp_quantities)
+                    
+                    so_mvp_data_income.append(so_mvp_income)
+                    os_mvp_data_income.append(os_mvp_income)
+                    dp_mvp_data_income.append(dp_mvp_income)
+
+            so_data_all_quantities.append(so_data_quantities)
+            os_data_all_quantities.append(os_data_quantities)
+            dp_data_all_quantities.append(dp_data_quantities)
+            
+            so_data_all_income.append(so_data_income)
+            os_data_all_income.append(os_data_income)
+            dp_data_all_income.append(dp_data_income)
+
+        # Plotting combined data
+        fig, ax1 = plt.subplots(figsize=(18, 9))
+
+        color = 'tab:blue'
+        ax1.set_xlabel('Time t')
+        ax1.set_ylabel('Quantities', color=color)
+        
+        for data in so_data_all_quantities:
+            ax1.plot(self.data.T, data, color='blue', alpha=0.3)
+        for data in os_data_all_quantities:
+            ax1.plot(self.data.T, data, color='green', alpha=0.3)
+        for data in dp_data_all_quantities:
+            ax1.plot(self.data.T, data, color='red', alpha=0.3)
+            
+        ax1.plot(self.data.T, so_mvp_data_quantities, label='SO quantities MVP', color='blue', linestyle='dashed')
+        ax1.plot(self.data.T, os_mvp_data_quantities, label='OS quantities MVP', color='green', linestyle='dashed')
+        ax1.plot(self.data.T, dp_mvp_data_quantities, label='DP quantities MVP', color='red', linestyle='dashed')
+        
+        ax1.tick_params(axis='y', labelcolor=color)
+        ax1.legend(loc='upper left')
+
+        ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+        
+        color = 'tab:gray'
+        ax2.set_ylabel('Values', color=color)  # we already handled the x-label with ax1
+        for data in so_data_all_income:
+            ax2.plot(self.data.T, data, color='blue', alpha=0.3)
+        for data in os_data_all_income:
+            ax2.plot(self.data.T, data, color='green', alpha=0.3)
+        for data in dp_data_all_income:
+            ax2.plot(self.data.T, data, color='red', alpha=0.3)
+        
+        ax2.plot(self.data.T, so_mvp_data_income, label='SO values MVP', color='blue', linestyle='dashed')
+        ax2.plot(self.data.T, os_mvp_data_income, label='OS values MVP', color='green', linestyle='dashed')
+        ax2.plot(self.data.T, dp_mvp_data_income, label='DP values MVP', color='red', linestyle='dashed')
+        
+        ax2.tick_params(axis='y', labelcolor=color)
+        ax2.legend(loc='upper right')
+
+        fig.tight_layout()  # otherwise the right y-label is slightly clipped
+        plt.title('Sales Quantities and Income Over Time')
+
+        plt.savefig('figures/combined_sales_quantities_and_income.png')
+        plt.close(fig)  # Close the figure to avoid display issues in some environments
