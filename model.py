@@ -1036,15 +1036,15 @@ class Model:
                     row['m'] = m
                     row['t'] = t
                     row['Zm'] = model.getVarByName(f'Zm_t[{m},{t}]').X
-                    row['Z1m_t'] = model.getVarByName(f'Z1m_t[{m},{t}]').X
-                    row['Z2m_t'] = model.getVarByName(f'Z2m_t[{m},{t}]').X
+                    # row['Z1m_t'] = model.getVarByName(f'Z1m_t[{m},{t}]').X
+                    # row['Z2m_t'] = model.getVarByName(f'Z2m_t[{m},{t}]').X
                     row['Zm_t-1'] = model.getVarByName(f'Zm_t[{m},{t-1}]').X if t > 0 else np.nan
                     row['Am'] = model.getVarByName(f'Am_t[{m},{t}]').X
                     row['Am_t-1'] = model.getVarByName(f'Am_t[{m},{t-1}]').X if t > 0 else np.nan
-                    row['R1m'] = model.getVarByName(f'R1m_t[{m},{t}]').X
-                    row['R2m'] = model.getVarByName(f'R2m_t[{m},{t}]').X
-                    row['Ym_t'] = model.getVarByName(f'Ym_t[{m},{t}]').X
-                    row['Auxm_t'] = model.getVarByName(f'Auxm_t[{m},{t}]').X
+                    # row['R1m'] = model.getVarByName(f'R1m_t[{m},{t}]').X
+                    # row['R2m'] = model.getVarByName(f'R2m_t[{m},{t}]').X
+                    # row['Ym_t'] = model.getVarByName(f'Ym_t[{m},{t},{data.dmax}]').X
+                    # row['Auxm_t'] = model.getVarByName(f'Auxm_t[{m},{t}]').X
                     row['Qm_t'] = model.getVarByName(f'Qm_t[{m},{t}]').X
                     row['MOm_t'] = model.getVarByName(f'MOm_t[{m},{t}]').X
                     row['MOm_t>sigma'] = (1-data.beta[m]) * model.getVarByName(f'Qm_t[{m},{t-data.sigma[m]}]').X if t > data.sigma[m] else np.nan  
@@ -1063,9 +1063,9 @@ class Model:
                     row['Qm_t/fym'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.fy[m] if data.fy[m] > 0 else np.nan
                     row['RM_t'] = model.getVarByName(f'RMt[{t}]').X 
                     row['dmax/cmin'] = data.dmax[m]/data.cmin[m]
-                    row['R2*dmax/cmin'] = model.getVarByName(f'R2m_t[{m},{t}]').X * data.dmax[m]/data.cmin[m]
+                    # row['R2*dmax/cmin'] = model.getVarByName(f'R2m_t[{m},{t}]').X * data.dmax[m]/data.cmin[m]
                     row['zmax'] = data.zmax[m]
-                    row['zmax*(1-R1)'] = data.zmax[m] * (1 - model.getVarByName(f'R1m_t[{m},{t}]').X)
+                    # row['zmax*(1-R1)'] = data.zmax[m] * (1 - model.getVarByName(f'R1m_t[{m},{t}]').X)
                     row['cmax'] = data.cmax[m]
                     row['cmin'] = data.cmin[m]
 
