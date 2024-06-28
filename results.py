@@ -1018,7 +1018,7 @@ class Results:
         s_min, s_mean, s_max = self.get_scenario_with_demand()
         
 
-        # # self.plot1_ri_rs_ro()
+        # # self.plot1_ri_rs_ro()       # old 
         # self.plot1_ri_rs_ro(s_min=s_min, s_max=s_max, s_mean=s_mean)
         # self.plot2_ri_rs_ro()
         # self.plot3_sales_quantities()
@@ -1988,4 +1988,43 @@ class Results:
         plt.tight_layout()
 
         plt.savefig('figures/plot7-1_manufacturing_output.png')
+        plt.close(fig)  # Close the figure to avoid display issues in some environments
+
+        # DataFrame erstellen
+        mo_df = pd.DataFrame(mo, columns=['Factory', 'Time', 'MO'])
+        z_df = pd.DataFrame(z, columns=['Factory', 'Time', 'Z'])
+
+        # DataFrames zusammenführen und pivotieren
+        mo_z_df = mo_df.merge(z_df, on=['Factory', 'Time']).sort_values(by=['Factory', 'Time'])
+        mo_z_df_pivot = mo_z_df.pivot(index='Time', columns='Factory', values='MO').T
+
+        # Heatmap erstellen
+                # Plot erstellen
+        fig, (ax_heatmap, ax_table) = plt.subplots(nrows=2, figsize=(14, 8), gridspec_kw={'height_ratios': [4, 1]})
+
+        # Heatmap plotten
+        sns.heatmap(mo_z_df_pivot, cmap='coolwarm', annot=True, fmt=".0f", linewidths=.5, ax=ax_heatmap, cbar_kws={'label': 'Manufacture Output (MO)'})
+
+        # Achsenbeschriftungen anpassen
+        ax_heatmap.set_xlabel('')
+        ax_heatmap.set_ylabel('Manufacturing Plant')
+
+        # Tabelle für die Anzahl der Schichten plotten
+        z_pivot = mo_z_df.pivot(index='Time', columns='Factory', values='Z').T
+        z_pivot = z_pivot.astype(int)
+        ax_table.axis('off')
+
+        # Tabelle direkt unterhalb der x-Achse der Heatmap platzieren
+        table = ax_table.table(cellText=z_pivot.values, colLabels=z_pivot.columns, rowLabels=z_pivot.index, loc='center', cellLoc='center')
+        table.auto_set_font_size(False)
+        table.set_fontsize(10)
+        table.scale(1.2, 1.2)
+
+        # Titel und Layout anpassen
+        plt.suptitle('Manufacture Output (MO) and Shifts (Z) per Factory over Time', y=0.95)
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+
+        # Bild speichern
+        plt.savefig('figures/plot7-2_manufacturing_output.png')
+
 
