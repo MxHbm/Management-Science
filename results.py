@@ -964,7 +964,7 @@ class Results:
             ax.bar(x + width, scenario_data.groupby('t')['ROs_t'].sum(), width, label='ROs_t', color='brown', bottom=scenario_data.groupby('t')['RIs_t'].sum())
             ax.bar(x + width, scenario_data.groupby('t')['RIs_t'].sum(), width, label='RIs_t', color='gray')
 
-            ax.set_title(f'Scenario {scenario}')
+            ax.set_title(f'Scenario {scenario+1}')
             ax.set_xlabel('Time t')
             ax.set_ylabel('Values')
             ax.set_xticks(x)
@@ -973,7 +973,7 @@ class Results:
             ax.legend(loc='upper left', bbox_to_anchor=(1,1))
 
             plt.tight_layout()
-            plt.savefig(f'figures/plot_scenario_{scenario}.png')
+            plt.savefig(f'figures/plot_scenario_{scenario+1}.png')
             # plt.show()
 
     def plot_sales_perspective(self, data_path):
@@ -1000,7 +1000,7 @@ class Results:
             ax.bar(x, scenario_data['SOs_f_l_t'], width, label='SOs_f_l_t', color='green', bottom=scenario_data['OSs_f_l_t'])
             ax.bar(x, scenario_data['OSs_f_l_t'], width, label='OSs_f_l_t', color='red')
 
-            ax.set_title(f'Sales Perspective - Scenario {scenario}')
+            ax.set_title(f'Sales Perspective - Scenario {scenario+1}')
             ax.set_xlabel('Time t')
             ax.set_ylabel('Sales Quantities')
             ax.set_xticks(x)
@@ -1009,7 +1009,7 @@ class Results:
             ax.legend(loc='upper left', bbox_to_anchor=(1,1))
 
             plt.tight_layout()
-            plt.savefig(f'figures/plot_scenario_{scenario}-sales.png')
+            plt.savefig(f'figures/plot_scenario_{scenario+1}-sales.png')
 
     # evaluate cost distribution
     def evaluate_cost_distribution(self):
@@ -1018,14 +1018,17 @@ class Results:
         s_min, s_mean, s_max = self.get_scenario_with_demand()
         
 
-        self.plot1_ri_rs_ro()
-        self.plot2_ri_rs_ro()
-        self.plot3_sales_quantities()
-        self.plot4_sales_income()
+        # # self.plot1_ri_rs_ro()
+        # self.plot1_ri_rs_ro(s_min=s_min, s_max=s_max, s_mean=s_mean)
+        # self.plot2_ri_rs_ro()
+        # self.plot3_sales_quantities()
+        # self.plot4_sales_income()
+        # self.plot6_distribution_center()
+        # self.plot6_distribution_center_new(s_min=s_min, s_max=s_max, s_mean=s_mean)
 
-        self.plot5_costs_and_sales_with_minmaxmean(s_min, s_max, s_mean)
+        self.plot7_manufacturing_output(s_min=s_min, s_max=s_max, s_mean=s_mean)
 
-        self.plot6_distribution_center()
+        # # self.plot5_costs_and_sales_with_minmaxmean(s_min, s_max, s_mean)
 
     
 
@@ -1039,8 +1042,8 @@ class Results:
             supply_value = self.data.SRA.reduced_scenarios[s][-1] 
             for f in self.data.F:
                 demand_value += self.data.SRA.reduced_scenarios[s][f] / self.data.fy[f]
-                print(f'scenarios: {s} - demand: {demand_value} - supply: {supply_value}')
-                print(f'scenarios: {s} - supply: {self.data.SRA.reduced_scenarios[s][f]} - fy: {self.data.fy[f]}')
+                print(f'scenarios: {s+1} - demand: {demand_value} - supply: {supply_value}')
+                print(f'scenarios: {s+1} - supply: {self.data.SRA.reduced_scenarios[s][f]} - fy: {self.data.fy[f]}')
             demand[s] = [demand_value / supply_value]
 
         demand = demand.T.rename(columns={0: 'demand'})
@@ -1062,6 +1065,7 @@ class Results:
     def plot5_costs_and_sales_with_minmaxmean(self, s_min, s_max, s_mean):
 
         self.plot1_ri_rs_ro(s_min=s_min, s_max=s_max, s_mean=s_mean)
+        self.plot6_distribution_center(s_min=s_min, s_max=s_max, s_mean=s_mean)
         pass
 
 
@@ -1119,11 +1123,11 @@ class Results:
                 demand_suffix = f' ({value} demand)'
             else:
                 demand_suffix = ''
-            axes['RI'].set_title(f'Raw Milk Inventory - Scenario {s}{demand_suffix}')
-            axes['RS'].set_title(f'Raw Milk Supply - Scenario {s}{demand_suffix}')
-            axes['RO'].set_title(f'Raw Milk Overstock - Scenario {s}{demand_suffix}')
-            axes['dri'].set_title(f'Demand - Scenario {s}{demand_suffix}')
-            axes['RM'].set_title(f'Raw Milk - Scenario {s}{demand_suffix}')
+            axes['RI'].set_title(f'Raw Milk Inventory - Scenario {s+1}{demand_suffix}')
+            axes['RS'].set_title(f'Raw Milk Supply - Scenario {s+1}{demand_suffix}')
+            axes['RO'].set_title(f'Raw Milk Overstock - Scenario {s+1}{demand_suffix}')
+            axes['dri'].set_title(f'Demand - Scenario {s+1}{demand_suffix}')
+            axes['RM'].set_title(f'Raw Milk - Scenario {s+1}{demand_suffix}')
 
             axes['RI'].set_xlabel('Time t')
             axes['RI'].set_ylabel('Values')
@@ -1144,9 +1148,9 @@ class Results:
 
             if s in min_mean_max.values():
                 value = [i for i in min_mean_max if min_mean_max[i] == s][0]
-                plt.savefig(f'figures/cost_distribution_scenario_{s}_{value}.png')
+                plt.savefig(f'figures/cost_distribution_scenario_{s+1}_{value}.png')
             else:
-                plt.savefig(f'figures/cost_distribution_scenario_{s}.png')
+                plt.savefig(f'figures/cost_distribution_scenario_{s+1}.png')
 
             plt.close(fig)  # Close the figure to avoid display issues in some environments
 
@@ -1155,30 +1159,35 @@ class Results:
             fig, ax = plt.subplots(figsize=(12, 12))
 
             width = 0.3
-            ax.bar(-width, self.data.r0, label='r0 - Initial Raw Milk Inventory\n from previous planning horizon', color='black', bottom=dri_data.get(0, 0), width=width, alpha=0.9)
-            
+          
+
             for t in range(len(list(rs_data.keys())) ):
+
                 rs = rs_data.get(t, 0)
                 ro = ro_data.get(t, 0)
                 rm = rm_data.get(t, 0)
+                dri = dri_data.get(t, 0)
                 if t > 0:
-                    previous_value = dri_data.get(t, 0) #+ ri_data.get(t-1, 0)
+                    previous_value = ri_data.get(t-1, 0) #dri_data.get(t, 0) #+ ri_data.get(t-1, 0)
                 else:
-                    previous_value = self.data.r0 + dri_data.get(t, 0)
+                    previous_value = self.data.r0 #+ dri_data.get(t, 0)
                 
 
 
                 # usage of raw milk inventory
-                inventory_usage = ri_data.get(t-1, 0) - ri_data.get(t, 0) if (t > 0) and ((ri_data.get(t-1, 0) - ri_data.get(t, 0)) > 0) else 0
-                ax.bar(t-width/2, -inventory_usage, bottom=ri_data.get(t, 0) if t>0 else ri_data.get(t,0), label='RIs_t - Raw Milk Consumption satisfied\n by Raw Milk Inventory' if t == 1 else "", color='blue', hatch='..', width=1.5*width, alpha=0.9)
+                # inventory_usage = ri_data.get(t-1, 0) - ri_data.get(t, 0) if (t > 0) and ((ri_data.get(t-1, 0) - ri_data.get(t, 0)) > 0) else 0
+                # ax.bar(t-width/2, -inventory_usage, bottom=ri_data.get(t, 0) if t>0 else ri_data.get(t,0), label='RIs_t - Raw Milk Consumption satisfied\n by Raw Milk Inventory' if t == 1 else "", color='blue', hatch='..', width=1.5*width, alpha=0.9)
 
+                # dri_t bar plot
+                ax.bar(t-width, dri, bottom=previous_value, label='dri_t - Raw Milk Input' if t == 1 else "", color='lime', width=width, alpha=0.9)
+                dri_end = previous_value + dri
 
                 # RSs_t bar plot
-                ax.bar(t-width, rs, bottom=previous_value, label='RSs_t - purchase of Raw Milk to a third Supplier' if t == 1 else "", color='green', width=width, alpha = 0.9)
-                rs_end = previous_value + rs
+                ax.bar(t-width, rs, bottom=dri_end, label='RSs_t - purchase of Raw Milk to a third Supplier' if t == 1 else "", color='green', width=width, alpha = 0.9)
+                rs_end = dri_end + rs
                 
                 # RM_t bar plot
-                ax.bar(t, -rm, bottom=rs_end, label='RM_t - Raw Milk Consumption' if t == 1 else "", color='grey', width=width, alpha=0.8)
+                ax.bar(t, -rm, bottom=rs_end, label='RM_t - Raw Milk Consumption' if t == 1 else "", color='fuchsia', width=width, alpha=0.8)
                 rm_end = rs_end - rm
 
                 # ROs_t bar plot
@@ -1186,6 +1195,8 @@ class Results:
                 ro_end = rm_end - ro
                 # Update previous_value for next iteration
                 previous_value = ro_end + dri_data.get(t, 0)
+
+            ax.bar(-width, self.data.r0, label='r0 - Initial Raw Milk Inventory\n from previous planning horizon', color='black', width=width, alpha=0.9)
 
             # ax.plot(list(rs_data.keys()), list(rs_data.values()), label='RSs_t', color='green')     # barplot starting from r0 respectivly from previous height/value
             # ax.plot(list(ro_data.keys()), list(ro_data.values()), label='ROs_t', color='red')       # barplot starting from r0 + RSs_t
@@ -1210,13 +1221,13 @@ class Results:
             if s in min_mean_max.values():
                 value = [i for i in min_mean_max if min_mean_max[i] == s][0]
                 demand_suffix = f' ({value} demand)'
-                ax.set_title(f'Raw milk supply consumption (Constraint (5)) - Scenario {s}{demand_suffix}')
+                ax.set_title(f'Raw milk supply consumption (Constraint (5)) - Scenario {s+1}{demand_suffix}')
                 plt.tight_layout()
-                plt.savefig(f'figures/combined_plot_scenario_{s}_{value}.png')
+                plt.savefig(f'figures/combined_plot_scenario_{s+1}_{value}.png')
             else:
-                ax.set_title(f'Raw milk supply consumption (Constraint (5)) - Scenario {s}')
+                ax.set_title(f'Raw milk supply consumption (Constraint (5)) - Scenario {s+1}')
                 plt.tight_layout()
-                plt.savefig(f'figures/combined_plot_scenario_{s}.png')
+                plt.savefig(f'figures/combined_plot_scenario_{s+1}.png')
             plt.close(fig)
 
 
@@ -1283,7 +1294,7 @@ class Results:
 
         plt.tight_layout()
 
-        plt.savefig(f'figures/plot2_raw-milk_distribution_over-{s}-scenarios.png')
+        plt.savefig(f'figures/plot2_raw-milk_distribution_over-{s+1}-scenarios.png')
         plt.close(fig)  # Close the figure to avoid display issues in some environments
 
     def plot3_sales_quantities(self):
@@ -1360,7 +1371,7 @@ class Results:
         axes[0].plot(self.data.T, exp, color='grey', alpha=0.5)
         axes[0].plot(self.data.T, exp_mvp, label='Ef_t_mvp_mean', color='black', linestyle='dashed')
         axes[0].set_title('Export Quantity vs. MVP')
-        axes[0].set_ylabel('Values')
+        axes[0].set_ylabel('Quantity in tons')
         axes[0].legend()
 
         # SO plot
@@ -1368,7 +1379,7 @@ class Results:
             axes[1].plot(self.data.T, data, color='grey', alpha=0.5)
         axes[1].plot(self.data.T, so_mvp_data, label='SOs_t_mvp_mean', color='black', linestyle='dashed')
         axes[1].set_title('Stock Out Quantity per Scenario vs. Mean Value Problem')
-        axes[1].set_ylabel('Values')
+        axes[1].set_ylabel('Quantity in tons')
         axes[1].legend()
 
         # OS plot
@@ -1377,7 +1388,7 @@ class Results:
         axes[2].plot(self.data.T, os_mvp_data, label='OSs_f_l_t_mvp_mean', color='black', linestyle='dashed')
         axes[2].set_title('Over Stock Quantity per Scenario vs. Mean Value Problem')
         axes[2].set_xlabel('Time t')
-        axes[2].set_ylabel('Values')
+        axes[2].set_ylabel('Quantity in tons')
         axes[2].legend()
 
         for data in dp_data_all:
@@ -1385,12 +1396,12 @@ class Results:
         axes[3].plot(self.data.T, dp_mvp_data, label='dps_f_l_t_mvp_mean', color='black', linestyle='dashed')
         axes[3].set_title('Demand - Over Stock Quantity per Scenario vs. Mean Value Problem')
         axes[3].set_xlabel('Time t')
-        axes[3].set_ylabel('Values')
+        axes[3].set_ylabel('Quantity in tons')
         axes[3].legend()
 
         plt.tight_layout()
 
-        plt.savefig(f'figures/plot3_sales_quantities_distribution_over-{s}-scenarios.png')
+        plt.savefig(f'figures/plot3_sales_quantities_distribution_over-{s+1}-scenarios.png')
         plt.close(fig)  # Close the figure to avoid display issues in some environments
 
     def plot4_sales_income(self):
@@ -1467,7 +1478,7 @@ class Results:
         axes[0].plot(self.data.T, exp, color='grey', alpha=0.5)
         axes[0].plot(self.data.T, exp_mvp, label='Ef_t_mvp_mean', color='black', linestyle='dashed')
         axes[0].set_title('Export Value vs. MVP')
-        axes[0].set_ylabel('Values')
+        axes[0].set_ylabel('Value in Monetary Units')
         axes[0].legend()
 
         # SO plot
@@ -1475,7 +1486,7 @@ class Results:
             axes[1].plot(self.data.T, data, color='grey', alpha=0.5)
         axes[1].plot(self.data.T, so_mvp_data, label='SOs_t_mvp_mean', color='black', linestyle='dashed')
         axes[1].set_title('Stock Out Value per Scenario vs. Mean Value Problem')
-        axes[1].set_ylabel('Values')
+        axes[1].set_ylabel('Value in Monetary Units')
         axes[1].legend()
 
         # OS plot
@@ -1484,7 +1495,7 @@ class Results:
         axes[2].plot(self.data.T, os_mvp_data, label='OSs_f_l_t_mvp_mean', color='black', linestyle='dashed')
         axes[2].set_title('Over Stock Value per Scenario vs. Mean Value Problem')
         axes[2].set_xlabel('Time t')
-        axes[2].set_ylabel('Values')
+        axes[2].set_ylabel('Value in Monetary Units')
         axes[2].legend()
 
         for data in dp_data_all:
@@ -1492,12 +1503,12 @@ class Results:
         axes[3].plot(self.data.T, dp_mvp_data, label='dps_f_l_t_mvp_mean', color='black', linestyle='dashed')
         axes[3].set_title('Demand - Over Stock Value per Scenario vs. Mean Value Problem')
         axes[3].set_xlabel('Time t')
-        axes[3].set_ylabel('Values')
+        axes[3].set_ylabel('Value in Monetary Unit')
         axes[3].legend()
 
         plt.tight_layout()
 
-        plt.savefig(f'figures/plot4_sales_values_distribution_over-{s}-scenarios.png')
+        plt.savefig(f'figures/plot4_sales_values_distribution_over-{s+1}-scenarios.png')
         plt.close(fig)  # Close the figure to avoid display issues in some environments
 
     def plot_combined_sales_quantities_and_income(self):
@@ -1629,12 +1640,12 @@ class Results:
         for s in self.data.S:
             scenario_data = []
             for t in self.data.T:
-                inventory = self.family_model.getVarByName(f'RIs_t[{s},{t}]').X
                 for f in self.data.F:
                     for l in self.data.L:
                         shipped = self.family_model.getVarByName(f'DVf_l_t[{f},{l},{t}]').X
-                        sales = self.family_model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').X
+                        sales = self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
                         overstock = self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
+                        inventory = self.family_model.getVarByName(f'IDs_f_l_t[{s},{f},{l},{t}]').X
                         scenario_data.append((s, f, l, t, shipped, inventory, sales, overstock))
             scenarios[s] = scenario_data
         scenarios1 = pd.DataFrame(scenarios)
@@ -1693,7 +1704,7 @@ class Results:
                 ax.legend(handles=handles1, labels=new_labels, title='Family', loc='upper left')
                 
                 # Plot shipped and inventory as lines
-                ax2 = ax.twinx()
+                # ax2 = ax.twinx()
                 # sns.lineplot(x='t', y='shipped', data=dc_df, ax=ax2, color='black', label='Shipped')
                 # sns.lineplot(x='t', y='inventory', data=dc_df, ax=ax2, color='red', label='Inventory')
                 
@@ -1701,12 +1712,13 @@ class Results:
                 ax.set_title(f'Distribution Center {distribution_center}', fontsize=14)
                 ax.set_xlabel('Time')
                 ax.set_ylabel('Sales/Overstock')
-                ax2.set_ylabel('Shipped/Inventory')
+                # ax2.set_ylabel('Shipped/Inventory')
                 
                 # Combine legends
                 handles1, labels1 = ax.get_legend_handles_labels()
-                handles2, labels2 = ax2.get_legend_handles_labels()
-                ax.legend(handles1 + handles2, labels1 + labels2, loc='upper left')
+                # handles2, labels2 = ax2.get_legend_handles_labels()
+                # ax.legend(handles1 + handles2, new_labels + labels2, loc='upper left')
+                ax.legend(handles1, new_labels, loc='upper left')
                 #ax2.get_legend().remove()
             
             # Remove empty subplots
@@ -1714,5 +1726,266 @@ class Results:
                 fig.delaxes(axes[j])
             
             plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-            plt.savefig(f'figures/plot6_distribution_center_scenario_{scenario}.png')
+            plt.savefig(f'figures/plot6_distribution_center_scenario_{scenario+1}.png')
             plt.close()
+
+    def plot6_distribution_center_new(self, s_min = None, s_max = None, s_mean = None):
+        # Initialize dictionaries to hold the aggregated data for all scenarios
+        min_mean_max = {'min': s_min, 'max': s_max, 'mean': s_mean}
+        # create one plot per scenario. Each subplot per scenario should show the distribution center for each family and time period with its inventory, sales, and overstock quantities.
+        # Initialize dictionaries to hold the aggregated data for all scenarios
+        scenarios = {}
+        for s in self.data.S:
+            scenario_data = []
+            shipped = {}
+            sales = {}
+            overstocks = {}
+            inventories = {}
+            demands = {}
+            for t in self.data.T:
+                for f in self.data.F:
+                    for l in self.data.L:
+                        shipped[(t,l,f)] = self.family_model.getVarByName(f'DVf_l_t[{f},{l},{t}]').X
+                        sales[(t,l,f)] = self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                        overstocks[(t,l,f)] = self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
+                        inventories[(t,l,f)] = self.family_model.getVarByName(f'IDs_f_l_t[{s},{f},{l},{t}]').X
+                        demands[(t,l,f)] = self.data.dp[s][f][l][t]
+
+                        #scenario_data.append((s, f, l, t, shipped, inventory, sales, overstock))
+            # scenarios[s] = scenario_data
+        #scenarios1 = pd.DataFrame(scenarios)
+
+            fig, ax = plt.subplots(figsize=(12, 12))
+
+            width = 0.3
+            
+
+            for t in self.data.T:
+                for l in self.data.L:
+                    for f in self.data.F:
+                        ship = shipped.get((t,l,f), 0)
+                        sale = sales.get((t,l,f), 0)
+                        overstock = overstocks.get((t,l,f), 0)
+                        inventory = inventories.get((t,l,f), 0)
+                        demand = demands.get((t,l,f), 0)
+
+                        if t > 0:
+                            previous_value = inventories.get((t-1, l, f), 0) #dri_data.get(t, 0) #+ ri_data.get(t-1, 0)
+                        else:
+                            previous_value = self.data.i_0_f[l] #+ dri_data.get(t, 0)
+                        
+
+
+                        # usage of raw milk inventory
+                        # inventory_usage = ri_data.get(t-1, 0) - ri_data.get(t, 0) if (t > 0) and ((ri_data.get(t-1, 0) - ri_data.get(t, 0)) > 0) else 0
+                        # ax.bar(t-width/2, -inventory_usage, bottom=ri_data.get(t, 0) if t>0 else ri_data.get(t,0), label='RIs_t - Raw Milk Consumption satisfied\n by Raw Milk Inventory' if t == 1 else "", color='blue', hatch='..', width=1.5*width, alpha=0.9)
+
+                        # dri_t bar plot
+                        ax.bar(t-width, ship, bottom=previous_value, label='DVf_l_t - Raw Milk Input' if t == 1 else "", color='lime', width=width, alpha=0.9)
+                        ship_end = previous_value + ship
+
+                        # RSs_t bar plot
+                        ax.bar(t-width, sale, bottom=ship_end, label='SOs_f_l_t - stock out of Inventory' if t == 1 else "", color='green', width=width, alpha = 0.9)
+                        so_end = ship_end + sale
+                        
+                        # RM_t bar plot
+                        ax.bar(t, -overstock, bottom=so_end, label='SOs_f_l_t - Overstock' if t == 1 else "", color='fuchsia', width=width, alpha=0.8)
+                        overstock_end = so_end - overstock
+
+                        # ROs_t bar plot
+                        ax.bar(t, -demand, bottom=overstock_end, label='ROs_t - Raw Milk Disposal' if t == 1 else "", color='red', width=width, alpha=0.9)
+                        demand_end = overstock_end - demand
+                        # Update previous_value for next iteration
+                        #previous_value = ro_end + dri_data.get(t, 0)
+
+                #ax.bar(-width, self.data.r0, label='r0 - Initial Raw Milk Inventory\n from previous planning horizon', color='black', width=width, alpha=0.9)
+
+                # ax.plot(list(rs_data.keys()), list(rs_data.values()), label='RSs_t', color='green')     # barplot starting from r0 respectivly from previous height/value
+                # ax.plot(list(ro_data.keys()), list(ro_data.values()), label='ROs_t', color='red')       # barplot starting from r0 + RSs_t
+                ax.plot(list(inventories.keys()), list(inventories.values()), label='IDs_f_l_t - DC Inventory', color='blue')      # LINE PLOT
+                # ax.plot(list(dri_data.keys()), list(dri_data.values()), label='dri_t - Raw milk Daily Input', color='orange')  # line plot
+                # ax.plot(list(rm_data.keys()), list(rm_data.values()), label='RM_t', color='purple')     # barplot starting from r0 - RM
+
+
+                #ax.set_title(f'Raw milk supply consumption (Constraint (5)) - Scenario {s}{demand_suffix}')
+                ax.set_xlabel('Time t in days')
+                ax.set_ylabel('Quantity in tons')
+                ax.legend(ncol=3, loc='best', bbox_to_anchor=(0.1, -0.2, 0.8, 0.5))
+                
+                """
+            # Convert the tuples to a DataFrame with individual columns
+            df_list = [pd.DataFrame(scenarios1[col].tolist(), columns=['s', 'f', 'l', 't', 'shipped', 'inventory', 'sales', 'overstock']) for col in scenarios1.columns]
+
+            # Concatenate the individual DataFrames into one DataFrame
+            df = pd.concat(df_list, keys=scenarios1.columns, names=['scenario', 'row'])
+
+            # Reset index to flatten the multi-level index from concatenation
+            df = df.reset_index(level='row', drop=True).reset_index()
+
+            # Set the multi-level index
+            df = df.set_index(['scenario', 'f', 'l', 't'])
+
+            # Sort the index for better readability
+            df = df.sort_index()
+
+            # Display the resulting DataFrame
+            print(df)
+
+            # Reset the index to make 'scenario', 's', 'f', 'l', 't' columns available for plotting
+            df_reset = df.reset_index()
+
+            # Iterate over each scenario
+            for scenario in df_reset['scenario'].unique():
+                # Group by 'l', 't', 'f' and sum the values for the current scenario
+                scenario_df = df_reset[df_reset['scenario'] == scenario].groupby(['l', 't', 'f']).sum().reset_index()
+
+                # Get the unique distribution centers
+                distribution_centers = scenario_df['l'].unique()
+                
+                # Create a 2x2 grid of subplots
+                fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(15, 10), sharex=True)
+                #fig.suptitle(f'Scenario {scenario}', fontsize=16)
+                axes = axes.flatten()  # Flatten the 2x2 array of axes for easier iteration
+                
+                # Iterate over each distribution center and plot on corresponding subplot
+                for i, distribution_center in enumerate(distribution_centers):
+                    ax = axes[i]
+                    
+                    # Filter for the current distribution center
+                    dc_df = scenario_df[scenario_df['l'] == distribution_center]
+
+                    
+                    # Pivot the DataFrame to get a better structure for stacked bar plots
+                    sales_pivot = dc_df.pivot(index='t', columns='f', values='sales').fillna(0)
+                    overstock_pivot = dc_df.pivot(index='t', columns='f', values='overstock').fillna(0)
+                    
+                    # Plot sales and overstock as stacked bars
+                    #sales_bars = sales_pivot.plot(kind='bar', stacked=True, ax=ax, cmap='tab20', alpha=0.7, edgecolor='black', legend=False)
+
+                    # Add labels to the legend
+                    handles1, labels1 = ax.get_legend_handles_labels()
+                    new_labels = [f'Sales Family {int(label)}' for label in labels1]
+                    ax.legend(handles=handles1, labels=new_labels, title='Family', loc='upper left')
+
+                    overstock_bars = overstock_pivot.plot(kind='bar', stacked=True, ax=ax, cmap='tab20', alpha=0.4, edgecolor='black', legend=True, label = 'Overstock')
+                    """
+                    
+                    
+                # # Plot shipped and inventory as lines
+                # ax2 = ax.twinx()
+                # sns.lineplot(x='t', y='shipped', data=dc_df, ax=ax2, color='black', label='Shipped')
+                # sns.lineplot(x='t', y='inventory', data=dc_df, ax=ax2, color='red', label='Inventory')
+                
+                # Set titles and labels
+                # handles1, labels1 = ax.get_legend_handles_labels()
+                # new_labels = [f'Sales Family {int(float(label))}' for label in labels1]
+                # ax.legend(handles=handles1, labels=new_labels, title='Family', loc='upper left')
+                ax.set_title(f'Distribution Center {l}', fontsize=14)
+                ax.set_xlabel('Time')
+                ax.set_ylabel('Sales/Overstock')
+                # ax2.set_ylabel('Shipped/Inventory')
+                
+                # Combine legends
+                # handles1, labels1 = ax.get_legend_handles_labels()
+                #handles2, labels2 = ax2.get_legend_handles_labels()
+                # ax.legend(handles1 + handles2, new_labels + labels2, loc='upper left')
+                #ax2.get_legend().remove()
+                
+                # Remove empty subplots
+                # for j in range(i+1, len(ax)):
+                #     fig.delaxes(ax[j])
+                
+                if s in min_mean_max.values():
+                    value = [i for i in min_mean_max if min_mean_max[i] == s][0]
+                    demand_suffix = f' ({value} demand)'
+                    # global title
+                    fig.suptitle(f'Scenario {s+1}{demand_suffix}', fontsize=16)
+                    plt.tight_layout()
+                    plt.savefig(f'figures/plot6_distribution_center_scenario_{s+1}_{value}.png')
+                else:
+                    fig.suptitle(f'Scenario {s+1}', fontsize=16)
+                    plt.tight_layout()
+
+                    # plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+                    plt.savefig(f'figures/plot6_distribution_center_scenario_{s+1}.png')
+                plt.close()
+
+    def plot7_manufacturing_output(self, s_min = None, s_max = None, s_mean = None):
+
+
+        m =    {m for m in self.data.MP}
+        t =    {t for t in self.data.T}
+        mo =   {(m, t, self.family_model.getVarByName(f'MOm_t[{m},{t}]').X) for m in self.data.MP for t in self.data.T}
+        z =    {(m, t, self.family_model.getVarByName(f'Zm_t[{m},{t}]').X) for m in self.data.MP for t in self.data.T}
+        y =    {(m, t, k, self.family_model.getVarByName(f'Ym_t[{m},{t},{k}]').X) for m in self.data.MP for t in self.data.T for k in range(self.data.dmax[0]) if self.data.cty[m] == 0 }
+
+        mo_df = pd.DataFrame(mo, columns=['Factory', 'Time', 'MO'])
+        z_df = pd.DataFrame(z, columns=['Factory', 'Time', 'Z'])
+
+        # DataFrame für Y erstellen
+        y_columns = range(self.data.dmax[0])
+        y_index = pd.MultiIndex.from_product([self.data.MP, self.data.T], names=['Factory', 'Time'])
+        y_values = {(m, t): {k: self.family_model.getVarByName(f'Ym_t[{m},{t},{k}]') for k in y_columns} for m in self.data.MP for t in self.data.T}
+        y_df = pd.DataFrame.from_dict({(i, j): y_values[i, j] for i in self.data.MP for j in self.data.T}, orient='index')
+        y_df.index = y_index
+
+        # Plot erstellen
+        fig, ax1 = plt.subplots(figsize=(14, 7), sharex=True)
+
+        # MO Plot
+        sns.barplot(data=mo_df, x='Time', y='MO', hue='Factory', ax=ax1)
+        ax1.set_ylabel('Manufacture Output (MO)')
+        ax1.set_title('Manufacture Output (MO) and Shifts (Z) per Factory over Time')
+
+        # Zweite Achse für Z und Y
+        ax2 = ax1.twinx()
+
+        # Z Plot
+        sns.scatterplot(data=z_df, x='Time', y='Z', hue='Factory', ax=ax2, legend=False)
+        ax2.set_ylabel('Number of Shifts (Z)')
+
+        # Anpassungen und Anzeigen
+        ax1.legend(loc='upper left', bbox_to_anchor=(1, 1))
+        ax2.legend(loc='upper right', bbox_to_anchor=(1.2, 1))
+
+        # combine both legends:
+        handles1, labels1 = ax1.get_legend_handles_labels()
+        handles2, labels2 = ax2.get_legend_handles_labels()
+        ax1.legend(handles=handles1 + handles2, labels=labels1 + labels2, loc='upper left', bbox_to_anchor=(1, 1))
+
+        plt.tight_layout()
+
+        plt.savefig('figures/plot7_manufacturing_output.png')
+
+        # create heat map
+        # combine mo_df and z_df
+
+        fig = plt.figure(figsize=(14, 8))
+
+        # DataFrames zusammenführen und pivotieren
+        mo_z_df = mo_df.merge(z_df, on=['Factory', 'Time']).sort_values(by=['Factory', 'Time'])
+        mo_z_df = mo_z_df.pivot(index='Time', columns='Factory', values='MO').T
+
+        # Heatmap erstellen
+        ax = sns.heatmap(mo_z_df, cmap='coolwarm', annot=True, fmt=".0f", linewidths=.5)
+
+
+        # Sekundäre Y-Achse hinzufügen
+        ax2 = ax.twinx()
+        ax2.set_ylabel('\n\n\nManufacture Output (MO)')
+        ax2.set_yticks([])  # Entfernt die Ticks der sekundären Y-Achse
+
+        # Achsenbeschriftungen anpassen
+        # ax.set_xlabel('Time')
+        ax.set_ylabel('Manufacturing Plant')
+
+        # Entferne die Ticks und Labels der ursprünglichen y-Achse
+        ax.yaxis.set_ticks_position('left')
+        ax.yaxis.set_label_position('left')
+        #ax.set_yticks([])
+
+       # plt.title('Manufacture Output (MO) per Factory over Time')
+        plt.tight_layout()
+
+        plt.savefig('figures/plot7-1_manufacturing_output.png')
+
