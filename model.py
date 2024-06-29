@@ -99,7 +99,7 @@ class Model:
                         'Constraint_1.1b-6')
 
         model.addConstrs((vars.first_stage.RM[t] 
-                        == gp.quicksum(vars.first_stage.Q[m,t]/data.fy[m] for m in data.MP)         
+                        == gp.quicksum(vars.first_stage.Q[m,t]/data.fy[data.fpr[m]] for m in data.MP)         
                         for t in data.T),
                         'Constraint_1.1c-7')
         
