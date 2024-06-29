@@ -4,7 +4,7 @@
 from variables import *  #Werte für Parameter
 #from gurobipy import * #Gurobi
 import gurobipy as gp
-from gurobipy import GRB, quicksum, Model, abs_ 
+from gurobipy import GRB, quicksum, Model
 import datetime as dt
 import time as time
 from parameters import *   # All parameters
