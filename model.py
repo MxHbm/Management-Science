@@ -105,25 +105,13 @@ class Model:
         
       # Constraint 2: General production constraints
         """ Family f production of all plants in the complex is equal to the manufacturing output of plants producing f. """
+               
+        
         model.addConstrs((vars.first_stage.FP[f,t] 
-                        == vars.first_stage.MO[f,t]   # Product family is produced by plant m
-                        for f in data.F for t in data.T),
-                        'Constraint_1.2a-8')
-        
-        
-        '''
-            model.addConstrs((vars.first_stage.FP[f,t] 
-                        == gp.quicksum(vars.first_stage.MO[m,t] for m in data.MP if m == f)   # Product family is produced by plant m
+                        == gp.quicksum(vars.first_stage.MO[m,t] for m in data.MP if data.fpr[m] == f)   # Product family is produced by plant m
                         for f in data.F for t in data.T),
                         'Constraint_1.2a')
-        '''
-    
-        '''
-            model.addConstrs((vars.first_stage.FP[f,t] 
-                        == gp.quicksum(vars.first_stage.MO[m,t] for m in data.MP if m == f)   # Product family is produced by plant m
-                        for f in data.F for t in data.T),
-                        'Constraint_1.2a')
-        '''
+        
 
         model.addConstrs((vars.first_stage.MO[m,t] 
                         == (1 - data.beta[m]) 
@@ -142,8 +130,8 @@ class Model:
         """ Manufacturing products with σ m > 0 generate WIP inventory which is depleted by the volume of finished products in period t represented by the variable MOm, t. Parameter iwip0
             m represents inventory from the previous planning horizon at manufacturing plant m. """
         
-        ### SHOULD ONLY TAKE VALUES AT THE BEGININNG OF THE PLANNING HORIZON !!!
-        '''
+        ### SHOULD ONLY TAKE VALUES AT THE BEGININNG OF THE PLANNING HORIZON !!! -- still decide what tom do with it :/ 
+
         model.addConstrs((vars.first_stage.IWIP[m,t] 
                         == data.iwip0[m]
                         + gp.quicksum(vars.first_stage.Q[m,t1] for t1 in data.T if t1 <= t)
@@ -151,44 +139,7 @@ class Model:
                         for m in data.MP for t in data.T 
                         if data.sigma[m] > 0),
                         'Constraint_1.3a-11')
-    '''
-          # Constraint 4
-
-                #Constraint 6
-        """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
-        according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
-        capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
-        can be idle.
-        """
-
-        model.addConstrs(((vars.first_stage.Q[m, t] 
-                        / data.sc[m])
-                        <= vars.integer.Z[m, t] 
-                        for m in data.MP for t in data.T 
-                        if data.cty[m] == 1),
-                        'Constraint_1.6a-32')
         
-        ## DAMIT FUNKTIONIERT ES NICHT !!
-
-        model.addConstrs(((vars.first_stage.Q[m, t] / data.sc[m]) * (1/(1 - data.is_[m]))
-                >= vars.integer.Z[m, t] 
-                for m in data.MP for t in data.T 
-                if data.cty[m] == 1),
-                'Constraint_1.6b-33')
-        
-        # Constraint 4                 
-        '''
-        model.addConstrs((vars.binary.R1[m, t]
-                        + vars.binary.R2[m, t] 
-                        == 1 
-                        for m in data.MP for t in data.T if data.cty[m] == 0),
-                        'Constraint_1.4d-15')
-        
-        model.addConstrs((vars.binary.R1[m, 0] 
-                        == 1 
-                        for m in data.MP if data.cty[m]==0),
-                        'Constraint_1.4e-16')
-        '''
          #Constraint 5: Length-based campaign
         """ The level of production capacity during a production campaign of a length-based plant is set """
 
@@ -208,43 +159,28 @@ class Model:
                         if data.cty[m] == 0),
                         'Constraint_1.5b-24')
         
-
-          
-        
-        # Constraint 1.7: Campaign Setups
-        """In order to model these features, the binary variable Ym, t is introduced. This variable takes value 1 when a new production campaign
-        starts at t, if and only if R2m, t > 0 and Zm,t−1 = 0, which is ensured by constraints (34) - (35) – (36). We emphasize the redundancy of
-        constraint (36) which was included to improve the computational performance of the family aggregated model.
-        If at any period t, a production campaign for a manufacturing plant start (Ym,t = 1), then on periods t− t1 : t1 ∈ 0..(αm− 1) setup
-        tasks may be required and therefore production is not allowed in these periods . In this way if Ym,t = 1 keeps Zm,t−t1 = 0 (there is no
-        production) until finish the setup task (constraint (37)). Now for the special case that at the beginning of the horizon there is a setup task
-        in progress, this is reflected in the parameter ostm > 0, constraint (38) keeping campaign indicator variable to 0 until the task is finished.
+        #Constraint 6
+        """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
+        according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
+        capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
+        can be idle.
         """
-        
 
-        # Zusammenfassen als R2 >= abs(Zm-t - Zm-t-1) !!!
-        '''
-        model.addConstrs((vars.binary.R2[m, t] >=  vars.integer.Z[m, t-1] - vars.integer.Z[m, t]
+        model.addConstrs(((vars.first_stage.Q[m, t] 
+                        / data.sc[m])
+                        <= vars.integer.Z[m, t] 
                         for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+                        if data.cty[m] == 1),
+                        'Constraint_1.6a-32')
         
-        model.addConstrs((vars.binary.R2[m, t] >=  vars.integer.Z[m, t] - vars.integer.Z[m, t-1]
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        '''
-        #Ensure that R1 is 1 ewhen Zt-1 and Zt are equal
-        '''
-        model.addConstrs((vars.binary.R1[m, t] >=  1 - vars.integer.Z[m, t] - vars.integer.Z[m, t-1]
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        
-        model.addConstrs((vars.binary.R1[m, t] >=  (-1)*((1 - vars.integer.Z[m, t-1]) - vars.integer.Z[m, t])
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        '''
+        model.addConstrs(((vars.first_stage.Q[m, t] / data.sc[m]) * (1/(1 - data.is_[m]))
+                >= vars.integer.Z[m, t] 
+                for m in data.MP for t in data.T 
+                if data.cty[m] == 1),
+                'Constraint_1.6b-33')
         
         
-        ####### NEW BECKER FORMULATION ########
+        # Constraint 1.7: Campaign Setups ####### NEW BECKER FORMULATION ########
         '''I want to find a lot of tuples (k,t') in a set Omega_t, which are defined as follows:
         if at time t the tuple k,t' could be active at time t, being active is defined as follows,
         that t' is the starting point and k is the duration. 
@@ -392,10 +328,6 @@ class Model:
                         'Constraint_1.13-50b')
         
 
-        ## NEw Constraint Maximum INventtory
-
-        #model.addConstrs(vars.first_stage.IF[f,t] <= 5000 for f in data.F for t in data.T)
-
         return model
         
     def Calculate_emvp(self, data:S_star,  logger):
@@ -454,11 +386,6 @@ class Model:
         model.setParam('MIPGap', 0.05)
         model.setParam('TimeLimit', 60)
 
-        # Adaptions to get more preciose results and less floats
-        # model.setParam('NumericalFocus', 2)
-        # model.setParam('IntFeasTol', 1e-9)
-        # model.setParam('FeasibilityTol', 1e-9)
-        # model.setParam('OptimalityTol', 1e-9)
 
         print('============================ Optimize Model ============================')
         model.optimize()
@@ -662,13 +589,6 @@ class Model:
                             + data.tl_min 
                         for i in data.FT for l in data.L for t in data.T),
                         'Constraint_63')
-        
-        # new constraint - similar to constraint 49 - DO WE NEED THIS ??
-        # model.addConstrs((vars.first_stage.VD[i, l, t] 
-        #                 == 0 
-        #                 for i in data.FT for l in data.L for t in (range(data.hl - data.tau[l] + 1, data.hl))
-        #                 if data.tau[l] > 0),
-        #                 'Constraint_64_new')
 
         '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
 
@@ -735,24 +655,6 @@ class Model:
             param_FP.append(sub_params_FP)
             param_E.append(sub_params_E)
 
-        
-        #Debugging: Print the values of the fixed variables
-        '''
-        if 1 == 1:
-            print("param_E")
-            for f in  data.F:
-                for t in data.T:
-                    print(f, t, '\t', param_E[f][t])
-                
-                print("\n")
-
-            print("param_FP")
-            for f in  data.F:
-                for t in data.T:
-                    print(f, t, '\t', param_FP[f][t])
-                
-                print("\n")
-        '''
         return param_FP, param_E
 
     def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model, logger, model_type='DPM'):

@@ -12,11 +12,14 @@ class Parameters:
         '''
 
         self.json_file_path = json_file_path
+
         if not hasattr(self, '_use_SRA'):
             self._use_SRA = None
 
         self.__loadData()
         self.__createSets()
+
+        #CHeck if parameter decision was to use Scenario Reduction or to calculate the mean expected benefit
         if self._use_SRA:
             self.__createScenarioReduction()
             self._rho =  self._SRA.reduced_scenarios_probabilities
@@ -24,11 +27,12 @@ class Parameters:
             self._S = range(0, 1)
             self._rho = [1]
 
-
+        # Create the demand for each family type or procduct based on the SRA  
         self._dp = self.__create_dp()
         self._dri = self.__create_dri()
         self._dpd = self.__create_dpd()
 
+        # Create the sets of tupel combinations for controlling length based campaigns and setup times
         self.__create_big_phi()
         self.__create_big_theta()
         self.__create_big_omega()
@@ -117,12 +121,14 @@ class Parameters:
         self._P = range(self._P_No)
 
     def __find_incompatible_tuples(self, t , k ):
+        ''' Find for one tuple combination (t,k) all tuples (t_,k_), which would be producing together and are incompatible!
+        '''
 
-        starting_set = {t + i for i in range(k + 3)}
+        starting_set = {t + i for i in range(k + self._alpha[0] + 1)}
         incompatible_tuples = set()
         for t_ in range(self._T_No):
             for k_ in range(self._dmax[0]):
-                    new_set = {t_ + i_ for i_ in range(k_ + 3)}
+                    new_set = {t_ + i_ for i_ in range(k_ + self._alpha[0] + 1)}
                     if starting_set & new_set:
                         incompatible_tuples.add((t_, k_))
 
@@ -131,7 +137,8 @@ class Parameters:
         return incompatible_tuples
 
     def __create_big_omega(self):
-        
+        ''' Set of tuple combinations of Y[m,t,k], which have overlappting time periods and cant be used together
+        '''
         self._big_omega = []
         
         for t in range(self._T_No):
@@ -143,18 +150,21 @@ class Parameters:
             self._big_omega.append(sub_list_incompatible_tuples)
 
     def __find_setup_tuples(self, t):
+        ''' find for one time point t all tuple combinations (t_,k), which could be on setup
+        '''
 
         setup_tuples = set()
 
         for t_ in range(self._T_No):
             for k in range(self._dmax[0]):
-                if t in {t_ + k + 1, t_ + k + 2}:
+                if t in {num for num in range(t_ + k + 1, t_ + k + self._alpha[0] + 1)}:
                     setup_tuples.add((t_,k))
 
         return setup_tuples
     
-
     def __create_big_theta(self):
+        ''' Set of each time point containnig infoirmation which production campaigns Y[m,t,k] could be on setup
+        '''
         
         self._big_theta = []
         
@@ -164,16 +174,18 @@ class Parameters:
 
 
     def __find_active_tuples(self,t):
-            
-            active_tuples = set()
-            for t_ in range(self._T_No):
-                for k in range(self._dmax[0]):
-                    if t_ <= t <= t_ + k:
-                        active_tuples.add((t_,k))
-            return active_tuples
+        ''' FInd all tuples (t_,k) which are active producing in time point t
+        '''    
+        active_tuples = set()
+        for t_ in range(self._T_No):
+            for k in range(self._dmax[0]):
+                if t_ <= t <= t_ + k:
+                    active_tuples.add((t_,k))
+        return active_tuples
 
     def __create_big_phi(self):
-        
+        ''' Create a set for eavh time point t with all active tuples (t_,k) which are producing at time point t
+        '''
         self._big_phi = []
         
         for t in range(self._T_No):
@@ -183,6 +195,7 @@ class Parameters:
 
     def __create_dp(self) -> list[list[list[list[int]]]]:
         ''' Creation of demand in each scenario for each time point for each family type to each location
+            where the demand is the same for each location and each time point 
         '''
 
         # Create a list for the demand of each family
@@ -211,7 +224,7 @@ class Parameters:
         return demand
     
     def __create_dri(self) -> list[list[int]]:
-        ''' Raw milk daily input on day t under scenario s
+        ''' Raw milk daily input on day t under scenario s, same for each day t under teh scenario s
         '''
 
         milk_input = []
@@ -675,7 +688,7 @@ class Parameters:
 
         return self._mappingFtoM
     
-    ###### TRICKS FOR RETURNING PRODUCT DATA INSTEAD OF FAMILY TYPES ###### 
+    ###### DETAILED MODEL ###### 
 
     @property
     def P(self):

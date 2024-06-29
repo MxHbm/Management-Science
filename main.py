@@ -21,20 +21,7 @@ def main():
     # Model Class Object! 
     m = Model()
     data = Parameters("data/case_study_data.json")
-    #data = Parameters("data/base_data.json")
     data_s_star = S_star("data/case_study_data.json")      # data for EMVP calculation
-
-
-    # if data.use_SRA: 
-    #     #print(data.SRA.reduced_scenarios)
-    #     #print(data.SRA.reduced_scenarios_probabilities)
-    #     print(data.dp)
-    #     print(data.rho)
-    # else: 
-    #     print(data.dp)
-    #     print(data.rho)
-
-    # if you want to use only the expected values, set the following parameter to True in case_study_data.json use_sra = true / false
 
 
     try:

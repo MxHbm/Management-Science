@@ -26,7 +26,6 @@ class DecisionVariablesModel1:
             self.FP = model.addVars(data.F, data.T, lb=0, name="FPf_t")
             self.V = model.addVars(data.F, data.L, data.T, lb=0, name="Vi_l_t")
             self.DV = model.addVars(data.F, data.L, data.T, lb=0, name="DVf_l_t")
-            self.A = model.addVars(data.MP, data.T, lb=0, name="Am_t")
             self.MO = model.addVars(data.MP, data.T, lb=0, name="MOm_t")
             self.IWIP = model.addVars(data.MP, data.T, lb=0, name="IWIPm_t")
             self.Q = model.addVars(data.MP, data.T, lb=0, name="Qm_t")
@@ -48,16 +47,13 @@ class DecisionVariablesModel1:
         ''' Binary decision variables of the model '''
 
         def __init__(self, model: gp.Model, data: Parameters):
-            #self.R1 = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="R1m_t")
-            #self.R2 = model.addVars(data.MP, data.T, vtype=GRB.BINARY, name="R2m_t")
             self.Y = model.addVars(data.MP, data.T,data.dmax[0], vtype=GRB.BINARY, name="Ym_t")
 
     class Integer:
         ''' Integer decision variables of the model '''
         
         def __init__(self, model: gp.Model, data: Parameters):
-            #self.TR = model.addVars(data.FT, data.L, data.T, vtype=GRB.INTEGER, lb=0,ub=30, name="TRi_l_t") ### New IMPLEMENTED UPPER BOUND !!! 
-            self.TR = model.addVars(data.FT, data.L, data.T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t") ### New IMPLEMENTED UPPER BOUND !!! 
+            self.TR = model.addVars(data.FT, data.L, data.T, vtype=GRB.INTEGER, lb=0, name="TRi_l_t")
             self.E = model.addVars(data.F, data.T, vtype=GRB.INTEGER, lb=0, name="Ef_t")
             self.Z = model.addVars(data.MP, data.T, vtype=GRB.INTEGER, lb=0, name="Zm_t")
 
