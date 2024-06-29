@@ -1,22 +1,26 @@
 # We will create a class that will generate the parameters for the model
 from scenario_reduction import *
+from typing import Any, List, Tuple, Set
 import json
 
 ### Script for generating data fpr our model
 class Parameters:
     ''' Class to generate the parameters for the model'''
 
-    def __init__(self, json_file_path: str):
+    def __init__(self, json_file_path: str) -> None:
         ''' Constructor for this class.
         :param file_path: path to the file with the datafile (txt file)
         '''
 
         self.json_file_path = json_file_path
+
         if not hasattr(self, '_use_SRA'):
             self._use_SRA = None
 
         self.__loadData()
         self.__createSets()
+
+        #CHeck if parameter decision was to use Scenario Reduction or to calculate the mean expected benefit
         if self._use_SRA:
             self.__createScenarioReduction()
             self._rho =  self._SRA.reduced_scenarios_probabilities
@@ -24,11 +28,12 @@ class Parameters:
             self._S = range(0, 1)
             self._rho = [1]
 
-
+        # Create the demand for each family type or procduct based on the SRA  
         self._dp = self.__create_dp()
         self._dri = self.__create_dri()
         self._dpd = self.__create_dpd()
 
+        # Create the sets of tupel combinations for controlling length based campaigns and setup times
         self.__create_big_phi()
         self.__create_big_theta()
         self.__create_big_omega()
@@ -116,13 +121,15 @@ class Parameters:
         self._S = range(self._K)
         self._P = range(self._P_No)
 
-    def __find_incompatible_tuples(self, t , k ):
+    def __find_incompatible_tuples(self, t , k ) -> Set[Tuple[int, int]]:
+        ''' Find for one tuple combination (t,k) all tuples (t_,k_), which would be producing together and are incompatible!
+        '''
 
-        starting_set = {t + i for i in range(k + 3)}
+        starting_set = {t + i for i in range(k + self._alpha[0] + 1)}
         incompatible_tuples = set()
         for t_ in range(self._T_No):
             for k_ in range(self._dmax[0]):
-                    new_set = {t_ + i_ for i_ in range(k_ + 3)}
+                    new_set = {t_ + i_ for i_ in range(k_ + self._alpha[0] + 1)}
                     if starting_set & new_set:
                         incompatible_tuples.add((t_, k_))
 
@@ -130,8 +137,9 @@ class Parameters:
 
         return incompatible_tuples
 
-    def __create_big_omega(self):
-        
+    def __create_big_omega(self)-> None:
+        ''' Set of tuple combinations of Y[m,t,k], which have overlappting time periods and cant be used together
+        '''
         self._big_omega = []
         
         for t in range(self._T_No):
@@ -142,19 +150,22 @@ class Parameters:
 
             self._big_omega.append(sub_list_incompatible_tuples)
 
-    def __find_setup_tuples(self, t):
+    def __find_setup_tuples(self, t) -> Set[Tuple[int, int]]:
+        ''' find for one time point t all tuple combinations (t_,k), which could be on setup
+        '''
 
         setup_tuples = set()
 
         for t_ in range(self._T_No):
             for k in range(self._dmax[0]):
-                if t in {t_ + k + 1, t_ + k + 2}:
+                if t in {num for num in range(t_ + k + 1, t_ + k + self._alpha[0] + 1)}:
                     setup_tuples.add((t_,k))
 
         return setup_tuples
     
-
-    def __create_big_theta(self):
+    def __create_big_theta(self) -> None:
+        ''' Set of each time point containnig infoirmation which production campaigns Y[m,t,k] could be on setup
+        '''
         
         self._big_theta = []
         
@@ -163,17 +174,19 @@ class Parameters:
             self._big_theta.append(setup_tuples)
 
 
-    def __find_active_tuples(self,t):
-            
-            active_tuples = set()
-            for t_ in range(self._T_No):
-                for k in range(self._dmax[0]):
-                    if t_ <= t <= t_ + k:
-                        active_tuples.add((t_,k))
-            return active_tuples
+    def __find_active_tuples(self,t) -> Set[Tuple[int, int]]:
+        ''' FInd all tuples (t_,k) which are active producing in time point t
+        '''    
+        active_tuples = set()
+        for t_ in range(self._T_No):
+            for k in range(self._dmax[0]):
+                if t_ <= t <= t_ + k:
+                    active_tuples.add((t_,k))
+        return active_tuples
 
-    def __create_big_phi(self):
-        
+    def __create_big_phi(self) -> None:
+        ''' Create a set for eavh time point t with all active tuples (t_,k) which are producing at time point t
+        '''
         self._big_phi = []
         
         for t in range(self._T_No):
@@ -183,6 +196,7 @@ class Parameters:
 
     def __create_dp(self) -> list[list[list[list[int]]]]:
         ''' Creation of demand in each scenario for each time point for each family type to each location
+            where the demand is the same for each location and each time point 
         '''
 
         # Create a list for the demand of each family
@@ -211,7 +225,7 @@ class Parameters:
         return demand
     
     def __create_dri(self) -> list[list[int]]:
-        ''' Raw milk daily input on day t under scenario s
+        ''' Raw milk daily input on day t under scenario s, same for each day t under teh scenario s
         '''
 
         milk_input = []
@@ -268,12 +282,12 @@ class Parameters:
     
     ###### MANY PROPERTIES TO NOT CHANGE THE VALUES OF THE VARIABLES ######
     @property
-    def hl(self):
+    def hl(self) -> int:
         ''' Time span of optimization horizon '''
         return self._hl
 
     @property
-    def fty(self):
+    def fty(self) -> List[int]:
         ''' The type (Fresh or Dry) of family f 
         dry (not refrigerated) for products of the UHT and Powdered Milk families; and fresh (refrigerated), for
         products of the Yogurt and Cheese families
@@ -285,7 +299,7 @@ class Parameters:
         return self._fty
 
     @property
-    def cty(self):
+    def cty(self) -> List[int]:
         ''' Campaign type for production plant m -> Which work model is used in manufacturing plant m 
         
             0 = Lengthbased
@@ -295,28 +309,28 @@ class Parameters:
         return self._cty
     
     @property
-    def big_omega(self):
+    def big_omega(self) -> List[Set[Tuple[int, int]]]:
         ''' all possible cmapagign tuples whoch should be blocked for one tuple combination
         '''
         
         return self._big_omega
     
     @property
-    def big_phi(self):
+    def big_phi(self) -> List[Set[Tuple[int, int]]]:
         ''' all possible active campaign tuples for each time point t
         '''
         
         return self._big_phi
     
     @property
-    def big_theta(self):
+    def big_theta(self) -> List[Set[Tuple[int, int]]]:
         ''' all possible active campaign tuples which are causing setup times at time point t
         '''
         
         return self._big_theta
 
     @property
-    def fpr(self):
+    def fpr(self) -> List[int]:
         ''' The family produced by manufacturing plant m 
             UHT and Powdered Milk, Yogurt, Cheese
             Differnece between production plants of Powedered Milk and Rest !!!
@@ -325,7 +339,7 @@ class Parameters:
         return self._fpr
 
     @property
-    def fy(self):
+    def fy(self) -> List[float]:
         ''' Family f production yield for  a unit of processed raw milk 
             UHT and Powdered Milk, Yogurt, Cheese
         '''
@@ -333,27 +347,27 @@ class Parameters:
         return self._fy
 
     @property
-    def rsc(self):
+    def rsc(self) -> int:
         ''' Raw milk third supplier cost '''
 
         return self._rsc
 
     @property
-    def roc(self):
+    def roc(self) -> int:
         ''' Raw milk over stock cost per volume unit 
         '''
 
         return self._roc
     
     @property
-    def use_SRA(self):
+    def use_SRA(self) -> bool:
         ''' Use of Scenario Reduction Analysis
         ''' 
 
         return self._use_SRA
 
     @property
-    def el(self):
+    def el(self) -> List[int]:
         ''' Export lot size in metric tons of family f 
             Lot size is 25 metric ton
         '''
@@ -361,56 +375,56 @@ class Parameters:
         return self._el
 
     @property
-    def tau(self):
+    def tau(self) -> List[int]:
         ''' Transportation time from factory to distribution center in days
         '''
 
         return self._tau
 
     @property
-    def i_0(self):
+    def i_0(self) -> List[List[int]]:
         ''' Family f Initial inventory at location l.e
         '''
 
         return self._i_0
 
     @property
-    def i_0_f(self):
+    def i_0_f(self) -> List[int]:
         ''' Family f Initial inventory at FW
         '''
 
         return self._i_0_f
 
     @property
-    def tl_min(self):
+    def tl_min(self) -> int:
         ''' Minimum  truckload capacity, respectively.
         '''
 
         return self._tl_min
 
     @property
-    def tl_max(self):
+    def tl_max(self) -> int:
         '''  Maximum truckload capacity, respectively.
         '''
 
         return self._tl_max
 
     @property
-    def r0(self):
+    def r0(self) -> int:
         ''' Raw milk initial inventory.
         '''
 
         return self._r0
 
     @property
-    def r_max(self):
+    def r_max(self) -> int:
         ''' Maximum raw milk inventory.
         '''
 
         return self._r_max
 
     @property
-    def dmax(self):
+    def dmax(self) -> List[int]:
         ''' Maximum campaign length (in days) for plant m. 
 
         Only one value given for Length-Based Campaign --> Assumnption that shift based campaign are unlimited!
@@ -419,7 +433,7 @@ class Parameters:
         return self._dmax
 
     @property
-    def cmin(self):
+    def cmin(self) ->  List[int]:
         ''' Minimum daily production capacity at manufacturing plant m 
             Assumption about minimum that it is 0!
             # assumption update: it cannot be 0, because cmin is a divisor in a constraint, so that would lead to division by zero
@@ -428,7 +442,7 @@ class Parameters:
         return self._cmin
 
     @property
-    def cmax(self):
+    def cmax(self) -> List[int]:
         ''' Maximum daily production capacity at manufacturing plant m 
             Assumption about maximum, but already given! 
             # assumption update: 3 times maximimum number of shifts
@@ -437,7 +451,7 @@ class Parameters:
         return self._cmax
 
     @property
-    def alpha(self):
+    def alpha(self) -> List[int]:
         ''' Setup time in periods for production plant m 
             Assunmption, that setup is only needed for Powdered Milk!
         '''
@@ -445,7 +459,7 @@ class Parameters:
         return self._alpha
 
     @property
-    def ost(self):
+    def ost(self) -> List[int]:
         ''' Remaining days to finish an ongoing setup task at manufacturing plant m 
             Assumption no ongoing setup tasks at manufacturing plant m
         '''
@@ -453,7 +467,7 @@ class Parameters:
         return self._ost
 
     @property
-    def wp(self):
+    def wp(self) -> List[List[int]]:
         ''' m: manufacturing plant, 
             t: time (days), 
             sigma: process time for family produced in manufacturing plant m
@@ -463,7 +477,7 @@ class Parameters:
         return self._wp
 
     @property
-    def el_min(self):
+    def el_min(self) -> List[int]:
         ''' F: lots of family f to be exported; here: Minimum number
             Powdered Milk, UHT, Butter, Cheese
         '''
@@ -471,7 +485,7 @@ class Parameters:
         return self._el_min
 
     @property
-    def el_max(self):
+    def el_max(self) -> List[int]:
         ''' F: lots of family f to be exported; here: Maximum number
             Powdered Milk, UHT, Butter, Cheese
         '''
@@ -479,7 +493,7 @@ class Parameters:
         return self._el_max
 
     @property
-    def is_(self):
+    def is_(self) -> List[float]:
         ''' M: maximum portion of total capacity that can be left
             idle during a production campaign  at manufacturing plant m with [0,1) value#
         '''
@@ -487,7 +501,7 @@ class Parameters:
         return self._is_
 
     @property
-    def omega_fw(self):
+    def omega_fw(self) -> List[int]:
         ''' factory warehouse shelf-life of products of family f
             Powdered Milk, UHT, Butter, Cheese
             100 as a high number for long time span
@@ -496,7 +510,7 @@ class Parameters:
         return self._omega_fw
 
     @property
-    def omega_dc(self):
+    def omega_dc(self) -> List[int]:
         ''' distribution center shelf-life of products of family f
             Powdered Milk, UHT, Butter, Cheese
             100 as a high number for long time span
@@ -505,7 +519,7 @@ class Parameters:
         return self._omega_dc
 
     @property
-    def rr(self):
+    def rr(self) -> list[int]:
         ''' revenue from reduced price selling of products of family f over stock (distressed sales) 
             Powdered Milk, UHT, Butter, Cheese
         '''
@@ -513,7 +527,7 @@ class Parameters:
         return self._rr
 
     @property
-    def r(self):
+    def r(self) -> List[int]:
         ''' revenue from selling one ton of family f in any distribution center of the Supply Chain 
             Powdered Milk, UHT, Butter, Cheese
         '''
@@ -521,7 +535,7 @@ class Parameters:
         return self._r
 
     @property
-    def re(self):
+    def re(self) -> List[int]:
         ''' revenue from exporting a batch of family f 
             UHT and Powdered Milk, Yogurt, Cheese
             only for powdered milk! 
@@ -530,14 +544,14 @@ class Parameters:
         return self._re
 
     @property
-    def imax(self):
+    def imax(self) -> List[List[int]]:
         ''' Maximum storage capacities at location l for fresh and dry product families i 
         '''
 
         return self._imax
 
     @property
-    def zmax(self):
+    def zmax(self) -> List[int]:
         ''' For shift-based production, maximum shifts, otherwise 1
             Retrieved from paper
         '''
@@ -545,7 +559,7 @@ class Parameters:
         return self._zmax
 
     @property
-    def sc(self):
+    def sc(self) -> List[int]:
         ''' Production capacity of the manufacturing plant m per work shift in metric tons
             Retrieved from paper
             0 for lenghtbased production plants
@@ -554,14 +568,14 @@ class Parameters:
         return self._sc
 
     @property
-    def beta(self):
+    def beta(self) -> List[float]:
         ''' Deterioration coefficient for products manufactured at factory m 
         '''
 
         return self._beta
 
     @property
-    def sigma(self):
+    def sigma(self) -> List[int]:
         ''' Process time in periods for the family produced at manufacturing plant m
 
             List for availability of product lines 
@@ -574,7 +588,7 @@ class Parameters:
         return self._sigma
 
     @property
-    def iwip0(self):
+    def iwip0(self) -> List[int]:
         ''' Inventory of work-in-progress from previous planning horizon at manufacturing plant m
         '''
 
@@ -582,7 +596,7 @@ class Parameters:
     
 
     @property
-    def sco(self):
+    def sco(self) -> int:
         ''' Setup costs in Monetary Units
         '''
 
@@ -590,14 +604,14 @@ class Parameters:
 
     
     @property
-    def SRA(self):
+    def SRA(self) -> Scenario_Analyse:
         ''' Scenario Reduction Analysis Instance with all data and results
         '''
 
         return self._SRA
 
     @property
-    def dp(self):
+    def dp(self) -> list[list[list[list[int]]]]:
         ''' Family demand for distribution center l on day t under scenario s.
         '''
         pass
@@ -605,178 +619,179 @@ class Parameters:
         return self._dp
 
     @property
-    def rho(self):
+    def rho(self) -> list[float]:
         ''' The probability of scenario s.
         '''
 
         return self._rho
 
     @property
-    def dri(self):
+    def dri(self) -> list[list[int]]:
         ''' Raw milk daily input on day t under scenario s
         '''
 
         return self._dri
 
     @property
-    def T(self):
+    def T(self) -> range:
         ''' Range for time span of optimization horizon
         '''
 
         return self._T
 
     @property
-    def F(self):
+    def F(self) -> range:
         ''' Range for product family types 
         '''
         
         return self._F
 
     @property
-    def FT(self):
+    def FT(self) -> range:
         ''' Range for family types, fresh or dry 
         '''
 
         return self._FT
 
     @property
-    def MP(self):
+    def MP(self) -> range:
         ''' Range for manufacturing plants
         '''
 
         return self._MP
 
     @property
-    def CT(self):
+    def CT(self) -> range:
         ''' Range for production camp. types. length or shift based
         '''
 
         return self._CT
 
     @property
-    def L(self):
+    def L(self) -> range:
         ''' Range for distribution centers
         '''
 
         return self._L
 
     @property
-    def S(self):
+    def S(self) -> range:
         ''' Range for reduced scenarios
         '''
 
         return self._S
     
-    
-    @property
-    def mappingFtoM(self):
-        ''' Mapping of family to manufacturing plant
-        '''
-
-        return self._mappingFtoM
-    
-    ###### TRICKS FOR RETURNING PRODUCT DATA INSTEAD OF FAMILY TYPES ###### 
+    ###### DETAILED MODEL ###### 
 
     @property
-    def P(self):
+    def P(self) -> range:
         ''' Range for products
         '''
 
         return self._P
 
     @property
-    def ls(self):
+    def ls(self) -> list[int]:
         ''' Product p export lot size, expressed in metric tons.
         '''
         return self._ls
 
     @property
-    def id0(self):
+    def id0(self) -> list[list[int]]:
         ''' Product p initial inventory at any location l ∈ L∪ < {FW}.
         '''
         return self._id0
     
     @property
-    def r_p(self):
+    def r_p(self) -> list[int]:
         ''' Product p revenue from selling one ton in any distribution center of the supply chain.
         '''
         return self._r_p
     
     @property
-    def tc(self): 
+    def tc(self) -> list[list[int]]:
         ''' Product p transportation cost from factory to distribution center l.
         '''
 
         return self._tc
     
     @property
-    def re_p(self):
+    def re_p(self) -> list[int]:
         ''' Product p revenue from exporting a batch.
         '''
         return self._re_p
     
     @property
-    def fly(self):
+    def fly(self) -> list[int]:
         ''' Product p family type.
         '''
         return self._fly
 
     @property
-    def dpd (self):
+    def dpd (self) -> list[list[list[list[int]]]]:
         ''' Product p demand for distribution center l on day t under scenario s.
         '''
         return self._dpd
     
     @property
-    def id0_FW(self):
+    def id0_FW(self) -> list[list[int]]:
         ''' Product p initial inventory at FW.
         '''
         return self._id0_FW
     
 
     @property
-    def fty_p(self):
+    def fty_p(self) -> list[int]:
         ''' Product p family type.
         '''
         return self._fty_p
     
     @property
-    def rr_p(self): 
+    def rr_p(self) -> list[int]:
         ''' Product p revenue from reduced price selling of products of family f over stock (distressed sales).
         '''
         return self._rr_p
 
-# class s_star that inherits from class Parameters and it is used to calculate the s_star value (mean values of the demand)
-class S_star(Parameters):
-    ''' Class to calculate the s_star value (mean values of the demand)'''
 
-    def __init__(self, json_file_path = "data/case_study_data.json"):
-        ''' Constructor for this class.
-        :param file_path: path to the file with the datafile (txt file)
+class S_star(Parameters):
+    ''' 
+    Class to calculate the s_star value (mean values of the demand).
+    Class S_star that inherits from class Parameters and is used to calculate the s_star value (mean values of the demand)
+    '''
+
+    def __init__(self, json_file_path: str = "data/case_study_data.json"):
+        ''' 
+        Constructor for this class.
+        
+        Parameters:
+            json_file_path (str): Path to the file with the datafile (JSON file).
         '''
-        self._use_SRA = False       # False to indicate that we do not want to use the SRA
+        self._use_SRA = False  # False to indicate that we do not want to use the SRA
 
         super().__init__(json_file_path)
 
         self.__calculate_s_star()
         self._s_star = 0
 
-    def __calculate_s_star(self):
-        ''' Calculate the mean values of the demand
+    def __calculate_s_star(self) -> None:
+        ''' 
+        Calculate the mean values of the demand.
+        
+        This is a placeholder function to be implemented with actual calculation logic.
         '''
+        pass  # Placeholder for actual calculation logic
 
-        # self._dp = self.recreate_dp()           # demand
-        # self._dri = self.recreate_dri()         # raw milk input
-        #self.dpd = self.recreate_dpd()
-        # self._S = range(0, 1)                   # only one scenario
-        # self._rho = self.calculate_expected_value()    # expected value of all scenarios
-
-
-    def recreate_dp(self):
+    def recreate_dp(self) -> List[List[List[List[float]]]]:
+        ''' 
+        Recreate the demand values adjusted by the expected value (rho).
+        
+        Returns:
+            List[List[List[List[float]]]]: Adjusted demand values.
+        '''
+        
         dp = [[
             [
                 [
-                    #sum(self._dp[s][f][l][t] * self._rho[s] for s in self._S)  # / len(self._S) 
                     self._dp[s][f][l][t] * self._rho[s] for s in self._S  # / len(self._S) 
                     for t in self._T
                 ]
@@ -786,42 +801,40 @@ class S_star(Parameters):
         ]]
 
         return dp
-    
-    # def recreate_dpd(self):
-    #     dpd = [
-    #         [
-    #             [
-    #                 sum(self._dpd[s][f][l][t] for f in self._F) / len(self._F) * self._rho[s]
-    #                 for t in self._T
-    #             ]
-    #             for l in self._L
-    #         ]
-    #         for s in self._S
-    #     ]
 
-    #     return dpd
-    
-    def recreate_dri(self):
+    def recreate_dri(self) -> List[List[float]]:
+        ''' 
+        Recreate the raw milk input values adjusted by the expected value (rho).
+        
+        Returns:
+            List[List[float]]: Adjusted raw milk input values.
+        '''
         dri = [
             [
-                # sum(self._dri[s][t] * self._rho[s] for s in self._S) #/ len(self._S) 
                 self._dri[s][t] * self._rho[s] for s in self._S  #/ len(self._S) 
                 for t in self._T
             ]
         ]
 
         return dri
-    
-    def calculate_expected_value(self):
-        rho =[ sum(self._rho )]
 
-        # rho = [0]
+    def calculate_expected_value(self) -> List[float]:
+        ''' 
+        Calculate the expected value (rho) of all scenarios.
+        
+        Returns:
+            List[float]: List containing the expected value.
+        '''
+        rho = [sum(self._rho)]
 
         return rho  
 
     @property
-    def s_star(self):
-        ''' Mean values of the demand
+    def s_star(self) -> float:
+        ''' 
+        Mean values of the demand.
+        
+        Returns:
+            float: The mean value of the demand.
         '''
-
         return self._s_star
