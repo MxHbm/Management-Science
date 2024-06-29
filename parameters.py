@@ -1,12 +1,13 @@
 # We will create a class that will generate the parameters for the model
 from scenario_reduction import *
+from typing import Any, List, Tuple, Set
 import json
 
 ### Script for generating data fpr our model
 class Parameters:
     ''' Class to generate the parameters for the model'''
 
-    def __init__(self, json_file_path: str):
+    def __init__(self, json_file_path: str) -> None:
         ''' Constructor for this class.
         :param file_path: path to the file with the datafile (txt file)
         '''
@@ -120,7 +121,7 @@ class Parameters:
         self._S = range(self._K)
         self._P = range(self._P_No)
 
-    def __find_incompatible_tuples(self, t , k ):
+    def __find_incompatible_tuples(self, t , k ) -> Set[Tuple[int, int]]:
         ''' Find for one tuple combination (t,k) all tuples (t_,k_), which would be producing together and are incompatible!
         '''
 
@@ -136,7 +137,7 @@ class Parameters:
 
         return incompatible_tuples
 
-    def __create_big_omega(self):
+    def __create_big_omega(self)-> None:
         ''' Set of tuple combinations of Y[m,t,k], which have overlappting time periods and cant be used together
         '''
         self._big_omega = []
@@ -149,7 +150,7 @@ class Parameters:
 
             self._big_omega.append(sub_list_incompatible_tuples)
 
-    def __find_setup_tuples(self, t):
+    def __find_setup_tuples(self, t) -> Set[Tuple[int, int]]:
         ''' find for one time point t all tuple combinations (t_,k), which could be on setup
         '''
 
@@ -162,7 +163,7 @@ class Parameters:
 
         return setup_tuples
     
-    def __create_big_theta(self):
+    def __create_big_theta(self) -> None:
         ''' Set of each time point containnig infoirmation which production campaigns Y[m,t,k] could be on setup
         '''
         
@@ -173,7 +174,7 @@ class Parameters:
             self._big_theta.append(setup_tuples)
 
 
-    def __find_active_tuples(self,t):
+    def __find_active_tuples(self,t) -> Set[Tuple[int, int]]:
         ''' FInd all tuples (t_,k) which are active producing in time point t
         '''    
         active_tuples = set()
@@ -183,7 +184,7 @@ class Parameters:
                     active_tuples.add((t_,k))
         return active_tuples
 
-    def __create_big_phi(self):
+    def __create_big_phi(self) -> None:
         ''' Create a set for eavh time point t with all active tuples (t_,k) which are producing at time point t
         '''
         self._big_phi = []

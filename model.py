@@ -15,10 +15,10 @@ import pandas as pd
 
 
 class Model:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def Objective_Function(self, data:Parameters, vars:DecisionVariablesModel1, model: gp.Model):
+    def Objective_Function(self, data:Parameters, vars:DecisionVariables, model: gp.Model) -> gp.model:
 
         ''' objective function:
         TCOST ... total costs
@@ -74,7 +74,7 @@ class Model:
         return model
 
 
-    def Constraints(self, data:Parameters, vars:DecisionVariablesModel1, model: gp.Model):
+    def Constraints(self, data:Parameters, vars:DecisionVariables, model: gp.Model) -> gp.Model:
         
         #pass
         ''' constraints: 
@@ -330,7 +330,7 @@ class Model:
 
         return model
         
-    def Calculate_emvp(self, data:S_star,  logger):
+    def Calculate_emvp(self, data:S_star,  logger) -> Tuple[float, Tuple[gp.Model,Any], Tuple[gp.Model,Any], Any]:
         print('============================ Calculate EMVP ============================')
         logger.info('============================ Calculate EMVP ============================')
 
@@ -365,7 +365,7 @@ class Model:
     
 
     
-    def Run_Model(self, data:Parameters, logger, model_type='FAM'):
+    def Run_Model(self, data:Parameters, logger, model_type='FAM') -> Tuple[gp.Model, Any]:
 
         logger.info('============================ Run Model ============================')
         # Create a new model
@@ -373,7 +373,7 @@ class Model:
 
         # get the needed decision variables
         #vars = DecisionVariables(model, data)
-        vars = DecisionVariablesModel1(model, data)
+        vars = DecisionVariables(model, data)
 
         # Add the objective function
         model = self.Objective_Function(data, vars, model)
@@ -470,10 +470,7 @@ class Model:
         
         return model, logger
     
-    def Detailed_Constraints(self, data:Parameters, vars:DecisionVariablesModel2, model: gp.Model, FP: list[list[float]], E: list[list[int]]):
-        
-        # WAS SOLLEN DIESE CONSTRAINTS MACHEN??
-        # WELCHE VARIABLEN BRAUCHEN WIR DAFÜR?
+    def Detailed_Constraints(self, data:Parameters, vars:DecisionVariables, model: gp.Model, FP: list[list[float]], E: list[list[int]]) -> gp.model:
         
         # Constraint 53: Translating familiys to products
         """ In the following constraints, for every product p, flyp accounts for product p family. Manufacturing of products from any family f is
@@ -599,7 +596,7 @@ class Model:
 
         return model
     
-    def Detailed_Objective_Function(self, data:Parameters, vars:DecisionVariablesModel2, model: gp.Model):
+    def Detailed_Objective_Function(self, data:Parameters, vars:DecisionVariables, model: gp.Model) -> gp.model:
 
         ''' The detailed planning model maximizes the expected net benefit (DENB), and is obtained as follows.
         '''
@@ -635,7 +632,7 @@ class Model:
 
         return model
     
-    def get_fixed_values(self, gp_model : gp.Model, data:Parameters):
+    def get_fixed_values(self, gp_model : gp.Model, data:Parameters) -> Tuple[list[list[float]], list[list[int]]]:
         ''' Retrieves the values from the previously solved gurobi model for variable E and FP'''
 
         # Get the fixed values from the model
@@ -657,442 +654,426 @@ class Model:
 
         return param_FP, param_E
 
-    def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model, logger, model_type='DPM'):
 
-
-        # Get the needed fixed variable values from model 1
-        param_FP, param_E = self.get_fixed_values(model_first_stage, data)
-
-        #model_first_stage.reset()
-
-        # Create a new model
-        model = gp.Model("second_stage")
-
-        # get the needed decision variables
-        vars = DecisionVariablesModel2(model, data)
-
-        # Add the objective function
-        model = self.Detailed_Objective_Function(data, vars, model)
-
-        # Add the constraints
-        model = self.Detailed_Constraints(data, vars, model, param_FP, param_E)
-
-        # Optimize model
-        model.setParam('MIPGap', 1)
-        print('============================ Optimize Detailed Model ============================')
-
-        # for debugging: set variable values
-        for f in data.F:
-            for t in data.T:
-                #vars.first_stage.FP[f, t].setAttr('Obj', 5000)
-                pass
-
-        model.optimize()
-
-        logger.info(f'=========== Detailed Model =================')
-        logger.info(f'model.status: {model.status}')
-        print(f'model.status: {model.status}')
-
-        # Print the values of all variables
-        for v in model.getVars():
-            if v.Obj != 0:
-                #logger.info(f"{v.VarName} = {v.Obj}")
-                pass
-
-        # for p in data.P:
-        #     for l in data.L:
-        #         for t in data.T:
-        #             for t1 in data.T :
-        #                 if t1 + data.tau[l] <= t:
-        #                     print(f'PS[{p},{l},{t1}]: {vars.first_stage.PS[p,l,t1]}' )
-        #                     if vars.first_stage.PS[p,l,t1].X != 0:
-        #                         try:
-        #                             logger.info(f'PS[{p},{l},{t1}]: {vars.first_stage.PS[p,l,t1].X}' )
-        #                         except:
-        #                             logger.error(f'Error: PS[{p},{l},{t1}]')
-
-        if model.status == 5:
-            logger.warning("Model is unbounded")
-        elif model.status == 2:
-            logger.info("Optimal solution found")
-            #for v in model.getVars():
-            # for v in model.printAttr('X'):
-            #     logger.info(f"{v.varName}: {v.x}")
-
-
-            logger.info('Obj: %g' % model.objVal)
-
-            # Save the model
-            if 1 == 0:
-                # Add timestamp to file name
-                timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%data.S")
-                file_name = f"results/result_FirstStage_LP_{timestamp}.lp"
-                model.write(file_name)
-
-                file_name = f"results/result_FirstStage_MPS_{timestamp}.mps"
-                model.write(file_name)
-
-                file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
-                model.write(file_name)
-
-        elif model.status == 4:
-            logger.warning("Model is infeasible or unbounded.")
-
-            try:
-                print('============================ Compute IIS ============================')
-                # model.setParam('DualReductions', 0)
-                # model.reset()
-                # model.optimize()
-                # logger.info(f'model.status: {model.status}')
-                model.computeIIS()
-                model.write("results/infeasible-detailled.ilp")
-
-
-            except gp.GurobiError as e:
-                logger.error('Error Compute IIS: %s', e)
-
-
-            # for v in model.getVars():
-            #     if v.Obj != 0:
-            #         logger.info(f"{v.varName}: {v.Obj}")
-
-            #logger.info()
-        else:
-            logger.error("Optimization ended with status %s", model.status)
-
-        #plot constraints and variables (bar chart, takes a lot of time)
-        #self.plot_constraints_and_vars(logger, model, 'detailed_model')
-
-        logger.info('Detailed Model finished')
-        self.create_table_of_ZRA(data, model, model_type)
-
-        return model, logger
-
-    def plot_constraints_and_vars(self, logger, model, model_type='family_aggregated_model'):
-        plot_time_start = time.process_time_ns()
-        # self.display_constraints(logger, model, model_type)
-        # self.display_vars(logger, model, model_type)
-
-        combined_plots = [['R1', 'R2'], 
-                          ['Z1', 'Z2'],
-                          ['Zm', 'Y']]
-        self.display_combined_plots(logger, model, model_type, combined_plots)
-        plot_time_end = time.process_time_ns()
-        logger.info(f'All plots saved in {(plot_time_end - plot_time_start) / (10**9)} seconds')
-
-    def display_combined_plots(self, logger, model, model_type, combined_plots):
-            
-            for i, plot in enumerate(combined_plots):
-                # Start time
-                start_time = time.process_time_ns()
+def Run_Detailed_Model(self, data: Parameters, model_first_stage: gp.Model, logger, model_type: str = 'DPM') -> Tuple[gp.Model, Any]:
+    '''
+    Runs the detailed model optimization based on the parameters and first-stage model.
     
-                # figure size
-                plt.figure(figsize=(20, 10))
-    
-                # Plotting the variable values
-                for p in plot:
-                    names = []
-                    values = []
-                    for v in model.getVars():
-                        if p in v.varName:
-                            names.append(v.varName.split('[')[1])
-                            values.append(v.X)
-    
-                    plt.bar(names, values)
-    
-                plt.xlabel('Variable')
-                plt.ylabel('Value')
-                plt.title(f'Combined Plots: {plot} ({model_type})')
-                plt.xticks(rotation=90)
-                plt.legend(plot)
-                plt.tight_layout()
-                # plt.show()
-                file_name = f"results/{plot}-{model_type}.png"
-                plt.savefig(file_name)
-                plt.clf()
-                plt.close()
-    
-                # End time
-                end_time = time.process_time_ns()
-    
-                # Calculate elapsed time
-                elapsed_time = (end_time - start_time) / (10**9)
-    
-    def display_vars(self, logger, model, model_type):
-
-        v_names = []
-        v_names_split = []
-        obj_values = []
-
-        for v in model.getVars():
-            #if ('FPf_t' in v.varName) or ('PDp_t' in v.varName) or ('EDp_t' in v.varName) or ('Ef_t' in v.varName):
-            v_name = v.varName
-            v_names.append(v_name)
-            v_name_split = v_name.split('[')[0]  # Remove brackets from v name
-            v_names_split.append(v_name_split)
-            obj_values.append(v.X)
-
-            #logger.info(f"{v.varName}: {v.Obj}")
-            v_name = v.varName.split('[')[0]
+    Parameters:
+        data (Parameters): The data object containing model parameters.
+        model_first_stage (gp.Model): The first stage Gurobi model.
+        logger: The logger object for logging information.
+        model_type (str): The type of the model, default is 'DPM'.
         
-        
-        for i, var in enumerate(set(v_names_split)):
-            # Start time
-            start_time = time.process_time_ns()
-                
-            names = []
-            values = []
-            for name, val in zip(v_names, obj_values):
-                if var in name:
-                    names.append(name)
-                    values.append(val)
+    Returns:
+        model (gp.Model): The optimized detailed model.
+        logger: The logger object with updated logs.
+    '''
+    # Get the needed fixed variable values from model 1
+    param_FP, param_E = self.get_fixed_values(model_first_stage, data)
 
-            
-            # figure size
-            plt.figure(figsize=(20, 10))
+    #model_first_stage.reset()
 
-            # Plotting the variable values
-            plt.bar(names, values)
-            plt.xlabel('Variable')
-            plt.ylabel('Value')
-            plt.title(f'Variable Values {var} ({model_type})')
-            plt.xticks(rotation=90)
-            plt.tight_layout()
-            # plt.show()
-            file_name = f"results/{var}-{model_type}.png"
-            plt.savefig(file_name)
-            plt.clf()
-            plt.close()
+    # Create a new model
+    model = gp.Model("second_stage")
 
-            # End time
-            end_time = time.process_time_ns()
+    # get the needed decision variables
+    vars = DecisionVariables(model, data)
 
-            # Calculate elapsed time
-            elapsed_time = (end_time - start_time) / (10**9)  # convert to seconds (1 ns = 10^-9 s)
+    # Add the objective function
+    model = self.Detailed_Objective_Function(data, vars, model)
 
-            print(f"saved plot to {file_name} (plot {i+1}/{len(set(v_names_split))}) [{round(elapsed_time, 2)} seconds]")
+    # Add the constraints
+    model = self.Detailed_Constraints(data, vars, model, param_FP, param_E)
 
+    # Optimize model
+    model.setParam('MIPGap', 1)
+    print('============================ Optimize Detailed Model ============================')
 
-    def display_constraints(self, logger, model, model_type):
-
-        constraint_names = []
-        constraint_names_split = []
-        rhs_values = []
-
-        for c in model.getConstrs():
-            constraint_name = c.constrName
-            constraint_names.append(constraint_name)
-            constraint_name_split = constraint_name.split('[')[0]  # Remove brackets from constraint name
-            constraint_names_split.append(constraint_name_split)
-            rhs_values.append(c.RHS)
-
-        print(set(constraint_names_split))
-
-        for i, constraint in enumerate(set(constraint_names_split)):
-            # Start time
-            start_time = time.process_time_ns()
-
-            # figure size
-            plt.figure(figsize=(20, 10))
-
-            names = []
-            rhs_v = []
-            for name, rhs in zip(constraint_names, rhs_values):
-                if constraint in name:
-                    names.append(name)
-                    rhs_v.append(rhs)
-                
-            plt.bar(names, rhs_v)
-
-            plt.xlabel('Constraint Name')
-            plt.ylabel('RHS Value')
-            plt.title(f'Constraint RHS Value: {constraint} ({model_type})')
-            plt.xticks(rotation=90)
-            plt.tight_layout()
-            #plt.show()
-            file_name = f"results/{constraint}-{model_type}.png"
-            plt.savefig(file_name)
-            plt.clf()
-            plt.close()
-
-            # End time
-            end_time = time.process_time_ns()
-
-            # Calculate elapsed time
-            elapsed_time = (end_time - start_time) / (10**9)  # convert to seconds (1 ns = 10^-9 s)
-
-            print(f"saved plot to {file_name} (plot {i+1}/{len(set(constraint_names_split))}) [{round(elapsed_time, 2)} seconds]")
-
-    def create_table_of_ZRA(self, data:Parameters, model: gp.Model, model_type='FAM'):
-        # time for fileName
-        timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
-        timestamp += f'_{model_type}'
-
-        if model_type in ['FAM', 'MVP']:
-            # Create a table of the ZRA values
-            table = []
-
-            for m in data.MP:
-                for t in data.T:
-                    row = {}
-                    row['m'] = m
-                    row['t'] = t
-                    row['Zm'] = model.getVarByName(f'Zm_t[{m},{t}]').X
-                    # row['Z1m_t'] = model.getVarByName(f'Z1m_t[{m},{t}]').X
-                    # row['Z2m_t'] = model.getVarByName(f'Z2m_t[{m},{t}]').X
-                    row['Zm_t-1'] = model.getVarByName(f'Zm_t[{m},{t-1}]').X if t > 0 else np.nan
-                    row['Am'] = model.getVarByName(f'Am_t[{m},{t}]').X
-                    row['Am_t-1'] = model.getVarByName(f'Am_t[{m},{t-1}]').X if t > 0 else np.nan
-                    # row['R1m'] = model.getVarByName(f'R1m_t[{m},{t}]').X
-                    # row['R2m'] = model.getVarByName(f'R2m_t[{m},{t}]').X
-                    # row['Ym_t'] = model.getVarByName(f'Ym_t[{m},{t},{data.dmax}]').X
-                    # row['Auxm_t'] = model.getVarByName(f'Auxm_t[{m},{t}]').X
-                    row['Qm_t'] = model.getVarByName(f'Qm_t[{m},{t}]').X
-                    row['MOm_t'] = model.getVarByName(f'MOm_t[{m},{t}]').X
-                    row['MOm_t>sigma'] = (1-data.beta[m]) * model.getVarByName(f'Qm_t[{m},{t-data.sigma[m]}]').X if t > data.sigma[m] else np.nan  
-                    row['MOm_t<=sigma'] = (1-data.beta[m]) * data.wp[m][t] if t <= data.sigma[m] else np.nan  
-                    row['iwip0m'] = data.iwip0[m]
-                    row['IWIPm_t'] = model.getVarByName(f'IWIPm_t[{m},{t}]').X
-                    row['FPf_t'] = model.getVarByName(f'FPf_t[{m},{t}]').X
-                    row['i0f_fw'] = data.i_0_f[m]
-                    row['IFm_t'] = model.getVarByName(f'IFf_t[{m},{t}]').X 
-
-                    row['Zmax=Q/cmin'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.cmin[m]
-                    row['Zmin=Q/cmax'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.cmax[m]
-
-                    row['Qm_t/sc_m'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.sc[m] if data.sc[m] > 0 else np.nan
-                    row['Qm_t/sc_m(1-ism)'] = model.getVarByName(f'Qm_t[{m},{t}]').X / (data.sc[m] * (1 - data.is_[m])) if data.sc[m] > 0 else np.nan
-                    row['Qm_t/fym'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.fy[m] if data.fy[m] > 0 else np.nan
-                    row['RM_t'] = model.getVarByName(f'RMt[{t}]').X 
-                    row['dmax/cmin'] = data.dmax[m]/data.cmin[m]
-                    # row['R2*dmax/cmin'] = model.getVarByName(f'R2m_t[{m},{t}]').X * data.dmax[m]/data.cmin[m]
-                    row['zmax'] = data.zmax[m]
-                    # row['zmax*(1-R1)'] = data.zmax[m] * (1 - model.getVarByName(f'R1m_t[{m},{t}]').X)
-                    row['cmax'] = data.cmax[m]
-                    row['cmin'] = data.cmin[m]
-
-                    table.append(row)
-
-            # table to df
-            table = pd.DataFrame(table)
-            table.to_csv(f'results/table_mt_{timestamp}.csv', index=False)
-
-            table2 = []
-
-            for f in data.F:
-                for t in data.T:
-                    row = {}
-                    row['f'] = f
-                    row['t'] = t
-
-                    row['IFf_t'] = model.getVarByName(f'IFf_t[{f},{t}]').X
-                    row['i_0f'] = data.i_0_f[f]
-                    row['FPf_t'] = model.getVarByName(f'FPf_t[{f},{t}]').X
-
-                    for l in data.L:
-                        row[f'DVf_{l}_t'] = model.getVarByName(f'DVf_l_t[{f},{l},{t}]').X
-
-                    row['Ef_t'] = model.getVarByName(f'Ef_t[{f},{t}]').X * data.el[f]
-
-                    table2.append(row)
-
-            table2 = pd.DataFrame(table2)
-            table2.to_csv(f'results/table_flt_{timestamp}.csv', index=False)
-
-            table2 = []
-
-            for i in data.FT:
-                for t in data.T:
-                    row = {}
-                    row['i'] = i
-                    row['t'] = t
-
-
-                    for l in data.L:
-                        row[f'Vi_{l}_t'] = model.getVarByName(f'Vi_l_t[{i},{l},{t}]').X
-                        row[f'TRi_{l}_t'] = model.getVarByName(f'TRi_l_t[{i},{l},{t}]').X
-
-
-                    table2.append(row)
-
-            table2 = pd.DataFrame(table2)
-            table2.to_csv(f'results/table_ilt_{timestamp}.csv', index=False)
-
-
-            # data for plotting 
-            table = []
-                
-            for s in data.S:
-
-                for t in data.T:
-                    for f in data.F:
-                        for l in data.L:
-                            row = {}
-
-                            row['f'] = f
-                            row['l'] = l
-                            row['s'] = s
-                            row['t'] = t
-                            
-                            row['RM_t'] = model.getVarByName(f'RMt[{t}]').X
-                            row[f'SAs_f_l_t'] = model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').X
-                            row[f'SOs_f_l_t'] = model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
-                            row[f'OSs_f_l_t'] = model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
-                    
-                            row[f'RSs_t'] = model.getVarByName(f'RSs_t[{s},{t}]').X
-                            row[f'ROs_t'] = model.getVarByName(f'ROs_t[{s},{t}]').X
-                            row[f'RIs_t'] = model.getVarByName(f'RIs_t[{s},{t}]').X
-                            table.append(row)
-
-            # table to df
-            table = pd.DataFrame(table)
-            table.drop_duplicates(inplace=True)
-            table.to_csv(f'results/plot_table_ts_{timestamp}.csv', index=False)
-
-
-            # data for validation Objective Function
-            table = []
-                
-
-            for t in data.T:
-                for s in data.S:
-                    row = {}
-
-                    row['s'] = s
-                    row['t'] = t
-                
-            
-                    row[f'RSs_t'] = model.getVarByName(f'RSs_t[{s},{t}]').X
-                    row[f'RSs_t*roc'] = model.getVarByName(f'RSs_t[{s},{t}]').X * data.roc
-                    row[f'ROs_t'] = model.getVarByName(f'ROs_t[{s},{t}]').X
-                    row[f'ROs_t*rsc'] = model.getVarByName(f'ROs_t[{s},{t}]').X * data.rsc
-
-                    table.append(row)
-
-                for f in data.F:
-                    row = {}
-                    row['f'] = f
-                    row['t'] = t
-
-                    row['Ef_t'] = model.getVarByName(f'Ef_t[{f},{t}]').X 
-                    row['Ef_t*el'] = model.getVarByName(f'Ef_t[{f},{t}]').X * data.el[f]
-                    row['Ef_t*el*ls'] = model.getVarByName(f'Ef_t[{f},{t}]').X * data.el[f] * data.ls[f]
-
-                    row['FPf_t'] = model.getVarByName(f'FPf_t[{f},{t}]').X
-
-                    table.append(row)
-
-
-            # table to df
-            table = pd.DataFrame(table)
-            # 
-
-            table.drop_duplicates(inplace=True)
-            table.to_csv(f'results/validation_table_{timestamp}.csv', index=False)
-
-        if model_type in ['DPM', 'EMVP']:
+    # for debugging: set variable values
+    for f in data.F:
+        for t in data.T:
+            #vars.first_stage.FP[f, t].setAttr('Obj', 5000)
             pass
 
-        #return table
+    model.optimize()
+
+    logger.info(f'=========== Detailed Model =================')
+    logger.info(f'model.status: {model.status}')
+    print(f'model.status: {model.status}')
+
+    # Print the values of all variables
+    for v in model.getVars():
+        if v.Obj != 0:
+            #logger.info(f"{v.VarName} = {v.Obj}")
+            pass
+
+    if model.status == 5:
+        logger.warning("Model is unbounded")
+    elif model.status == 2:
+        logger.info("Optimal solution found")
+        logger.info('Obj: %g' % model.objVal)
+
+        # Save the model
+        if 1 == 0:
+            # Add timestamp to file name
+            timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%data.S")
+            file_name = f"results/result_FirstStage_LP_{timestamp}.lp"
+            model.write(file_name)
+
+            file_name = f"results/result_FirstStage_MPS_{timestamp}.mps"
+            model.write(file_name)
+
+            file_name = f"results/result_FirstStage_PRM_{timestamp}.prm"
+            model.write(file_name)
+
+    elif model.status == 4:
+        logger.warning("Model is infeasible or unbounded.")
+
+        try:
+            print('============================ Compute IIS ============================')
+            model.computeIIS()
+            model.write("results/infeasible-detailled.ilp")
+        except gp.GurobiError as e:
+            logger.error('Error Compute IIS: %s', e)
+
+    else:
+        logger.error("Optimization ended with status %s", model.status)
+
+    # Plot constraints and variables (bar chart, takes a lot of time)
+    # self.plot_constraints_and_vars(logger, model, 'detailed_model')
+
+    logger.info('Detailed Model finished')
+    self.create_table_of_ZRA(data, model, model_type)
+
+    return model, logger
+
+def plot_constraints_and_vars(self, logger: Any, model: gp.Model, model_type: str = 'family_aggregated_model') -> None:
+    '''
+    Plots constraints and variables for the given model.
+    
+    Parameters:
+        logger: The logger object for logging information.
+        model (gp.Model): The Gurobi model to plot.
+        model_type (str): The type of the model, default is 'family_aggregated_model'.
+    '''
+    plot_time_start = time.process_time_ns()
+    combined_plots = [['R1', 'R2'], 
+                      ['Z1', 'Z2'],
+                      ['Zm', 'Y']]
+    self.display_combined_plots(logger, model, model_type, combined_plots)
+    plot_time_end = time.process_time_ns()
+    logger.info(f'All plots saved in {(plot_time_end - plot_time_start) / (10**9)} seconds')
+
+def display_combined_plots(self, logger: Any, model: gp.Model, model_type: str, combined_plots: List[List[str]]) -> None:
+    '''
+    Displays combined plots of specified variable groups.
+    
+    Parameters:
+        logger: The logger object for logging information.
+        model (gp.Model): The Gurobi model.
+        model_type (str): The type of the model.
+        combined_plots (list): A list of variable groups to plot together.
+    '''
+    for i, plot in enumerate(combined_plots):
+        # Start time
+        start_time = time.process_time_ns()
+
+        # figure size
+        plt.figure(figsize=(20, 10))
+
+        # Plotting the variable values
+        for p in plot:
+            names = []
+            values = []
+            for v in model.getVars():
+                if p in v.varName:
+                    names.append(v.varName.split('[')[1])
+                    values.append(v.X)
+
+            plt.bar(names, values)
+
+        plt.xlabel('Variable')
+        plt.ylabel('Value')
+        plt.title(f'Combined Plots: {plot} ({model_type})')
+        plt.xticks(rotation=90)
+        plt.legend(plot)
+        plt.tight_layout()
+        file_name = f"results/{plot}-{model_type}.png"
+        plt.savefig(file_name)
+        plt.clf()
+        plt.close()
+
+        # End time
+        end_time = time.process_time_ns()
+
+        # Calculate elapsed time
+        elapsed_time = (end_time - start_time) / (10**9)
+
+def display_vars(self, logger: Any, model: gp.Model, model_type: str):
+    '''
+    Displays plots of variable values.
+    
+    Parameters:
+        logger: The logger object for logging information.
+        model (gp.Model): The Gurobi model.
+        model_type (str): The type of the model.
+    '''
+    v_names = []
+    v_names_split = []
+    obj_values = []
+
+    for v in model.getVars():
+        v_name = v.varName
+        v_names.append(v_name)
+        v_name_split = v_name.split('[')[0]  # Remove brackets from v name
+        v_names_split.append(v_name_split)
+        obj_values.append(v.X)
+
+    for i, var in enumerate(set(v_names_split)):
+        # Start time
+        start_time = time.process_time_ns()
+
+        names = []
+        values = []
+        for name, val in zip(v_names, obj_values):
+            if var in name:
+                names.append(name)
+                values.append(val)
+
+        # figure size
+        plt.figure(figsize=(20, 10))
+
+        # Plotting the variable values
+        plt.bar(names, values)
+        plt.xlabel('Variable')
+        plt.ylabel('Value')
+        plt.title(f'Variable Values {var} ({model_type})')
+        plt.xticks(rotation=90)
+        plt.tight_layout()
+        file_name = f"results/{var}-{model_type}.png"
+        plt.savefig(file_name)
+        plt.clf()
+        plt.close()
+
+        # End time
+        end_time = time.process_time_ns()
+
+        # Calculate elapsed time
+        elapsed_time = (end_time - start_time) / (10**9)  # convert to seconds (1 ns = 10^-9 s)
+
+        print(f"saved plot to {file_name} (plot {i+1}/{len(set(v_names_split))}) [{round(elapsed_time, 2)} seconds]")
+
+def display_constraints(self, logger: Any, model: gp.Model, model_type: str) -> None:
+    '''
+    Displays plots of constraint RHS values.
+    
+    Parameters:
+        logger: The logger object for logging information.
+        model (gp.Model): The Gurobi model.
+        model_type (str): The type of the model.
+    '''
+    constraint_names = []
+    constraint_names_split = []
+    rhs_values = []
+
+    for c in model.getConstrs():
+        constraint_name = c.constrName
+        constraint_names.append(constraint_name)
+        constraint_name_split = constraint_name.split('[')[0]  # Remove brackets from constraint name
+        constraint_names_split.append(constraint_name_split)
+        rhs_values.append(c.RHS)
+
+    for i, constraint in enumerate(set(constraint_names_split)):
+        # Start time
+        start_time = time.process_time_ns()
+
+        # figure size
+        plt.figure(figsize=(20, 10))
+
+        names = []
+        rhs_v = []
+        for name, rhs in zip(constraint_names, rhs_values):
+            if constraint in name:
+                names.append(name)
+                rhs_v.append(rhs)
+
+        plt.bar(names, rhs_v)
+
+        plt.xlabel('Constraint Name')
+        plt.ylabel('RHS Value')
+        plt.title(f'Constraint RHS Value: {constraint} ({model_type})')
+        plt.xticks(rotation=90)
+        plt.tight_layout()
+        file_name = f"results/{constraint}-{model_type}.png"
+        plt.savefig(file_name)
+        plt.clf()
+        plt.close()
+
+        # End time
+        end_time = time.process_time_ns()
+
+        # Calculate elapsed time
+        elapsed_time = (end_time - start_time) / (10**9)  # convert to seconds (1 ns = 10^-9 s)
+
+        print(f"saved plot to {file_name} (plot {i+1}/{len(set(constraint_names_split))}) [{round(elapsed_time, 2)} seconds]")
+
+def create_table_of_ZRA(self, data: Parameters, model: gp.Model, model_type: str = 'FAM') -> None:
+    '''
+    Creates tables of ZRA values from the optimized model.
+    
+    Parameters:
+        data (Parameters): The data object containing model parameters.
+        model (gp.Model): The optimized Gurobi model.
+        model_type (str): The type of the model, default is 'FAM'.
+    '''
+    # time for fileName
+    timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
+    timestamp += f'_{model_type}'
+
+    if model_type in ['FAM', 'MVP']:
+        # Create a table of the ZRA values
+        table = []
+
+        for m in data.MP:
+            for t in data.T:
+                row = {}
+                row['m'] = m
+                row['t'] = t
+                row['Zm'] = model.getVarByName(f'Zm_t[{m},{t}]').X
+                row['Zm_t-1'] = model.getVarByName(f'Zm_t[{m},{t-1}]').X if t > 0 else np.nan
+                row['Qm_t'] = model.getVarByName(f'Qm_t[{m},{t}]').X
+                row['MOm_t'] = model.getVarByName(f'MOm_t[{m},{t}]').X
+                row['MOm_t>sigma'] = (1-data.beta[m]) * model.getVarByName(f'Qm_t[{m},{t-data.sigma[m]}]').X if t > data.sigma[m] else np.nan  
+                row['MOm_t<=sigma'] = (1-data.beta[m]) * data.wp[m][t] if t <= data.sigma[m] else np.nan  
+                row['iwip0m'] = data.iwip0[m]
+                row['IWIPm_t'] = model.getVarByName(f'IWIPm_t[{m},{t}]').X
+                row['FPf_t'] = model.getVarByName(f'FPf_t[{m},{t}]').X
+                row['i0f_fw'] = data.i_0_f[m]
+                row['IFm_t'] = model.getVarByName(f'IFf_t[{m},{t}]').X 
+                row['Zmax=Q/cmin'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.cmin[m]
+                row['Zmin=Q/cmax'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.cmax[m]
+                row['Qm_t/sc_m'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.sc[m] if data.sc[m] > 0 else np.nan
+                row['Qm_t/sc_m(1-ism)'] = model.getVarByName(f'Qm_t[{m},{t}]').X / (data.sc[m] * (1 - data.is_[m])) if data.sc[m] > 0 else np.nan
+                row['Qm_t/fym'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.fy[m] if data.fy[m] > 0 else np.nan
+                row['RM_t'] = model.getVarByName(f'RMt[{t}]').X 
+                row['dmax/cmin'] = data.dmax[m]/data.cmin[m]
+                row['zmax'] = data.zmax[m]
+                row['cmax'] = data.cmax[m]
+                row['cmin'] = data.cmin[m]
+
+                table.append(row)
+
+        # table to df
+        table = pd.DataFrame(table)
+        table.to_csv(f'results/table_mt_{timestamp}.csv', index=False)
+
+        table2 = []
+
+        for f in data.F:
+            for t in data.T:
+                row = {}
+                row['f'] = f
+                row['t'] = t
+
+                row['IFf_t'] = model.getVarByName(f'IFf_t[{f},{t}]').X
+                row['i_0f'] = data.i_0_f[f]
+                row['FPf_t'] = model.getVarByName(f'FPf_t[{f},{t}]').X
+
+                for l in data.L:
+                    row[f'DVf_{l}_t'] = model.getVarByName(f'DVf_l_t[{f},{l},{t}]').X
+
+                row['Ef_t'] = model.getVarByName(f'Ef_t[{f},{t}]').X * data.el[f]
+
+                table2.append(row)
+
+        table2 = pd.DataFrame(table2)
+        table2.to_csv(f'results/table_flt_{timestamp}.csv', index=False)
+
+        table2 = []
+
+        for i in data.FT:
+            for t in data.T:
+                row = {}
+                row['i'] = i
+                row['t'] = t
+
+                for l in data.L:
+                    row[f'Vi_{l}_t'] = model.getVarByName(f'Vi_l_t[{i},{l},{t}]').X
+                    row[f'TRi_{l}_t'] = model.getVarByName(f'TRi_l_t[{i},{l},{t}]').X
+
+                table2.append(row)
+
+        table2 = pd.DataFrame(table2)
+        table2.to_csv(f'results/table_ilt_{timestamp}.csv', index=False)
+
+        # data for plotting 
+        table = []
+            
+        for s in data.S:
+
+            for t in data.T:
+                for f in data.F:
+                    for l in data.L:
+                        row = {}
+
+                        row['f'] = f
+                        row['l'] = l
+                        row['s'] = s
+                        row['t'] = t
+                        
+                        row['RM_t'] = model.getVarByName(f'RMt[{t}]').X
+                        row[f'SAs_f_l_t'] = model.getVarByName(f'SAs_f_l_t[{s},{f},{l},{t}]').X
+                        row[f'SOs_f_l_t'] = model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
+                        row[f'OSs_f_l_t'] = model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
+                
+                        row[f'RSs_t'] = model.getVarByName(f'RSs_t[{s},{t}]').X
+                        row[f'ROs_t'] = model.getVarByName(f'ROs_t[{s},{t}]').X
+                        row[f'RIs_t'] = model.getVarByName(f'RIs_t[{s},{t}]').X
+                        table.append(row)
+
+        # table to df
+        table = pd.DataFrame(table)
+        table.drop_duplicates(inplace=True)
+        table.to_csv(f'results/plot_table_ts_{timestamp}.csv', index=False)
+
+        # data for validation Objective Function
+        table = []
+            
+
+        for t in data.T:
+            for s in data.S:
+                row = {}
+
+                row['s'] = s
+                row['t'] = t
+            
+                row[f'RSs_t'] = model.getVarByName(f'RSs_t[{s},{t}]').X
+                row[f'RSs_t*roc'] = model.getVarByName(f'RSs_t[{s},{t}]').X * data.roc
+                row[f'ROs_t'] = model.getVarByName(f'ROs_t[{s},{t}]').X
+                row[f'ROs_t*rsc'] = model.getVarByName(f'ROs_t[{s},{t}]').X * data.rsc
+
+                table.append(row)
+
+            for f in data.F:
+                row = {}
+                row['f'] = f
+                row['t'] = t
+
+                row['Ef_t'] = model.getVarByName(f'Ef_t[{f},{t}]').X 
+                row['Ef_t*el'] = model.getVarByName(f'Ef_t[{f},{t}]').X * data.el[f]
+                row['Ef_t*el*ls'] = model.getVarByName(f'Ef_t[{f},{t}]').X * data.el[f] * data.ls[f]
+
+                row['FPf_t'] = model.getVarByName(f'FPf_t[{f},{t}]').X
+
+                table.append(row)
+
+        # table to df
+        table = pd.DataFrame(table)
+        table.drop_duplicates(inplace=True)
+        table.to_csv(f'results/validation_table_{timestamp}.csv', index=False)
+
+    if model_type in ['DPM', 'EMVP']:
+        pass
 
 
