@@ -4,7 +4,7 @@
 from variables import *  #Werte für Parameter
 #from gurobipy import * #Gurobi
 import gurobipy as gp
-from gurobipy import GRB, quicksum, Model, abs_ 
+from gurobipy import GRB, quicksum, Model
 import datetime as dt
 import time as time
 from parameters import *   # All parameters
@@ -15,10 +15,10 @@ import pandas as pd
 
 
 class Model:
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
-    def Objective_Function(self, data:Parameters, vars:DecisionVariablesModel1, model: gp.Model):
+    def Objective_Function(self, data:Parameters, vars:DecisionVariables, model: gp.Model) -> gp.Model:
 
         ''' objective function:
         TCOST ... total costs
@@ -74,7 +74,7 @@ class Model:
         return model
 
 
-    def Constraints(self, data:Parameters, vars:DecisionVariablesModel1, model: gp.Model):
+    def Constraints(self, data:Parameters, vars:DecisionVariables, model: gp.Model) -> gp.Model:
         
         #pass
         ''' constraints: 
@@ -99,31 +99,19 @@ class Model:
                         'Constraint_1.1b-6')
 
         model.addConstrs((vars.first_stage.RM[t] 
-                        == gp.quicksum(vars.first_stage.Q[m,t]/data.fy[m] for m in data.MP)         
+                        == gp.quicksum(vars.first_stage.Q[m,t]/data.fy[data.fpr[m]] for m in data.MP)         
                         for t in data.T),
                         'Constraint_1.1c-7')
         
       # Constraint 2: General production constraints
         """ Family f production of all plants in the complex is equal to the manufacturing output of plants producing f. """
+               
+        
         model.addConstrs((vars.first_stage.FP[f,t] 
-                        == vars.first_stage.MO[f,t]   # Product family is produced by plant m
-                        for f in data.F for t in data.T),
-                        'Constraint_1.2a-8')
-        
-        
-        '''
-            model.addConstrs((vars.first_stage.FP[f,t] 
-                        == gp.quicksum(vars.first_stage.MO[m,t] for m in data.MP if m == f)   # Product family is produced by plant m
+                        == gp.quicksum(vars.first_stage.MO[m,t] for m in data.MP if data.fpr[m] == f)   # Product family is produced by plant m
                         for f in data.F for t in data.T),
                         'Constraint_1.2a')
-        '''
-    
-        '''
-            model.addConstrs((vars.first_stage.FP[f,t] 
-                        == gp.quicksum(vars.first_stage.MO[m,t] for m in data.MP if m == f)   # Product family is produced by plant m
-                        for f in data.F for t in data.T),
-                        'Constraint_1.2a')
-        '''
+        
 
         model.addConstrs((vars.first_stage.MO[m,t] 
                         == (1 - data.beta[m]) 
@@ -142,8 +130,8 @@ class Model:
         """ Manufacturing products with σ m > 0 generate WIP inventory which is depleted by the volume of finished products in period t represented by the variable MOm, t. Parameter iwip0
             m represents inventory from the previous planning horizon at manufacturing plant m. """
         
-        ### SHOULD ONLY TAKE VALUES AT THE BEGININNG OF THE PLANNING HORIZON !!!
-        '''
+        ### SHOULD ONLY TAKE VALUES AT THE BEGININNG OF THE PLANNING HORIZON !!! -- still decide what tom do with it :/ 
+
         model.addConstrs((vars.first_stage.IWIP[m,t] 
                         == data.iwip0[m]
                         + gp.quicksum(vars.first_stage.Q[m,t1] for t1 in data.T if t1 <= t)
@@ -151,44 +139,7 @@ class Model:
                         for m in data.MP for t in data.T 
                         if data.sigma[m] > 0),
                         'Constraint_1.3a-11')
-    '''
-          # Constraint 4
-
-                #Constraint 6
-        """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
-        according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
-        capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
-        can be idle.
-        """
-
-        model.addConstrs(((vars.first_stage.Q[m, t] 
-                        / data.sc[m])
-                        <= vars.integer.Z[m, t] 
-                        for m in data.MP for t in data.T 
-                        if data.cty[m] == 1),
-                        'Constraint_1.6a-32')
         
-        ## DAMIT FUNKTIONIERT ES NICHT !!
-
-        model.addConstrs(((vars.first_stage.Q[m, t] / data.sc[m]) * (1/(1 - data.is_[m]))
-                >= vars.integer.Z[m, t] 
-                for m in data.MP for t in data.T 
-                if data.cty[m] == 1),
-                'Constraint_1.6b-33')
-        
-        # Constraint 4                 
-        '''
-        model.addConstrs((vars.binary.R1[m, t]
-                        + vars.binary.R2[m, t] 
-                        == 1 
-                        for m in data.MP for t in data.T if data.cty[m] == 0),
-                        'Constraint_1.4d-15')
-        
-        model.addConstrs((vars.binary.R1[m, 0] 
-                        == 1 
-                        for m in data.MP if data.cty[m]==0),
-                        'Constraint_1.4e-16')
-        '''
          #Constraint 5: Length-based campaign
         """ The level of production capacity during a production campaign of a length-based plant is set """
 
@@ -208,43 +159,28 @@ class Model:
                         if data.cty[m] == 0),
                         'Constraint_1.5b-24')
         
-
-          
-        
-        # Constraint 1.7: Campaign Setups
-        """In order to model these features, the binary variable Ym, t is introduced. This variable takes value 1 when a new production campaign
-        starts at t, if and only if R2m, t > 0 and Zm,t−1 = 0, which is ensured by constraints (34) - (35) – (36). We emphasize the redundancy of
-        constraint (36) which was included to improve the computational performance of the family aggregated model.
-        If at any period t, a production campaign for a manufacturing plant start (Ym,t = 1), then on periods t− t1 : t1 ∈ 0..(αm− 1) setup
-        tasks may be required and therefore production is not allowed in these periods . In this way if Ym,t = 1 keeps Zm,t−t1 = 0 (there is no
-        production) until finish the setup task (constraint (37)). Now for the special case that at the beginning of the horizon there is a setup task
-        in progress, this is reflected in the parameter ostm > 0, constraint (38) keeping campaign indicator variable to 0 until the task is finished.
+        #Constraint 6
+        """ The level of production capacity during a production campaign for a shift scheduled plant is set in constraints (32) and (33). It is set
+        according to the number of shifts defined by the production campaign indicator (Zm, t ). In these equations scm represents the production
+        capacity of manufacturing plant m on one work shift. The parameter ism in (0,1] is the maximum portion of the capacity of a shift which
+        can be idle.
         """
-        
 
-        # Zusammenfassen als R2 >= abs(Zm-t - Zm-t-1) !!!
-        '''
-        model.addConstrs((vars.binary.R2[m, t] >=  vars.integer.Z[m, t-1] - vars.integer.Z[m, t]
+        model.addConstrs(((vars.first_stage.Q[m, t] 
+                        / data.sc[m])
+                        <= vars.integer.Z[m, t] 
                         for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
+                        if data.cty[m] == 1),
+                        'Constraint_1.6a-32')
         
-        model.addConstrs((vars.binary.R2[m, t] >=  vars.integer.Z[m, t] - vars.integer.Z[m, t-1]
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        '''
-        #Ensure that R1 is 1 ewhen Zt-1 and Zt are equal
-        '''
-        model.addConstrs((vars.binary.R1[m, t] >=  1 - vars.integer.Z[m, t] - vars.integer.Z[m, t-1]
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        
-        model.addConstrs((vars.binary.R1[m, t] >=  (-1)*((1 - vars.integer.Z[m, t-1]) - vars.integer.Z[m, t])
-                        for m in data.MP for t in data.T 
-                        if (t > 0) and (data.cty[m] == 0)), "Constraint_1.7a-34")
-        '''
+        model.addConstrs(((vars.first_stage.Q[m, t] / data.sc[m]) * (1/(1 - data.is_[m]))
+                >= vars.integer.Z[m, t] 
+                for m in data.MP for t in data.T 
+                if data.cty[m] == 1),
+                'Constraint_1.6b-33')
         
         
-        ####### NEW BECKER FORMULATION ########
+        # Constraint 1.7: Campaign Setups ####### NEW BECKER FORMULATION ########
         '''I want to find a lot of tuples (k,t') in a set Omega_t, which are defined as follows:
         if at time t the tuple k,t' could be active at time t, being active is defined as follows,
         that t' is the starting point and k is the duration. 
@@ -392,13 +328,9 @@ class Model:
                         'Constraint_1.13-50b')
         
 
-        ## NEw Constraint Maximum INventtory
-
-        #model.addConstrs(vars.first_stage.IF[f,t] <= 5000 for f in data.F for t in data.T)
-
         return model
         
-    def Calculate_emvp(self, data:S_star,  logger):
+    def Calculate_emvp(self, data:S_star,  logger) -> Tuple[float, Tuple[gp.Model,Any], Tuple[gp.Model,Any], Any]:
         print('============================ Calculate EMVP ============================')
         logger.info('============================ Calculate EMVP ============================')
 
@@ -433,7 +365,7 @@ class Model:
     
 
     
-    def Run_Model(self, data:Parameters, logger, model_type='FAM'):
+    def Run_Model(self, data:Parameters, logger, model_type='FAM') -> Tuple[gp.Model, Any]:
 
         logger.info('============================ Run Model ============================')
         # Create a new model
@@ -441,7 +373,7 @@ class Model:
 
         # get the needed decision variables
         #vars = DecisionVariables(model, data)
-        vars = DecisionVariablesModel1(model, data)
+        vars = DecisionVariables(model, data)
 
         # Add the objective function
         model = self.Objective_Function(data, vars, model)
@@ -454,11 +386,6 @@ class Model:
         model.setParam('MIPGap', 0.05)
         model.setParam('TimeLimit', 60)
 
-        # Adaptions to get more preciose results and less floats
-        # model.setParam('NumericalFocus', 2)
-        # model.setParam('IntFeasTol', 1e-9)
-        # model.setParam('FeasibilityTol', 1e-9)
-        # model.setParam('OptimalityTol', 1e-9)
 
         print('============================ Optimize Model ============================')
         model.optimize()
@@ -543,10 +470,7 @@ class Model:
         
         return model, logger
     
-    def Detailed_Constraints(self, data:Parameters, vars:DecisionVariablesModel2, model: gp.Model, FP: list[list[float]], E: list[list[int]]):
-        
-        # WAS SOLLEN DIESE CONSTRAINTS MACHEN??
-        # WELCHE VARIABLEN BRAUCHEN WIR DAFÜR?
+    def Detailed_Constraints(self, data:Parameters, vars:DecisionVariables, model: gp.Model, FP: list[list[float]], E: list[list[int]]) -> gp.Model:
         
         # Constraint 53: Translating familiys to products
         """ In the following constraints, for every product p, flyp accounts for product p family. Manufacturing of products from any family f is
@@ -662,13 +586,6 @@ class Model:
                             + data.tl_min 
                         for i in data.FT for l in data.L for t in data.T),
                         'Constraint_63')
-        
-        # new constraint - similar to constraint 49 - DO WE NEED THIS ??
-        # model.addConstrs((vars.first_stage.VD[i, l, t] 
-        #                 == 0 
-        #                 for i in data.FT for l in data.L for t in (range(data.hl - data.tau[l] + 1, data.hl))
-        #                 if data.tau[l] > 0),
-        #                 'Constraint_64_new')
 
         '''In any DC, fresh and dry warehouse size limitations may arise; this is modeled by constraint'''
 
@@ -679,7 +596,7 @@ class Model:
 
         return model
     
-    def Detailed_Objective_Function(self, data:Parameters, vars:DecisionVariablesModel2, model: gp.Model):
+    def Detailed_Objective_Function(self, data:Parameters, vars:DecisionVariables, model: gp.Model) -> gp.Model:
 
         ''' The detailed planning model maximizes the expected net benefit (DENB), and is obtained as follows.
         '''
@@ -715,7 +632,7 @@ class Model:
 
         return model
     
-    def get_fixed_values(self, gp_model : gp.Model, data:Parameters):
+    def get_fixed_values(self, gp_model : gp.Model, data:Parameters) -> Tuple[list[list[float]], list[list[int]]]:
         ''' Retrieves the values from the previously solved gurobi model for variable E and FP'''
 
         # Get the fixed values from the model
@@ -735,29 +652,23 @@ class Model:
             param_FP.append(sub_params_FP)
             param_E.append(sub_params_E)
 
-        
-        #Debugging: Print the values of the fixed variables
-        '''
-        if 1 == 1:
-            print("param_E")
-            for f in  data.F:
-                for t in data.T:
-                    print(f, t, '\t', param_E[f][t])
-                
-                print("\n")
-
-            print("param_FP")
-            for f in  data.F:
-                for t in data.T:
-                    print(f, t, '\t', param_FP[f][t])
-                
-                print("\n")
-        '''
         return param_FP, param_E
 
-    def Run_Detailed_Model(self, data:Parameters, model_first_stage: gp.Model, logger, model_type='DPM'):
 
-
+    def Run_Detailed_Model(self, data: Parameters, model_first_stage: gp.Model, logger, model_type: str = 'DPM') -> Tuple[gp.Model, Any]:
+        '''
+        Runs the detailed model optimization based on the parameters and first-stage model.
+        
+        Parameters:
+            data (Parameters): The data object containing model parameters.
+            model_first_stage (gp.Model): The first stage Gurobi model.
+            logger: The logger object for logging information.
+            model_type (str): The type of the model, default is 'DPM'.
+            
+        Returns:
+            model (gp.Model): The optimized detailed model.
+            logger: The logger object with updated logs.
+        '''
         # Get the needed fixed variable values from model 1
         param_FP, param_E = self.get_fixed_values(model_first_stage, data)
 
@@ -767,7 +678,7 @@ class Model:
         model = gp.Model("second_stage")
 
         # get the needed decision variables
-        vars = DecisionVariablesModel2(model, data)
+        vars = DecisionVariables(model, data)
 
         # Add the objective function
         model = self.Detailed_Objective_Function(data, vars, model)
@@ -797,27 +708,10 @@ class Model:
                 #logger.info(f"{v.VarName} = {v.Obj}")
                 pass
 
-        # for p in data.P:
-        #     for l in data.L:
-        #         for t in data.T:
-        #             for t1 in data.T :
-        #                 if t1 + data.tau[l] <= t:
-        #                     print(f'PS[{p},{l},{t1}]: {vars.first_stage.PS[p,l,t1]}' )
-        #                     if vars.first_stage.PS[p,l,t1].X != 0:
-        #                         try:
-        #                             logger.info(f'PS[{p},{l},{t1}]: {vars.first_stage.PS[p,l,t1].X}' )
-        #                         except:
-        #                             logger.error(f'Error: PS[{p},{l},{t1}]')
-
         if model.status == 5:
             logger.warning("Model is unbounded")
         elif model.status == 2:
             logger.info("Optimal solution found")
-            #for v in model.getVars():
-            # for v in model.printAttr('X'):
-            #     logger.info(f"{v.varName}: {v.x}")
-
-
             logger.info('Obj: %g' % model.objVal)
 
             # Save the model
@@ -838,106 +732,108 @@ class Model:
 
             try:
                 print('============================ Compute IIS ============================')
-                # model.setParam('DualReductions', 0)
-                # model.reset()
-                # model.optimize()
-                # logger.info(f'model.status: {model.status}')
                 model.computeIIS()
                 model.write("results/infeasible-detailled.ilp")
-
-
             except gp.GurobiError as e:
                 logger.error('Error Compute IIS: %s', e)
 
-
-            # for v in model.getVars():
-            #     if v.Obj != 0:
-            #         logger.info(f"{v.varName}: {v.Obj}")
-
-            #logger.info()
         else:
             logger.error("Optimization ended with status %s", model.status)
 
-        #plot constraints and variables (bar chart, takes a lot of time)
-        #self.plot_constraints_and_vars(logger, model, 'detailed_model')
+        # Plot constraints and variables (bar chart, takes a lot of time)
+        # self.plot_constraints_and_vars(logger, model, 'detailed_model')
 
         logger.info('Detailed Model finished')
         self.create_table_of_ZRA(data, model, model_type)
 
         return model, logger
 
-    def plot_constraints_and_vars(self, logger, model, model_type='family_aggregated_model'):
+    def plot_constraints_and_vars(self, logger: Any, model: gp.Model, model_type: str = 'family_aggregated_model') -> None:
+        '''
+        Plots constraints and variables for the given model.
+        
+        Parameters:
+            logger: The logger object for logging information.
+            model (gp.Model): The Gurobi model to plot.
+            model_type (str): The type of the model, default is 'family_aggregated_model'.
+        '''
         plot_time_start = time.process_time_ns()
-        # self.display_constraints(logger, model, model_type)
-        # self.display_vars(logger, model, model_type)
-
         combined_plots = [['R1', 'R2'], 
-                          ['Z1', 'Z2'],
-                          ['Zm', 'Y']]
+                        ['Z1', 'Z2'],
+                        ['Zm', 'Y']]
         self.display_combined_plots(logger, model, model_type, combined_plots)
         plot_time_end = time.process_time_ns()
         logger.info(f'All plots saved in {(plot_time_end - plot_time_start) / (10**9)} seconds')
 
-    def display_combined_plots(self, logger, model, model_type, combined_plots):
-            
-            for i, plot in enumerate(combined_plots):
-                # Start time
-                start_time = time.process_time_ns()
-    
-                # figure size
-                plt.figure(figsize=(20, 10))
-    
-                # Plotting the variable values
-                for p in plot:
-                    names = []
-                    values = []
-                    for v in model.getVars():
-                        if p in v.varName:
-                            names.append(v.varName.split('[')[1])
-                            values.append(v.X)
-    
-                    plt.bar(names, values)
-    
-                plt.xlabel('Variable')
-                plt.ylabel('Value')
-                plt.title(f'Combined Plots: {plot} ({model_type})')
-                plt.xticks(rotation=90)
-                plt.legend(plot)
-                plt.tight_layout()
-                # plt.show()
-                file_name = f"results/{plot}-{model_type}.png"
-                plt.savefig(file_name)
-                plt.clf()
-                plt.close()
-    
-                # End time
-                end_time = time.process_time_ns()
-    
-                # Calculate elapsed time
-                elapsed_time = (end_time - start_time) / (10**9)
-    
-    def display_vars(self, logger, model, model_type):
+    def display_combined_plots(self, logger: Any, model: gp.Model, model_type: str, combined_plots: List[List[str]]) -> None:
+        '''
+        Displays combined plots of specified variable groups.
+        
+        Parameters:
+            logger: The logger object for logging information.
+            model (gp.Model): The Gurobi model.
+            model_type (str): The type of the model.
+            combined_plots (list): A list of variable groups to plot together.
+        '''
+        for i, plot in enumerate(combined_plots):
+            # Start time
+            start_time = time.process_time_ns()
 
+            # figure size
+            plt.figure(figsize=(20, 10))
+
+            # Plotting the variable values
+            for p in plot:
+                names = []
+                values = []
+                for v in model.getVars():
+                    if p in v.varName:
+                        names.append(v.varName.split('[')[1])
+                        values.append(v.X)
+
+                plt.bar(names, values)
+
+            plt.xlabel('Variable')
+            plt.ylabel('Value')
+            plt.title(f'Combined Plots: {plot} ({model_type})')
+            plt.xticks(rotation=90)
+            plt.legend(plot)
+            plt.tight_layout()
+            file_name = f"results/{plot}-{model_type}.png"
+            plt.savefig(file_name)
+            plt.clf()
+            plt.close()
+
+            # End time
+            end_time = time.process_time_ns()
+
+            # Calculate elapsed time
+            elapsed_time = (end_time - start_time) / (10**9)
+
+    def display_vars(self, logger: Any, model: gp.Model, model_type: str):
+        '''
+        Displays plots of variable values.
+        
+        Parameters:
+            logger: The logger object for logging information.
+            model (gp.Model): The Gurobi model.
+            model_type (str): The type of the model.
+        '''
         v_names = []
         v_names_split = []
         obj_values = []
 
         for v in model.getVars():
-            #if ('FPf_t' in v.varName) or ('PDp_t' in v.varName) or ('EDp_t' in v.varName) or ('Ef_t' in v.varName):
             v_name = v.varName
             v_names.append(v_name)
             v_name_split = v_name.split('[')[0]  # Remove brackets from v name
             v_names_split.append(v_name_split)
             obj_values.append(v.X)
 
-            #logger.info(f"{v.varName}: {v.Obj}")
-            v_name = v.varName.split('[')[0]
-        
-        
         for i, var in enumerate(set(v_names_split)):
             # Start time
             start_time = time.process_time_ns()
-                
+
             names = []
             values = []
             for name, val in zip(v_names, obj_values):
@@ -945,7 +841,6 @@ class Model:
                     names.append(name)
                     values.append(val)
 
-            
             # figure size
             plt.figure(figsize=(20, 10))
 
@@ -956,7 +851,6 @@ class Model:
             plt.title(f'Variable Values {var} ({model_type})')
             plt.xticks(rotation=90)
             plt.tight_layout()
-            # plt.show()
             file_name = f"results/{var}-{model_type}.png"
             plt.savefig(file_name)
             plt.clf()
@@ -970,9 +864,15 @@ class Model:
 
             print(f"saved plot to {file_name} (plot {i+1}/{len(set(v_names_split))}) [{round(elapsed_time, 2)} seconds]")
 
-
-    def display_constraints(self, logger, model, model_type):
-
+    def display_constraints(self, logger: Any, model: gp.Model, model_type: str) -> None:
+        '''
+        Displays plots of constraint RHS values.
+        
+        Parameters:
+            logger: The logger object for logging information.
+            model (gp.Model): The Gurobi model.
+            model_type (str): The type of the model.
+        '''
         constraint_names = []
         constraint_names_split = []
         rhs_values = []
@@ -983,8 +883,6 @@ class Model:
             constraint_name_split = constraint_name.split('[')[0]  # Remove brackets from constraint name
             constraint_names_split.append(constraint_name_split)
             rhs_values.append(c.RHS)
-
-        print(set(constraint_names_split))
 
         for i, constraint in enumerate(set(constraint_names_split)):
             # Start time
@@ -999,7 +897,7 @@ class Model:
                 if constraint in name:
                     names.append(name)
                     rhs_v.append(rhs)
-                
+
             plt.bar(names, rhs_v)
 
             plt.xlabel('Constraint Name')
@@ -1007,7 +905,6 @@ class Model:
             plt.title(f'Constraint RHS Value: {constraint} ({model_type})')
             plt.xticks(rotation=90)
             plt.tight_layout()
-            #plt.show()
             file_name = f"results/{constraint}-{model_type}.png"
             plt.savefig(file_name)
             plt.clf()
@@ -1021,7 +918,15 @@ class Model:
 
             print(f"saved plot to {file_name} (plot {i+1}/{len(set(constraint_names_split))}) [{round(elapsed_time, 2)} seconds]")
 
-    def create_table_of_ZRA(self, data:Parameters, model: gp.Model, model_type='FAM'):
+    def create_table_of_ZRA(self, data: Parameters, model: gp.Model, model_type: str = 'FAM') -> None:
+        '''
+        Creates tables of ZRA values from the optimized model.
+        
+        Parameters:
+            data (Parameters): The data object containing model parameters.
+            model (gp.Model): The optimized Gurobi model.
+            model_type (str): The type of the model, default is 'FAM'.
+        '''
         # time for fileName
         timestamp = dt.datetime.now().strftime("%Y%m%d%H%M%S")
         timestamp += f'_{model_type}'
@@ -1036,15 +941,7 @@ class Model:
                     row['m'] = m
                     row['t'] = t
                     row['Zm'] = model.getVarByName(f'Zm_t[{m},{t}]').X
-                    # row['Z1m_t'] = model.getVarByName(f'Z1m_t[{m},{t}]').X
-                    # row['Z2m_t'] = model.getVarByName(f'Z2m_t[{m},{t}]').X
                     row['Zm_t-1'] = model.getVarByName(f'Zm_t[{m},{t-1}]').X if t > 0 else np.nan
-                    row['Am'] = model.getVarByName(f'Am_t[{m},{t}]').X
-                    row['Am_t-1'] = model.getVarByName(f'Am_t[{m},{t-1}]').X if t > 0 else np.nan
-                    # row['R1m'] = model.getVarByName(f'R1m_t[{m},{t}]').X
-                    # row['R2m'] = model.getVarByName(f'R2m_t[{m},{t}]').X
-                    # row['Ym_t'] = model.getVarByName(f'Ym_t[{m},{t},{data.dmax}]').X
-                    # row['Auxm_t'] = model.getVarByName(f'Auxm_t[{m},{t}]').X
                     row['Qm_t'] = model.getVarByName(f'Qm_t[{m},{t}]').X
                     row['MOm_t'] = model.getVarByName(f'MOm_t[{m},{t}]').X
                     row['MOm_t>sigma'] = (1-data.beta[m]) * model.getVarByName(f'Qm_t[{m},{t-data.sigma[m]}]').X if t > data.sigma[m] else np.nan  
@@ -1054,18 +951,14 @@ class Model:
                     row['FPf_t'] = model.getVarByName(f'FPf_t[{m},{t}]').X
                     row['i0f_fw'] = data.i_0_f[m]
                     row['IFm_t'] = model.getVarByName(f'IFf_t[{m},{t}]').X 
-
                     row['Zmax=Q/cmin'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.cmin[m]
                     row['Zmin=Q/cmax'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.cmax[m]
-
                     row['Qm_t/sc_m'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.sc[m] if data.sc[m] > 0 else np.nan
                     row['Qm_t/sc_m(1-ism)'] = model.getVarByName(f'Qm_t[{m},{t}]').X / (data.sc[m] * (1 - data.is_[m])) if data.sc[m] > 0 else np.nan
                     row['Qm_t/fym'] = model.getVarByName(f'Qm_t[{m},{t}]').X / data.fy[m] if data.fy[m] > 0 else np.nan
                     row['RM_t'] = model.getVarByName(f'RMt[{t}]').X 
                     row['dmax/cmin'] = data.dmax[m]/data.cmin[m]
-                    # row['R2*dmax/cmin'] = model.getVarByName(f'R2m_t[{m},{t}]').X * data.dmax[m]/data.cmin[m]
                     row['zmax'] = data.zmax[m]
-                    # row['zmax*(1-R1)'] = data.zmax[m] * (1 - model.getVarByName(f'R1m_t[{m},{t}]').X)
                     row['cmax'] = data.cmax[m]
                     row['cmin'] = data.cmin[m]
 
@@ -1105,17 +998,14 @@ class Model:
                     row['i'] = i
                     row['t'] = t
 
-
                     for l in data.L:
                         row[f'Vi_{l}_t'] = model.getVarByName(f'Vi_l_t[{i},{l},{t}]').X
                         row[f'TRi_{l}_t'] = model.getVarByName(f'TRi_l_t[{i},{l},{t}]').X
-
 
                     table2.append(row)
 
             table2 = pd.DataFrame(table2)
             table2.to_csv(f'results/table_ilt_{timestamp}.csv', index=False)
-
 
             # data for plotting 
             table = []
@@ -1147,7 +1037,6 @@ class Model:
             table.drop_duplicates(inplace=True)
             table.to_csv(f'results/plot_table_ts_{timestamp}.csv', index=False)
 
-
             # data for validation Objective Function
             table = []
                 
@@ -1159,7 +1048,6 @@ class Model:
                     row['s'] = s
                     row['t'] = t
                 
-            
                     row[f'RSs_t'] = model.getVarByName(f'RSs_t[{s},{t}]').X
                     row[f'RSs_t*roc'] = model.getVarByName(f'RSs_t[{s},{t}]').X * data.roc
                     row[f'ROs_t'] = model.getVarByName(f'ROs_t[{s},{t}]').X
@@ -1180,17 +1068,12 @@ class Model:
 
                     table.append(row)
 
-
             # table to df
             table = pd.DataFrame(table)
-            # 
-
             table.drop_duplicates(inplace=True)
             table.to_csv(f'results/validation_table_{timestamp}.csv', index=False)
 
         if model_type in ['DPM', 'EMVP']:
             pass
-
-        #return table
 
 

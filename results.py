@@ -915,12 +915,9 @@ class Results:
             supply_value = self.data.SRA.reduced_scenarios[s][-1] 
             for f in self.data.F:
                 demand_value += self.data.SRA.reduced_scenarios[s][f] / self.data.fy[f]
-                print(f'scenarios: {s+1} - demand: {demand_value} - supply: {supply_value}')
-                print(f'scenarios: {s+1} - supply: {self.data.SRA.reduced_scenarios[s][f]} - fy: {self.data.fy[f]}')
             demand[s] = [demand_value / supply_value]
 
         demand = demand.T.rename(columns={0: 'demand'})
-        print(demand)
         min = demand['demand'].min()
         max = demand['demand'].max()
         mean = demand['demand'].mean()
