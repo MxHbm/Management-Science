@@ -338,25 +338,13 @@ class Model:
         # this is done in class S_star
         # S_star calculates the mean value of the second stage parameters
 
-
-        #data.s_star = s_star.s_star
-        #logger.info(f's_star: {data.s_star}')
-
-        #scenarios, probabilities = data.S, data.rho
-
         # Step 2: Solve the planning model using s*
         mvp_solution, logger = self.Run_Model(data, logger, 'MVP')
         mvp_solution_obj = mvp_solution.ObjVal
 
-        # Step 3: Calculate optimal second stage reactions for each scenario
+        # Step 3: Calculate optimal DPM
         emvp_solution, logger = self.Run_Detailed_Model(data, mvp_solution, logger, 'EMVP')
         emvp_solution_obj = emvp_solution.ObjVal
-
-        # Extract objective values from Gurobi models
-        #optimal_objective_values = [emvp_solution.ObjVal]
-
-        # Step 4: Calculate EMVP
-        #emvp = sum(obj_val * prob for obj_val, prob in zip(optimal_objective_values, probabilities))
 
         logger.info(f'mvp: {mvp_solution_obj}')
         logger.info(f'emvp: {emvp_solution_obj}')
@@ -372,7 +360,6 @@ class Model:
         model = gp.Model("first_stage")
 
         # get the needed decision variables
-        #vars = DecisionVariables(model, data)
         vars = DecisionVariables(model, data)
 
         # Add the objective function
@@ -390,36 +377,6 @@ class Model:
         print('============================ Optimize Model ============================')
         model.optimize()
 
-        # für jede Variable einzeln die Werte mit .X abfragen
-        # unbeschränkte Variablen erkennenn
-        # Upper Bounds ändenr
-        # welche variablen haben einen positiven Zielkoeffizienten
-        # Marge beim Verkauf von Milch muss Penalty sein., um Arbitrage zu vermeiden 
-
-        #model.printAttr('X')
-
-        #logger.info(model.printAttr('X'))
-
-        # logger.info('rho: %s', data.rho)
-
-        # logger.info("SO[8,3,0,0]: LB = %s, UB = %s, Obj = %s, VType = %s, VarName = %s",
-        #             vars.second_stage.SO[8,3,0,0].LB,
-        #             vars.second_stage.SO[8,3,0,0].UB,
-        #             vars.second_stage.SO[8,3,0,0].Obj,
-        #             vars.second_stage.SO[8,3,0,0].VType,
-        #             vars.second_stage.SO[8,3,0,0].VarName)
-
-        
-        # for k in vars.second_stage.RS:
-        #     logger.info('RS: %s', vars.second_stage.RS[k].Obj)
-        
-        # for k in vars.integer.TR:
-        #     logger.info('TR: %s', vars.integer.TR[k].Obj)
-
-        # for k in vars.second_stage.RO:
-        #     logger.info('RO: %s', vars.second_stage.RO[k].Obj)
-
-
         logger.info(f'model.status: {model.status}')
         logger.info('rsc: %g', data.rsc)
         print(f'model.status: {model.status}')
@@ -431,14 +388,8 @@ class Model:
             logger.warning("Model is unbounded")
         elif model.status == 2:
             logger.info("Optimal solution found")
-            #for v in model.getVars():
-            # for v in model.printAttr('X'):
-            #     logger.info(f"{v.varName}: {v.x}")
 
-
-            logger.info('Obj: %g' % model.objVal)
-
-            
+            logger.info('Obj: %g' % model.objVal)            
 
             # Save the model
             if 1 == 0:
@@ -966,7 +917,7 @@ class Model:
 
             # table to df
             table = pd.DataFrame(table)
-            table.to_csv(f'results/table_mt_{timestamp}.csv', index=False)
+            table.to_csv(f'results/table_mt.csv', index=False)
 
             table2 = []
 
@@ -988,7 +939,7 @@ class Model:
                     table2.append(row)
 
             table2 = pd.DataFrame(table2)
-            table2.to_csv(f'results/table_flt_{timestamp}.csv', index=False)
+            table2.to_csv(f'results/table_flt.csv', index=False)
 
             table2 = []
 
@@ -1005,7 +956,7 @@ class Model:
                     table2.append(row)
 
             table2 = pd.DataFrame(table2)
-            table2.to_csv(f'results/table_ilt_{timestamp}.csv', index=False)
+            table2.to_csv(f'results/table_ilt.csv', index=False)
 
             # data for plotting 
             table = []
@@ -1035,7 +986,7 @@ class Model:
             # table to df
             table = pd.DataFrame(table)
             table.drop_duplicates(inplace=True)
-            table.to_csv(f'results/plot_table_ts_{timestamp}.csv', index=False)
+            table.to_csv(f'results/plot_table_ts.csv', index=False)
 
             # data for validation Objective Function
             table = []
