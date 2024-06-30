@@ -1,6 +1,7 @@
 import pandas as pd
 from parameters import Parameters, S_star
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 import seaborn as sns
 import numpy as np
 import gurobipy as gp
@@ -11,8 +12,8 @@ class Results:
         ''' Initialize Results Class'''
         self.family_model = model1
         self.detailed_model = model2
-        self.emvp_model = emvpModel
-        self.mvp_model = mvpModel
+        self.emvp_model = emvpModel     # EMVP Model = Detailed Model with S_star Data
+        self.mvp_model = mvpModel       # MVP Model = Family Model with S_star Data
         self.data = data
         self.data_s_star = data_s_star
 
@@ -425,14 +426,14 @@ class Results:
 
                 # mvp
                 if self.mvp_model.getVarByName(f'Ef_t[{f},{t}]') is not None:
-                    exports_mvp_mu += self.mvp_model.getVarByName(f'Ef_t[{f},{t}]').X * self.data.re[f] * self.data.el[f]
+                    exports_mvp_mu += self.mvp_model.getVarByName(f'Ef_t[{f},{t}]').X * self.data_s_star.re[f] * self.data_s_star.el[f]
         
         for p in self.MP:
             for t in self.T:
                 exports_detailed_mu += self.detailed_model.getVarByName(f'EDp_t[{p},{t}]').X * self.data.re_p[p] * self.data.ls[p]
 
                 if self.emvp_model.getVarByName(f'EDp_t[{p},{t}]') is not None:
-                    exports_emvp_mu += self.emvp_model.getVarByName(f'EDp_t[{p},{t}]').X * self.data.re_p[p] * self.data.ls[p]
+                    exports_emvp_mu += self.emvp_model.getVarByName(f'EDp_t[{p},{t}]').X * self.data_s_star.re_p[p] * self.data_s_star.ls[p]
 
         return [exports_family_mu, exports_detailed_mu, exports_mvp_mu, exports_emvp_mu]
 
@@ -610,9 +611,39 @@ class Results:
         df = pd.concat([df, total_costs_row, total_income_row, difference_row], ignore_index=True)
 
         # aggregate SP-FAM and SP-DPM to SP_agg and MVP and EMVP to EMVP_agg
-        df['SP_agg'] = df['SP-FAM'] + df['SP-DPM']
-        df['EMVP_agg'] = df['MVP'] + df['EMVP']
-        df['% deviation SP_agg from EMVP_agg'] = df.apply(lambda row: self.calculate_deviation(row['SP_agg'], row['EMVP_agg']), axis=1)
+        # df['SP_agg'] = df['SP-FAM'] + df['SP-DPM']
+        # df['EMVP_agg'] = df['MVP'] + df['EMVP']
+        # df['% deviation SP_agg from EMVP_agg'] = df.apply(lambda row: self.calculate_deviation(row['SP_agg'], row['EMVP_agg']), axis=1)
+
+        # save df as laTex table in txt file
+        df_latex = df.copy()
+        # Formatter function for scientific notation
+        def german_notation(x):
+            if pd.isnull(x):
+                return ''
+            return f"{x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+
+        # Escape percentage signs in the 'Description' column
+        df_latex['\% deviation SP-DPM from EMVP'] = df_latex['% deviation SP-DPM from EMVP'].str.replace('%', r'\%', regex=False).str.replace('.', r',', regex=False)
+        df_latex['Metric'] = df_latex['Metric'].str.replace('_', r'{\_}', regex=False)
+        # df_latex['\% deviation SP_agg from EMVP_agg'] = df_latex['% deviation SP_agg from EMVP_agg'].str.replace('.', r',', regex=False)
+        df_latex.drop(columns=['% deviation SP-DPM from EMVP'], inplace=True)
+
+        # Create a dictionary of formatters for each column that requires scientific notation
+        formatters = {
+            'SP-FAM': german_notation,
+            'SP-DPM': german_notation,
+            'MVP': german_notation,
+            'EMVP': german_notation,
+            # 'SP_agg': german_notation,
+            # 'EMVP_agg': german_notation,
+            'Metric': str,
+            '\% deviation SP-DPM from EMVP': str,
+            # '\% deviation SP_agg from EMVP_agg': str
+        }
+
+        # Convert DataFrame to LaTeX with German notation
+        df_latex.to_latex('results/table6.tex', index=False, formatters=formatters, escape=False)
 
         return df
     
@@ -648,13 +679,14 @@ class Results:
         # Second Summation
         for m in self.data.MP:
             for t in self.data.T:
-                if self.family_model.getVarByName(f'Ym_t[{m},{t}]') is not None:
-                    cost = self.family_model.getVarByName(f'Ym_t[{m},{t}]').X * self.data.sco
-                    cost2_fam += cost
+                for k in range(self.data.dmax[0]):
+                    if self.family_model.getVarByName(f'Ym_t[{m},{t},{k}]') is not None:
+                        cost = self.family_model.getVarByName(f'Ym_t[{m},{t},{k}]').X * self.data.sco
+                        cost2_fam += cost
 
-                if self.mvp_model.getVarByName(f'Ym_t[{m},{t}]') is not None:
-                    cost = self.mvp_model.getVarByName(f'Ym_t[{m},{t}]').X * self.data.sco
-                    cost2_mvp += cost
+                    if self.mvp_model.getVarByName(f'Ym_t[{m},{t},{k}]') is not None:
+                        cost = self.mvp_model.getVarByName(f'Ym_t[{m},{t},{k}]').X * self.data.sco
+                        cost2_mvp += cost
 
         # Third Summation
         for s in self.data.S:
@@ -686,12 +718,12 @@ class Results:
         for f in self.data.F:
             for t in self.data.T:
                 sum_part1_fam += self.data.re[f] * self.data.el[f] * self.family_model.getVarByName(f'Ef_t[{f},{t}]').X
-                sum_part1_mvp += self.data.re[f] * self.data.el[f] * self.mvp_model.getVarByName(f'Ef_t[{f},{t}]').X
+                sum_part1_mvp += self.data_s_star.re[f] * self.data_s_star.el[f] * self.mvp_model.getVarByName(f'Ef_t[{f},{t}]').X
 
         for p in self.P:
             for t in self.data.T:
                 sum_part1_dpm += self.data.re_p[p] * self.data.ls[p] * self.detailed_model.getVarByName(f'EDp_t[{p},{t}]').X
-                sum_part1_emvp += self.data.re_p[p] * self.data.ls[p] * self.emvp_model.getVarByName(f'EDp_t[{p},{t}]').X
+                sum_part1_emvp += self.data_s_star.re_p[p] * self.data_s_star.ls[p] * self.emvp_model.getVarByName(f'EDp_t[{p},{t}]').X
 
         # Calculate second part of the equation
         for s in self.data.S:
@@ -703,7 +735,7 @@ class Results:
                         sum_s += (self.data.r[f] * (self.data.dp[s][f][l][t] - self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X )
                                   + self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f])
                         if self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]') is not None:
-                            sum_part2_mvp += (self.data.r[f] * (self.data.dp[s][f][l][t] - self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X )
+                            sum_part2_mvp += (self.data.r[f] * (self.data_s_star.dp[s][f][l][t] - self.mvp_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X )
                                         + self.mvp_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X * self.data.rr[f]) * self.data_s_star.rho[s]
                             
                         
@@ -717,7 +749,7 @@ class Results:
                                      + self.detailed_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X * self.data.rr_p[p])
                         
                         if self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]') is not None:
-                            sum_s_emvp += (self.data.r_p[p] * (self.data.dpd[s][p][l][t] - self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X )
+                            sum_s_emvp += (self.data.r_p[p] * (self.data_s_star.dpd[s][p][l][t] - self.emvp_model.getVarByName(f'SODs_p_l_t[{s},{p},{l},{t}]').X )
                                          + self.emvp_model.getVarByName(f'OSDs_p_l_t[{s},{p},{l},{t}]').X * self.data.rr_p[p])
             
             sum_part2_dpm += self.data.rho[s] * sum_s_dpm
@@ -748,21 +780,45 @@ class Results:
         # costs and benefits to df - new row for every cost and benefit:
         data = {'SP-FAM':   [cost1_fam, cost2_fam, cost3_fam,   sum_part1_fam, sum_part2_fam, cost1_fam + cost2_fam + cost3_fam, benefit_fam, enb_fam, objValue_FAM],
                 'SP-DPM':   [cost1_dpm, 0,          0,          sum_part1_dpm, sum_part2_dpm, cost1_dpm, benefit_dpm, enb_dpm, objValue_DPM],
-                'MVP':      [cost1_mvp, cost2_mvp, cost3_mvp,   sum_part1_mvp, sum_part2_mvp, cost1_mvp + cost2_mvp + cost3_mvp, benefit_mvp, enb_mvp, objValue_MVP],
-                'EMVP':     [cost1_emvp, 0,         0,          sum_part1_emvp, sum_part2_emvp, cost1_emvp, benefit_emvp, enb_emvp, objValue_EMVP]}
-        df = pd.DataFrame(data, index = ['Cost 1', 'Cost 2', 'Cost 3', 'Benefit1', 'Benefit2', 'TCOST', 'Benefit', 'ENB', 'ObjValue'])
+                'EMVP-FAM':      [cost1_mvp, cost2_mvp, cost3_mvp,   sum_part1_mvp, sum_part2_mvp, cost1_mvp + cost2_mvp + cost3_mvp, benefit_mvp, enb_mvp, objValue_MVP],
+                'EMVP-DPM':     [cost1_emvp, 0,         0,          sum_part1_emvp, sum_part2_emvp, cost1_emvp, benefit_emvp, enb_emvp, objValue_EMVP]}
+        df = pd.DataFrame(data, index = ['Transportkosten', 'Setupkosten', 'Rohmilchkosten', 'Exporterlös', 'Verkaufserlös', 'Gesamtkosten', 'Gesamterlös', 'Gewinn', 'ObjValue'])
 
         # aggregated df: SP ( FAM + DPM) and EMVP (MVP + EMVP):
-        df['SP_agg'] = df['SP-FAM'] + df['SP-DPM']
-        df['EMVP_agg'] = df['MVP'] + df['EMVP']
-        # deviation for each row:
-        df['% agg deviation'] = df.apply(lambda row: self.calculate_deviation(row['SP_agg'], row['EMVP_agg']), axis=1)
+        # df['SP_agg'] = df['SP-FAM'] + df['SP-DPM']
+        # df['EMVP_agg'] = df['MVP'] + df['EMVP']
+        # # deviation for each row:
+        df['% SP-DPM/EMVP-DPM'] = df.apply(lambda row: self.calculate_deviation(row['SP-DPM'], row['EMVP-DPM']), axis=1)
 
-        print(df)
+        # save df as laTex table in txt file
+        df_latex = df.copy()
+        # Formatter function for scientific notation
+        def german_notation(x):
+            if pd.isnull(x):
+                return ''
+            return f"{x:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+        # Escape percentage signs in the 'Description' column
+        df_latex['\% SP-DPM/EMVP-DPM'] = df_latex['% SP-DPM/EMVP-DPM'].str.replace('%', r'\%', regex=False).str.replace('.', r',', regex=False)
+        df_latex.drop(columns=['% SP-DPM/EMVP-DPM'], index='ObjValue', inplace=True)
         
+        # Create a dictionary of formatters for each column that requires scientific notation
+        formatters = {
+            'SP-FAM': german_notation,
+            'SP-DPM': german_notation,
+            'EMVP-FAM': german_notation,
+            'EMVP-DPM': german_notation,
+            'Exporterlös': german_notation,
+            'Verkaufserlös': german_notation,
+            'Gesamtkosten': german_notation,
+            'Gesamterlös': german_notation,
+            'Gewinn': german_notation,
+            #'ObjValue': german_notation,
+            '\% SP-DPM/EMVP-DPM': str
+        }
+        # Convert DataFrame to LaTeX with German notation
+        df_latex.to_latex('results/objFunction.tex', index=True, formatters=formatters, escape=False)     
 
-
-        return
+        return df
 
 
     def Evaluate_results(self):
@@ -771,9 +827,8 @@ class Results:
         pd.set_option('display.max_columns', 500)
         pd.set_option('display.width', 1000)
         table6 = self.ComputeResultsOfTable6()
-        table8 = self.ComputeResultsOfTable8()
         objFunction = self.ComputeObjFunction()
-        self.PrintResults(table6, table8, objFunction)
+        self.PrintResults(table6, objFunction)
         pass
 
     def Calculate_ss(self, data:Parameters, gp_model_detailed, logger):
@@ -811,7 +866,7 @@ class Results:
 
         # Create subplots for each scenario
         # Convert relevant columns to float
-        columns_to_convert = ['RM_t', 'SAs_f_l_t', 'SOs_f_l_t', 'OSs_f_l_t', 'RCs', 'RSs_t', 'ROs_t', 'RIs_t']
+        columns_to_convert = ['RM_t', 'SAs_f_l_t', 'SOs_f_l_t', 'OSs_f_l_t', 'RSs_t', 'ROs_t', 'RIs_t']
         df[columns_to_convert] = df[columns_to_convert].astype(float)
 
         # Get unique scenarios
@@ -827,7 +882,6 @@ class Results:
 
             # Plot RM_t
             data_RMt = df[df['s'] == scenario][['t', 'RM_t']].drop_duplicates().set_index('t').sort_index()['RM_t']
-            print(data_RMt)
             ax.bar(x - width, data_RMt, width, label='RM_t', color='blue')
 
             # Plot SA, SO, OS stacked
@@ -857,7 +911,7 @@ class Results:
         data_path = 'results/plot_table_ts.csv'
         df = pd.read_csv(data_path)
 
-        columns_to_convert = ['RM_t', 'SAs_f_l_t', 'SOs_f_l_t', 'OSs_f_l_t', 'RCs', 'RSs_t', 'ROs_t', 'RIs_t']
+        columns_to_convert = ['RM_t', 'SAs_f_l_t', 'SOs_f_l_t', 'OSs_f_l_t', 'RSs_t', 'ROs_t', 'RIs_t']
         df[columns_to_convert] = df[columns_to_convert].astype(float)
 
         # Get unique scenarios
@@ -892,20 +946,23 @@ class Results:
         '''plot RSs_t, ROs_t over time per scenario'''
 
         s_min, s_mean, s_max = self.get_scenario_with_demand()
+
+        colors = {'RI': 'blue', 
+                  'RS': 'green', 
+                  'RO': 'red', 
+                  'dri': 'orange', 
+                  'RM': 'purple',
+                  'r0': 'black'}
         
 
-        # # self.plot1_ri_rs_ro()       # old 
-        self.plot1_ri_rs_ro(s_min=s_min, s_max=s_max, s_mean=s_mean)
-        self.plot2_ri_rs_ro()
+        self.plot1_ri_rs_ro(s_min=s_min, s_max=s_max, s_mean=s_mean, colors=colors)
+        self.plot2_ri_rs_ro(s_min=s_min, s_max=s_max, s_mean=s_mean, colors=colors)
         self.plot3_sales_quantities()
         self.plot4_sales_income()
-        self.plot6_distribution_center()
-        self.plot6_distribution_center_new(s_min=s_min, s_max=s_max, s_mean=s_mean)
+        self.plot6_distribution_center(s_min=s_min, s_max=s_max, s_mean=s_mean)
 
         self.plot7_manufacturing_output(s_min=s_min, s_max=s_max, s_mean=s_mean)
 
-        # # self.plot5_costs_and_sales_with_minmaxmean(s_min, s_max,
-        #self.plot_combined_sales_quantities_and_income()
 
     def get_scenario_with_demand(self):
         demand = pd.DataFrame()
@@ -932,14 +989,7 @@ class Results:
 
         return min, mean, max
     
-    def plot5_costs_and_sales_with_minmaxmean(self, s_min, s_max, s_mean):
-
-        self.plot1_ri_rs_ro(s_min=s_min, s_max=s_max, s_mean=s_mean)
-        self.plot6_distribution_center(s_min=s_min, s_max=s_max, s_mean=s_mean)
-        pass
-
-
-    def plot1_ri_rs_ro(self, s_min = None, s_max = None, s_mean = None):
+    def plot1_ri_rs_ro(self, s_min = None, s_max = None, s_mean = None, colors = None):
         # Initialize dictionaries to hold the aggregated data for all scenarios
         min_mean_max = {'min': s_min, 'max': s_max, 'mean': s_mean}
         rs_mvp = {}
@@ -975,11 +1025,11 @@ class Results:
                     rm_mvp[t] = self.mvp_model.getVarByName(f'RMt[{t}]').X
 
             # Correct plotting by separating keys and values
-            axes['RS'].plot(list(rs_data.keys()), list(rs_data.values()), label='RSs_t', color='green')
-            axes['RO'].plot(list(ro_data.keys()), list(ro_data.values()), label='ROs_t', color='red')
-            axes['RI'].plot(list(ri_data.keys()), list(ri_data.values()), label='RIs_t', color='blue')
-            axes['dri'].plot(list(dri_data.keys()), list(dri_data.values()), label='dri_t', color='orange')
-            axes['RM'].plot(list(rm_data.keys()), list(rm_data.values()), label='RM_t', color='purple')
+            axes['RS'].plot(list(rs_data.keys()), list(rs_data.values()), label='RSs_t', color=colors['RS'])
+            axes['RO'].plot(list(ro_data.keys()), list(ro_data.values()), label='ROs_t', color=colors['RO'])
+            axes['RI'].plot(list(ri_data.keys()), list(ri_data.values()), label='RIs_t', color=colors['RI'])
+            axes['dri'].plot(list(dri_data.keys()), list(dri_data.values()), label='dri_t', color=colors['dri'])
+            axes['RM'].plot(list(rm_data.keys()), list(rm_data.values()), label='RM_t', color=colors['RM'])
 
             # For MVP data, ensure you're also separating keys and values
             axes['RS'].plot(list(rs_mvp.keys()), list(rs_mvp.values()), label='RSs_t_mvp', color='black', linestyle='dashed')
@@ -1018,9 +1068,9 @@ class Results:
 
             if s in min_mean_max.values():
                 value = [i for i in min_mean_max if min_mean_max[i] == s][0]
-                plt.savefig(f'figures/cost_distribution_scenario_{s+1}_{value}.png')
+                plt.savefig(f'figures/plot1_cost_distribution_scenario_{s+1}_{value}.png')
             else:
-                plt.savefig(f'figures/cost_distribution_scenario_{s+1}.png')
+                plt.savefig(f'figures/plot1_cost_distribution_scenario_{s+1}.png')
 
             plt.close(fig)  # Close the figure to avoid display issues in some environments
 
@@ -1046,27 +1096,27 @@ class Results:
 
                 # usage of raw milk inventory
                 # inventory_usage = ri_data.get(t-1, 0) - ri_data.get(t, 0) if (t > 0) and ((ri_data.get(t-1, 0) - ri_data.get(t, 0)) > 0) else 0
-                # ax.bar(t-width/2, -inventory_usage, bottom=ri_data.get(t, 0) if t>0 else ri_data.get(t,0), label='RIs_t - Raw Milk Consumption satisfied\n by Raw Milk Inventory' if t == 1 else "", color='blue', hatch='..', width=1.5*width, alpha=0.9)
+                # ax.bar(t-width/2, -inventory_usage, bottom=ri_data.get(t, 0) if t>0 else ri_data.get(t,0), label='RIs_t - Raw Milk Consumption satisfied\n by Raw Milk Inventory' if t == 1 else "", color=colors['RM'], hatch='..', width=1.5*width, alpha=0.9)
 
                 # dri_t bar plot
-                ax.bar(t-width, dri, bottom=previous_value, label='dri_t - Raw Milk Input' if t == 1 else "", color='lime', width=width, alpha=0.9)
+                ax.bar(t-width, dri, bottom=previous_value, label='dri_t - Raw Milk Input' if t == 1 else "", color=colors['dri'], width=width, alpha=0.9)
                 dri_end = previous_value + dri
 
                 # RSs_t bar plot
-                ax.bar(t-width, rs, bottom=dri_end, label='RSs_t - purchase of Raw Milk to a third Supplier' if t == 1 else "", color='green', width=width, alpha = 0.9)
+                ax.bar(t-width, rs, bottom=dri_end, label='RSs_t - purchase of Raw Milk to a third Supplier' if t == 1 else "", color=colors['RS'], width=width, alpha = 0.9)
                 rs_end = dri_end + rs
                 
                 # RM_t bar plot
-                ax.bar(t, -rm, bottom=rs_end, label='RM_t - Raw Milk Consumption' if t == 1 else "", color='fuchsia', width=width, alpha=0.8)
+                ax.bar(t, -rm, bottom=rs_end, label='RM_t - Raw Milk Consumption' if t == 1 else "", color=colors['RM'], width=width, alpha=0.8)
                 rm_end = rs_end - rm
 
                 # ROs_t bar plot
-                ax.bar(t, -ro, bottom=rm_end, label='ROs_t - Raw Milk Disposal' if t == 1 else "", color='red', width=width, alpha=0.9)
+                ax.bar(t, -ro, bottom=rm_end, label='ROs_t - Raw Milk Disposal' if t == 1 else "", color=colors['RO'], width=width, alpha=0.9)
                 ro_end = rm_end - ro
                 # Update previous_value for next iteration
                 previous_value = ro_end + dri_data.get(t, 0)
 
-            ax.bar(-width, self.data.r0, label='r0 - Initial Raw Milk Inventory\n from previous planning horizon', color='black', width=width, alpha=0.9)
+            ax.bar(-width, self.data.r0, label='r0 - Initial Raw Milk Inventory\n from previous planning horizon', color=colors['r0'], width=width, alpha=0.9)
 
             # ax.plot(list(rs_data.keys()), list(rs_data.values()), label='RSs_t', color='green')     # barplot starting from r0 respectivly from previous height/value
             # ax.plot(list(ro_data.keys()), list(ro_data.values()), label='ROs_t', color='red')       # barplot starting from r0 + RSs_t
@@ -1074,11 +1124,11 @@ class Results:
             ax.plot(list(dri_data.keys()), list(dri_data.values()), label='dri_t - Raw milk Daily Input', color='orange')  # line plot
             # ax.plot(list(rm_data.keys()), list(rm_data.values()), label='RM_t', color='purple')     # barplot starting from r0 - RM
 
-            ax.plot(list(rs_mvp.keys()), list(rs_mvp.values()), label='RSs_t_mvp', color='black', linestyle='dashed')
-            ax.plot(list(ro_mvp.keys()), list(ro_mvp.values()), label='ROs_t_mvp', color='black', linestyle='dashed')
-            ax.plot(list(ri_mvp.keys()), list(ri_mvp.values()), label='RIs_t_mvp', color='black', linestyle='dashed')
-            ax.plot(list(dri_mvp.keys()), list(dri_mvp.values()), label='dri_t_mvp', color='black', linestyle='dashed')
-            ax.plot(list(rm_mvp.keys()), list(rm_mvp.values()), label='RM_t_mvp', color='black', linestyle='dashed')
+            # ax.plot(list(rs_mvp.keys()), list(rs_mvp.values()), label='RSs_t_mvp', color='black', linestyle='dashed')
+            # ax.plot(list(ro_mvp.keys()), list(ro_mvp.values()), label='ROs_t_mvp', color='black', linestyle='dashed')
+            # ax.plot(list(ri_mvp.keys()), list(ri_mvp.values()), label='RIs_t_mvp', color='black', linestyle='dashed')
+            # ax.plot(list(dri_mvp.keys()), list(dri_mvp.values()), label='dri_t_mvp', color='black', linestyle='dashed')
+            # ax.plot(list(rm_mvp.keys()), list(rm_mvp.values()), label='RM_t_mvp', color='black', linestyle='dashed')
 
             #ax.set_title(f'Raw milk supply consumption (Constraint (5)) - Scenario {s}{demand_suffix}')
             ax.set_xlabel('Time t in days')
@@ -1091,17 +1141,17 @@ class Results:
             if s in min_mean_max.values():
                 value = [i for i in min_mean_max if min_mean_max[i] == s][0]
                 demand_suffix = f' ({value} demand)'
-                ax.set_title(f'Raw milk supply consumption (Constraint (5)) - Scenario {s+1}{demand_suffix}')
+                ax.set_title(f'Raw milk supply consumption - Scenario {s+1}{demand_suffix}')
                 plt.tight_layout()
-                plt.savefig(f'figures/combined_plot_scenario_{s+1}_{value}.png')
+                plt.savefig(f'figures/plot1_combined_plot_scenario_{s+1}_{value}.png')
             else:
-                ax.set_title(f'Raw milk supply consumption (Constraint (5)) - Scenario {s+1}')
+                ax.set_title(f'Raw milk supply consumption - Scenario {s+1}')
                 plt.tight_layout()
-                plt.savefig(f'figures/combined_plot_scenario_{s+1}.png')
+                plt.savefig(f'figures/plot1_combined_plot_scenario_{s+1}.png')
             plt.close(fig)
 
 
-    def plot2_ri_rs_ro(self):
+    def plot2_ri_rs_ro(self, s_min = None, s_max = None, s_mean = None, colors = None):
 
         # Initialize dictionaries to hold the aggregated data for all scenarios
         rs_data_all = []
@@ -1503,7 +1553,9 @@ class Results:
         plt.savefig('figures/combined_sales_quantities_and_income.png')
         plt.close(fig)  # Close the figure to avoid display issues in some environments
 
-    def plot6_distribution_center(self):
+    def plot6_distribution_center(self, s_min = None, s_max = None, s_mean = None):
+        # Initialize dictionaries to hold the aggregated data for all scenarios
+        min_mean_max = {'min': s_min, 'max': s_max, 'mean': s_mean}
         # create one plot per scenario. Each subplot per scenario should show the distribution center for each family and time period with its inventory, sales, and overstock quantities.
         # Initialize dictionaries to hold the aggregated data for all scenarios
         scenarios = {}
@@ -1573,11 +1625,6 @@ class Results:
                 new_labels = [f'Family {int(label)}' for label in labels1]
                 ax.legend(handles=handles1, labels=new_labels, title='Family', loc='upper left')
                 
-                # Plot shipped and inventory as lines
-                # ax2 = ax.twinx()
-                # sns.lineplot(x='t', y='shipped', data=dc_df, ax=ax2, color='black', label='Shipped')
-                # sns.lineplot(x='t', y='inventory', data=dc_df, ax=ax2, color='red', label='Inventory')
-                
                 # Set titles and labels
                 ax.set_title(f'Distribution Center {distribution_center}', fontsize=14)
                 ax.set_xlabel('Time')
@@ -1586,233 +1633,76 @@ class Results:
                 
                 # Combine legends
                 handles1, labels1 = ax.get_legend_handles_labels()
-                # handles2, labels2 = ax2.get_legend_handles_labels()
-                # ax.legend(handles1 + handles2, new_labels + labels2, loc='upper left')
                 ax.legend(handles1, new_labels, loc='upper left')
-                #ax2.get_legend().remove()
             
             # Remove empty subplots
             for j in range(i+1, len(axes)):
                 fig.delaxes(axes[j])
+
+
+            s = scenario
             
-            plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-            plt.savefig(f'figures/plot6_distribution_center_scenario_{scenario+1}.png')
+            if s in min_mean_max.values():
+                value = [i for i in min_mean_max if min_mean_max[i] == s][0]
+                demand_suffix = f' ({value} demand)'
+                # global title
+                fig.suptitle(f'Scenario {s+1}{demand_suffix}', fontsize=16)
+                plt.tight_layout()
+                plt.savefig(f'figures/plot6_distribution_center_scenario_{s+1}_{value}.png')
+            else:
+                fig.suptitle(f'Scenario {s+1}', fontsize=16)
+                plt.tight_layout()
+
+                # plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+                plt.savefig(f'figures/plot6_distribution_center_scenario_{s+1}.png')
             plt.close()
 
-    def plot6_distribution_center_new(self, s_min = None, s_max = None, s_mean = None):
-        # Initialize dictionaries to hold the aggregated data for all scenarios
-        min_mean_max = {'min': s_min, 'max': s_max, 'mean': s_mean}
-        # create one plot per scenario. Each subplot per scenario should show the distribution center for each family and time period with its inventory, sales, and overstock quantities.
-        # Initialize dictionaries to hold the aggregated data for all scenarios
-        scenarios = {}
-        for s in self.data.S:
-            scenario_data = []
-            shipped = {}
-            sales = {}
-            overstocks = {}
-            inventories = {}
-            demands = {}
-            for t in self.data.T:
-                for f in self.data.F:
-                    for l in self.data.L:
-                        shipped[(t,l,f)] = self.family_model.getVarByName(f'DVf_l_t[{f},{l},{t}]').X
-                        sales[(t,l,f)] = self.family_model.getVarByName(f'SOs_f_l_t[{s},{f},{l},{t}]').X
-                        overstocks[(t,l,f)] = self.family_model.getVarByName(f'OSs_f_l_t[{s},{f},{l},{t}]').X
-                        inventories[(t,l,f)] = self.family_model.getVarByName(f'IDs_f_l_t[{s},{f},{l},{t}]').X
-                        demands[(t,l,f)] = self.data.dp[s][f][l][t]
 
-                        #scenario_data.append((s, f, l, t, shipped, inventory, sales, overstock))
-            # scenarios[s] = scenario_data
-        #scenarios1 = pd.DataFrame(scenarios)
+    def plot7_manufacturing_output(self, s_min = None, s_max = None, s_mean = None, colors = None):
 
-            fig, ax = plt.subplots(figsize=(12, 12))
-
-            width = 0.3
-            
-
-            for t in self.data.T:
-                for l in self.data.L:
-                    for f in self.data.F:
-                        ship = shipped.get((t,l,f), 0)
-                        sale = sales.get((t,l,f), 0)
-                        overstock = overstocks.get((t,l,f), 0)
-                        inventory = inventories.get((t,l,f), 0)
-                        demand = demands.get((t,l,f), 0)
-
-                        if t > 0:
-                            previous_value = inventories.get((t-1, l, f), 0) #dri_data.get(t, 0) #+ ri_data.get(t-1, 0)
-                        else:
-                            previous_value = self.data.i_0_f[l] #+ dri_data.get(t, 0)
-                        
-
-
-                        # usage of raw milk inventory
-                        # inventory_usage = ri_data.get(t-1, 0) - ri_data.get(t, 0) if (t > 0) and ((ri_data.get(t-1, 0) - ri_data.get(t, 0)) > 0) else 0
-                        # ax.bar(t-width/2, -inventory_usage, bottom=ri_data.get(t, 0) if t>0 else ri_data.get(t,0), label='RIs_t - Raw Milk Consumption satisfied\n by Raw Milk Inventory' if t == 1 else "", color='blue', hatch='..', width=1.5*width, alpha=0.9)
-
-                        # dri_t bar plot
-                        ax.bar(t-width, ship, bottom=previous_value, label='DVf_l_t - Raw Milk Input' if t == 1 else "", color='lime', width=width, alpha=0.9)
-                        ship_end = previous_value + ship
-
-                        # RSs_t bar plot
-                        ax.bar(t-width, sale, bottom=ship_end, label='SOs_f_l_t - stock out of Inventory' if t == 1 else "", color='green', width=width, alpha = 0.9)
-                        so_end = ship_end + sale
-                        
-                        # RM_t bar plot
-                        ax.bar(t, -overstock, bottom=so_end, label='SOs_f_l_t - Overstock' if t == 1 else "", color='fuchsia', width=width, alpha=0.8)
-                        overstock_end = so_end - overstock
-
-                        # ROs_t bar plot
-                        ax.bar(t, -demand, bottom=overstock_end, label='ROs_t - Raw Milk Disposal' if t == 1 else "", color='red', width=width, alpha=0.9)
-                        demand_end = overstock_end - demand
-                        # Update previous_value for next iteration
-                        #previous_value = ro_end + dri_data.get(t, 0)
-
-                #ax.bar(-width, self.data.r0, label='r0 - Initial Raw Milk Inventory\n from previous planning horizon', color='black', width=width, alpha=0.9)
-
-                # ax.plot(list(rs_data.keys()), list(rs_data.values()), label='RSs_t', color='green')     # barplot starting from r0 respectivly from previous height/value
-                # ax.plot(list(ro_data.keys()), list(ro_data.values()), label='ROs_t', color='red')       # barplot starting from r0 + RSs_t
-                ax.plot(list(inventories.keys()), list(inventories.values()), label='IDs_f_l_t - DC Inventory', color='blue')      # LINE PLOT
-                # ax.plot(list(dri_data.keys()), list(dri_data.values()), label='dri_t - Raw milk Daily Input', color='orange')  # line plot
-                # ax.plot(list(rm_data.keys()), list(rm_data.values()), label='RM_t', color='purple')     # barplot starting from r0 - RM
-
-
-                #ax.set_title(f'Raw milk supply consumption (Constraint (5)) - Scenario {s}{demand_suffix}')
-                ax.set_xlabel('Time t in days')
-                ax.set_ylabel('Quantity in tons')
-                ax.legend(ncol=3, loc='best', bbox_to_anchor=(0.1, -0.2, 0.8, 0.5))
-                
-                """
-            # Convert the tuples to a DataFrame with individual columns
-            df_list = [pd.DataFrame(scenarios1[col].tolist(), columns=['s', 'f', 'l', 't', 'shipped', 'inventory', 'sales', 'overstock']) for col in scenarios1.columns]
-
-            # Concatenate the individual DataFrames into one DataFrame
-            df = pd.concat(df_list, keys=scenarios1.columns, names=['scenario', 'row'])
-
-            # Reset index to flatten the multi-level index from concatenation
-            df = df.reset_index(level='row', drop=True).reset_index()
-
-            # Set the multi-level index
-            df = df.set_index(['scenario', 'f', 'l', 't'])
-
-            # Sort the index for better readability
-            df = df.sort_index()
-
-            # Display the resulting DataFrame
-            print(df)
-
-            # Reset the index to make 'scenario', 's', 'f', 'l', 't' columns available for plotting
-            df_reset = df.reset_index()
-
-            # Iterate over each scenario
-            for scenario in df_reset['scenario'].unique():
-                # Group by 'l', 't', 'f' and sum the values for the current scenario
-                scenario_df = df_reset[df_reset['scenario'] == scenario].groupby(['l', 't', 'f']).sum().reset_index()
-
-                # Get the unique distribution centers
-                distribution_centers = scenario_df['l'].unique()
-                
-                # Create a 2x2 grid of subplots
-                fig, axes = plt.subplots(nrows=2, ncols=2, figsize=(15, 10), sharex=True)
-                #fig.suptitle(f'Scenario {scenario}', fontsize=16)
-                axes = axes.flatten()  # Flatten the 2x2 array of axes for easier iteration
-                
-                # Iterate over each distribution center and plot on corresponding subplot
-                for i, distribution_center in enumerate(distribution_centers):
-                    ax = axes[i]
-                    
-                    # Filter for the current distribution center
-                    dc_df = scenario_df[scenario_df['l'] == distribution_center]
-
-                    
-                    # Pivot the DataFrame to get a better structure for stacked bar plots
-                    sales_pivot = dc_df.pivot(index='t', columns='f', values='sales').fillna(0)
-                    overstock_pivot = dc_df.pivot(index='t', columns='f', values='overstock').fillna(0)
-                    
-                    # Plot sales and overstock as stacked bars
-                    #sales_bars = sales_pivot.plot(kind='bar', stacked=True, ax=ax, cmap='tab20', alpha=0.7, edgecolor='black', legend=False)
-
-                    # Add labels to the legend
-                    handles1, labels1 = ax.get_legend_handles_labels()
-                    new_labels = [f'Sales Family {int(label)}' for label in labels1]
-                    ax.legend(handles=handles1, labels=new_labels, title='Family', loc='upper left')
-
-                    overstock_bars = overstock_pivot.plot(kind='bar', stacked=True, ax=ax, cmap='tab20', alpha=0.4, edgecolor='black', legend=True, label = 'Overstock')
-                    """
-                    
-                    
-                # # Plot shipped and inventory as lines
-                # ax2 = ax.twinx()
-                # sns.lineplot(x='t', y='shipped', data=dc_df, ax=ax2, color='black', label='Shipped')
-                # sns.lineplot(x='t', y='inventory', data=dc_df, ax=ax2, color='red', label='Inventory')
-                
-                # Set titles and labels
-                # handles1, labels1 = ax.get_legend_handles_labels()
-                # new_labels = [f'Sales Family {int(float(label))}' for label in labels1]
-                # ax.legend(handles=handles1, labels=new_labels, title='Family', loc='upper left')
-                ax.set_title(f'Distribution Center {l}', fontsize=14)
-                ax.set_xlabel('Time')
-                ax.set_ylabel('Sales/Overstock')
-                # ax2.set_ylabel('Shipped/Inventory')
-                
-                # Combine legends
-                # handles1, labels1 = ax.get_legend_handles_labels()
-                #handles2, labels2 = ax2.get_legend_handles_labels()
-                # ax.legend(handles1 + handles2, new_labels + labels2, loc='upper left')
-                #ax2.get_legend().remove()
-                
-                # Remove empty subplots
-                # for j in range(i+1, len(ax)):
-                #     fig.delaxes(ax[j])
-                
-                if s in min_mean_max.values():
-                    value = [i for i in min_mean_max if min_mean_max[i] == s][0]
-                    demand_suffix = f' ({value} demand)'
-                    # global title
-                    fig.suptitle(f'Scenario {s+1}{demand_suffix}', fontsize=16)
-                    plt.tight_layout()
-                    plt.savefig(f'figures/plot6_distribution_center_scenario_{s+1}_{value}.png')
-                else:
-                    fig.suptitle(f'Scenario {s+1}', fontsize=16)
-                    plt.tight_layout()
-
-                    # plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-                    plt.savefig(f'figures/plot6_distribution_center_scenario_{s+1}.png')
-                plt.close()
-
-    def plot7_manufacturing_output(self, s_min = None, s_max = None, s_mean = None):
+        ''' Plot the manufacturing output for each factory and time period for each scenario. '''
 
 
         m =    {m for m in self.data.MP}
         t =    {t for t in self.data.T}
         mo =   {(m, t, self.family_model.getVarByName(f'MOm_t[{m},{t}]').X) for m in self.data.MP for t in self.data.T}
+        mo_performance =   {(m, t, round(self.family_model.getVarByName(f'MOm_t[{m},{t}]').X/self.data.cmax[m], 2)*100) for m in self.data.MP for t in self.data.T}
+        mo_mvp_fam =   {(m, t, self.mvp_model.getVarByName(f'MOm_t[{m},{t}]').X) for m in self.data.MP for t in self.data.T}
+        mo_mvp_performance =   {(m, t, round(self.mvp_model.getVarByName(f'MOm_t[{m},{t}]').X/self.data.cmax[m], 2)*100) for m in self.data.MP for t in self.data.T}
         z =    {(m, t, self.family_model.getVarByName(f'Zm_t[{m},{t}]').X) for m in self.data.MP for t in self.data.T}
+        z_mvp_fam =    {(m, t, self.mvp_model.getVarByName(f'Zm_t[{m},{t}]').X) for m in self.data.MP for t in self.data.T}
         y =    {(m, t, k, self.family_model.getVarByName(f'Ym_t[{m},{t},{k}]').X) for m in self.data.MP for t in self.data.T for k in range(self.data.dmax[0]) if self.data.cty[m] == 0 }
         fp =    {(f, t, self.family_model.getVarByName(f'FPf_t[{f},{t}]').X) for f in self.data.F for t in self.data.T}
+        fp_mvp_fam =    {(f, t, self.mvp_model.getVarByName(f'FPf_t[{f},{t}]').X) for f in self.data.F for t in self.data.T}
 
         mo_df = pd.DataFrame(mo, columns=['Factory', 'Time', 'MO'])
+        mo_performance_df = pd.DataFrame(mo_performance, columns=['Factory', 'Time', 'MO'])
         z_df = pd.DataFrame(z, columns=['Factory', 'Time', 'Z'])
         fp_df = pd.DataFrame(fp, columns=['Family', 'Time', 'FP'])
-
-        print(fp_df)
-
-        print(mo_df)
+        mo_mvp_fam_df = pd.DataFrame(mo_mvp_fam, columns=['Factory', 'Time', 'MO'])
+        mo_mvp_performance_df = pd.DataFrame(mo_mvp_performance, columns=['Factory', 'Time', 'MO'])
+        z_mvp_fam_df = pd.DataFrame(z_mvp_fam, columns=['Factory', 'Time', 'Z'])
+        fp_mvp_fam_df = pd.DataFrame(fp_mvp_fam, columns=['Family', 'Time', 'FP'])
 
         # DataFrames zusammenführen und pivotieren
         mo_z_df = mo_df.merge(z_df, on=['Factory', 'Time']).sort_values(by=['Factory', 'Time'])
         #mo_z_df = mo_z_df.pivot(index='Time', columns='Factory', values='MO').T
         mo_z_df_pivot = mo_z_df.pivot(index='Time', columns='Factory', values='MO').T
 
+        mo_z_performance_df = mo_performance_df.merge(z_df, on=['Factory', 'Time']).sort_values(by=['Factory', 'Time'])
+        mo_z_performance_df_pivot = mo_z_performance_df.pivot(index='Time', columns='Factory', values='MO').T
+
+
         z_pivot = mo_z_df.pivot(index='Time', columns='Factory', values='Z').T
         z_pivot = z_pivot.astype(int)
 
-        # fp_pivot = fp_df.pivot(index='Time', columns='Family', values='FP').T
+        mo_z_mvp_fam_df = mo_mvp_fam_df.merge(z_mvp_fam_df, on=['Factory', 'Time']).sort_values(by=['Factory', 'Time'])
+        mo_z_mvp_fam_df_pivot = mo_z_mvp_fam_df.pivot(index='Time', columns='Factory', values='MO').T
+        z_mvp_fam_pivot = mo_z_mvp_fam_df.pivot(index='Time', columns='Factory', values='Z').T
+        z_mvp_fam_pivot = z_mvp_fam_pivot.astype(int)
 
-        # print(fp_pivot)
-
-        # mo_fp_df = mo_df.merge(fp_df, on=['Time', '']).sort_values(by=['Time'])
-        # mo_fp_df_pivot = mo_fp_df.pivot(index='Time', columns='Family', values='MO').T
-
+        mo_z_performance_mvp_fam_df = mo_mvp_performance_df.merge(z_mvp_fam_df, on=['Factory', 'Time']).sort_values(by=['Factory', 'Time'])
+        mo_z_performance_mvp_fam_df_pivot = mo_z_performance_mvp_fam_df.pivot(index='Time', columns='Factory', values='MO').T
 
         # DataFrame für Y erstellen
         y_columns = range(self.data.dmax[0])
@@ -1821,51 +1711,17 @@ class Results:
         y_df = pd.DataFrame.from_dict({(i, j): y_values[i, j] for i in self.data.MP for j in self.data.T}, orient='index')
         y_df.index = y_index
 
-        # Plot erstellen
-        fig, ax1 = plt.subplots(figsize=(14, 7), sharex=True)
-
-        # MO Plot
-        sns.barplot(data=mo_df, x='Time', y='MO', hue='Factory', ax=ax1)
-        ax1.set_ylabel('Manufacture Output (MO)')
-        ax1.set_title('Manufacture Output (MO) and Shifts (Z) per Factory over Time')
-
-        # Zweite Achse für Z und Y
-        ax2 = ax1.twinx()
-
-        # Z Plot
-        sns.scatterplot(data=z_df, x='Time', y='Z', hue='Factory', ax=ax2, legend=False)
-        ax2.set_ylabel('Number of Shifts (Z)')
-
-        # Anpassungen und Anzeigen
-        ax1.legend(loc='upper left', bbox_to_anchor=(1, 1))
-        ax2.legend(loc='upper right', bbox_to_anchor=(1.2, 1))
-
-        # combine both legends:
-        handles1, labels1 = ax1.get_legend_handles_labels()
-        handles2, labels2 = ax2.get_legend_handles_labels()
-        ax1.legend(handles=handles1 + handles2, labels=labels1 + labels2, loc='upper left', bbox_to_anchor=(1, 1))
-
-        plt.tight_layout()
-
-        plt.savefig('figures/plot7_manufacturing_output.png')
-
-        # create heat map
-        # combine mo_df and z_df
-
-        fig = plt.figure(figsize=(14, 8))
-
-       
+        fig = plt.figure(figsize=(14, 8))      
 
         # Heatmap erstellen
         ax = sns.heatmap(mo_z_df_pivot, cmap='coolwarm', annot=True, fmt=".0f", linewidths=.5)
-
 
         # Sekundäre Y-Achse hinzufügen
         ax2 = ax.twinx()
         ax2.set_ylabel('\n\n\nManufacture Output (MO)')
         ax2.set_yticks([])  # Entfernt die Ticks der sekundären Y-Achse
 
-        # Achsenbeschriftungen anpassen
+        # Achsenbeschriftungen npassen
         # ax.set_xlabel('Time')
         ax.set_ylabel('Manufacturing Plant')
 
@@ -1878,13 +1734,41 @@ class Results:
         plt.tight_layout()
 
         plt.savefig('figures/plot7-1_manufacturing_output.png')
-        plt.close(fig)  # Close the figure to avoid display issues in some environments
+        plt.close(fig)  # Close the figure to avoid display issues in some environmentsa
 
+
+        # HeatMap Auslastung pro Factory (performance)
+        fig = plt.figure(figsize=(14, 8))      
+
+        # Heatmap erstellen
+        ax = sns.heatmap(mo_z_performance_df_pivot, cmap='coolwarm', annot=True, fmt=".0f", linewidths=.5)
+
+        # Sekundäre Y-Achse hinzufügen
+        ax2 = ax.twinx()
+        ax2.set_ylabel('\n\n\nManufacture Output (MO) in Percent of Capacity')
+        ax2.set_yticks([])  # Entfernt die Ticks der sekundären Y-Achse
+
+        # Achsenbeschriftungen npassen
+        # ax.set_xlabel('Time')
+        ax.set_ylabel('Manufacturing Plant')
+
+        # Entferne die Ticks und Labels der ursprünglichen y-Achse
+        ax.yaxis.set_ticks_position('left')
+        ax.yaxis.set_label_position('left')
+        #ax.set_yticks([])
+
+        ax.set_title('Manufacture Output (MO) in Percent of Capacity per Factory over Time (FAM)')
+
+       # plt.title('Manufacture Output (MO) per Factory over Time')
+        plt.tight_layout()
+
+        plt.savefig('figures/plot7-1_manufacturing_output_performance.png')
+        plt.close(fig)
 
         # MO vs. Z Plot
 
 
-        # Heatmap erstellen
+        # Heatmap erstellen mit Schichtplan als tabelle
                 # Plot erstellen
         fig, (ax_heatmap, ax_table) = plt.subplots(nrows=2, figsize=(14, 8), gridspec_kw={'height_ratios': [4, 1]})
 
@@ -1907,9 +1791,111 @@ class Results:
         table.scale(1.2, 1.2)
 
         # Titel und Layout anpassen
-        plt.suptitle('Manufacture Output (MO) and Shifts (Z) per Factory over Time', y=0.95)
+        plt.suptitle('Manufacture Output (MO) and Shifts (Z) per Factory over Time (FAM)', y=0.95)
         plt.tight_layout(rect=[0, 0, 1, 0.95])
 
         # Bild speichern
-        plt.savefig('figures/plot7-2_manufacturing_output.png')
+        plt.savefig('figures/plot7-2_manufacturing_output_fam.png')
         plt.close(fig)  # Close the figure to avoid display issues in some environments
+
+
+
+        # Heatmap erstellen EMVP
+                # Plot erstellen
+        fig, (ax_heatmap, ax_table) = plt.subplots(nrows=2, figsize=(14, 8), gridspec_kw={'height_ratios': [4, 1]})
+
+        # Heatmap plotten
+        sns.heatmap(mo_z_mvp_fam_df_pivot, cmap='coolwarm', annot=True, fmt=".0f", linewidths=.5, ax=ax_heatmap, cbar_kws={'label': 'Manufacture Output (MO)'})
+
+        # Achsenbeschriftungen anpassen
+        ax_heatmap.set_xlabel('')
+        ax_heatmap.set_ylabel('Manufacturing Plant')
+
+        # Tabelle für die Anzahl der Schichten plotten
+        z_pivot = mo_z_mvp_fam_df.pivot(index='Time', columns='Factory', values='Z').T
+        z_pivot = z_pivot.astype(int)
+        ax_table.axis('off')
+
+        # Tabelle direkt unterhalb der x-Achse der Heatmap platzieren
+        table = ax_table.table(cellText=z_pivot.values, colLabels=z_pivot.columns, rowLabels=z_pivot.index, loc='center', cellLoc='center')
+        table.auto_set_font_size(False)
+        table.set_fontsize(10)
+        table.scale(1.2, 1.2)
+
+        # Titel und Layout anpassen
+        plt.suptitle('Manufacture Output (MO) and Shifts (Z) per Factory over Time (EMVP-FAM)', y=0.95)
+        plt.tight_layout(rect=[0, 0, 1, 0.95])
+
+        # Bild speichern
+        plt.savefig('figures/plot7-2_manufacturing_output_emvp_fam.png')
+        plt.close(fig)  # Close the figure to avoid display issues in some environments
+
+
+                # HeatMap Auslastung pro Factory (performance)  - EMVP
+        fig = plt.figure(figsize=(14, 8))      
+
+        # Heatmap erstellen
+        ax = sns.heatmap(mo_z_performance_mvp_fam_df_pivot, cmap='coolwarm', annot=True, fmt=".0f", linewidths=.5)
+
+        # Sekundäre Y-Achse hinzufügen
+        ax2 = ax.twinx()
+        ax2.set_ylabel('\n\n\nManufacture Output (MO) in Percent of Capacity')
+        ax2.set_yticks([])  # Entfernt die Ticks der sekundären Y-Achse
+
+        # Achsenbeschriftungen npassen
+        # ax.set_xlabel('Time')
+        ax.set_ylabel('Manufacturing Plant')
+
+        # Entferne die Ticks und Labels der ursprünglichen y-Achse
+        ax.yaxis.set_ticks_position('left')
+        ax.yaxis.set_label_position('left')
+        #ax.set_yticks([])
+
+        ax.set_title('Manufacture Output (MO) in Percent of Capacity per Factory over Time (EMVP-FAM)')
+
+       # plt.title('Manufacture Output (MO) per Factory over Time')
+        plt.tight_layout()
+
+        plt.savefig('figures/plot7-2_manufacturing_output_emvp_fam_performance.png')
+        plt.close(fig)
+
+
+        # HeatMap Auslastung pro Factory (performance)  - Difference between FAM and EMVP
+        fig = plt.figure(figsize=(14, 8))      
+
+        # 
+        cmap = sns.color_palette("PiYG", as_cmap=True)
+
+        # Konvertieren in eine Liste von Farben
+        cmap_list = cmap(np.linspace(0, 1, 256))
+
+        # Festlegen der mittleren Farbe (Index 128) auf transparent
+        cmap_list[128] = [1, 1, 1, 0]  # [R, G, B, A]
+
+        # Erstellen eines neuen Colormap-Objekts
+        custom_cmap = ListedColormap(cmap_list)
+
+        # Heatmap erstellen
+        ax = sns.heatmap(mo_z_performance_df_pivot-mo_z_performance_mvp_fam_df_pivot, cmap='coolwarm' ,  annot=True, fmt=".0f", linewidths=.5)
+
+        # Sekundäre Y-Achse hinzufügen
+        ax2 = ax.twinx()
+        ax2.set_ylabel('\n\n\nDifference Manufacture Output (MO) in Percent of Capacity')
+        ax2.set_yticks([])  # Entfernt die Ticks der sekundären Y-Achse
+
+        # Achsenbeschriftungen npassen
+        # ax.set_xlabel('Time')
+        ax.set_ylabel('Manufacturing Plant')
+
+        # Entferne die Ticks und Labels der ursprünglichen y-Achse
+        ax.yaxis.set_ticks_position('left')
+        ax.yaxis.set_label_position('left')
+        #ax.set_yticks([])
+
+        ax.set_title('Manufacture Output (MO) in Percent of Capacity per Factory over Time (EMVP-FAM)')
+
+       # plt.title('Manufacture Output (MO) per Factory over Time')
+        plt.tight_layout()
+
+        plt.savefig('figures/plot7-3_manufacturing_output_emvp_fam_performance_difference.png')
+        plt.close(fig)
